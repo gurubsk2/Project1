@@ -1,0 +1,6 @@
+[LAYOUT\Keyboard]
+0 | 117=[ACTION],11
+0 | 119=[ACTION],13
+0 | 121=[ACTION],0
+[General]
+DefaultLayout=Keyboard

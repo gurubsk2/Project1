@@ -1,0 +1,56 @@
+Parsing mimic Mimic0
+ERROR: Reference to a symbol that does not exist in the project "..\Symbol Files\Symbol_NotExisting".
+Parsing mimic Mimic_TestAnimations
+=========================================================================================
+Symbol name (alphabetic sort) => Level (minimal depth at which the symbol was referenced)
+-------------------------------------------------------------------------------------------------
+Subsymbol_AnimationSymbolsBitGroup_0000 => 2
+Subsymbol_AnimationSymbolsBitGroup_0001 => 2
+Subsymbol_AnimationSymbolsBitGroup_0010 => 2
+Subsymbol_AnimationSymbolsBitGroup_0011 => 2
+Subsymbol_AnimationSymbolsBitGroup_0100 => 2
+Subsymbol_AnimationSymbolsBitGroup_0101 => 2
+Subsymbol_AnimationSymbolsBitGroup_0110 => 2
+Subsymbol_AnimationSymbolsBitGroup_0111 => 2
+Subsymbol_AnimationSymbolsBitGroup_1000 => 2
+Subsymbol_AnimationSymbolsBitGroup_1001 => 2
+Subsymbol_AnimationSymbolsBitGroup_1011 => 2
+Subsymbol_AnimationSymbolsBitGroup_1100 => 2
+Subsymbol_AnimationSymbolsBitGroup_1101 => 2
+Subsymbol_AnimationSymbolsBitGroup_1110 => 2
+Subsymbol_AnimationSymbolsBitGroup_1111 => 2
+Subsymbol_AnimationSymbolsBitGroup_Unavailable => 2
+Subsymbol_AnimationSymbolsBit_Off => 2
+Subsymbol_AnimationSymbolsBit_On => 2
+Subsymbol_AnimationSymbolsBit_Unavailable => 2
+Subsymbol_AnimationSymbolsRegisterBit_Off => 2
+Subsymbol_AnimationSymbolsRegisterBit_On => 2
+Subsymbol_AnimationSymbolsRegisterBit_Unavailable => 2
+Subsymbol_AnimationSymbolsRegisterValue_Last => 2
+Subsymbol_AnimationSymbolsRegisterValue_MinusOne => 2
+Subsymbol_AnimationSymbolsRegisterValue_One => 2
+Subsymbol_AnimationSymbolsRegisterValue_OutOfLevel => 2
+Subsymbol_AnimationSymbolsRegisterValue_SubZero => 2
+Subsymbol_AnimationSymbolsRegisterValue_Unavailable => 2
+Subsymbol_Animationuppercase_notfound => 2
+Subsymbol_NoChildren => 2
+Symbol_AnimationSymbolsBit => 1
+Symbol_AnimationSymbolsBitGroup => 1
+Symbol_AnimationSymbolsRegisterBit => 1
+Symbol_AnimationSymbolsRegisterValue => 1
+Symbol_AtSeveralLevels_Expected1 => 1
+Symbol_CaseInsensitive => 1
+Symbol_Children => 1
+Symbol_NotExisting => 1
+Symbol_SeveralOccurrencesNoChildren => 1
+Symbol_UniqueNoChildren => 1
+=========================================================================================
+
+=================================================================================================
+Symbols that are present in the Symbol Files folder but not found in any mimic, symbol, animation
+-------------------------------------------------------------------------------------------------
+WARNING: Symbol "Subsymbol_AnimationSymbolsBitGroup_1010_NotUsed" => Not used in the project (dead code)
+WARNING: Symbol "Subsymbol_AnimationUPPERCASE_NOTFOUND" => Referenced from animations but with a different CASE
+WARNING: Symbol "Symbol_NotUsed" => Not used in the project (dead code)
+=================================================================================================
+

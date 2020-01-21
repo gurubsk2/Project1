@@ -1,0 +1,48 @@
+ASCII32,18,10,2019,9:41,25,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,255,0,255,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,172,168,153,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Shape10_Click()
+	On Error GoTo ErrorHandler
+	
+	    If ThisSystem.ComputerName = "TCCIHMTTR1" Then
+	        Call OpenMimicInCenter("GUA_DIAG_LATS", "*", Getmousepointerpossition)
+	        
+	    ElseIf ThisSystem.ComputerName = "TLLIHMTTR1" Then
+	        Call OpenMimicInCenter("GUA_DIAG_Depot", "*", Getmousepointerpossition)
+	        
+	    Else
+	        Call OpenMimicInCenter("GUA_DIAG", "*", Getmousepointerpossition)
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol13"
+	B,10,10,49,49,10,49,65535,0,6400,0,1,0,0
+	O,BEGIN,BM,"Bitmap64"
+		B,14,14,45,45,14,45,65535,0,6400,0,2,1,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,"Misc_Image39.bmp",1,COLOR,4
+	O,END
+	O,BEGIN,R,"Shape10"
+		B,49,49,10,10,49,49,65535,0,6400,0,2,1,1
+		ST,5,1,COLOR,5,COLOR,5,0,3,COLOR,5,3,COLOR,5,0,COLOR,5,0,COLOR,5
+		AST,7,2,COLOR,5,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	O,END
+O,END

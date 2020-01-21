@@ -1,0 +1,714 @@
+ASCII32,15,4,2016,16:30,17,1.1
+W,BEGIN,"GUA_Comandos","PMO_TREND"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,422,488
+	SIZE,1026,326,1026,326,0,0,0,1024,768,1010,292
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"     A¤adir Secuencia"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,1,1,0,1,0,0,1,0,1
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,16383
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	BEEP,"OPCCluster:SoundAlarm.BoolOutputPlug_1",1
+	EVENTS,1
+	BINOBJ,"GUA_Comandos.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	        Function Position()
+	    'Posicao do MSGBOX, abrir no primeiro ou segundo monitor
+	    iPopupPosition = ThisProject.ActiveMimic.Windows(1).Left
+	End Function
+	
+	
+	
+	Private Sub btnClose_Click()
+	
+	End Sub
+	
+	Private Sub btnClose1_Click()
+	
+	End Sub
+	
+	Private Sub Mimic_Run()
+	    RefreshList "CDV"
+	    RefreshList "Berth"
+	'    timerRefresh.Interval = 1000
+	
+	'
+	'    UpdateTrainList
+	    
+	    MSFlexGrid1.Cols = 7
+	    MSFlexGrid1.ColWidth(0) = 600
+	    MSFlexGrid1.ColWidth(1) = 4300
+	    MSFlexGrid1.ColWidth(2) = 2000
+	    MSFlexGrid1.ColWidth(3) = 2000
+	    MSFlexGrid1.ColWidth(4) = 2000
+	    MSFlexGrid1.ColWidth(5) = 2000
+	    MSFlexGrid1.ColWidth(6) = 2000
+	'    MSFlexGrid1.ColWidth(2) = 1780
+	'    MSFlexGrid1.ColWidth(3) = 1550
+	'    MSFlexGrid1.ColWidth(4) = 6000
+	    MSFlexGrid1.FONTBOLD = True
+	'    MSFlexGrid1.ColAlignment(4) = 2
+	    
+	    Refresh_Click
+	    
+	End Sub
+	
+	Private Sub MSFlexGrid1_Click()
+	
+	End Sub
+	
+	Private Sub Refresh_Click()
+	'    Dim i As Integer
+	'    Dim strEstado As String
+	'    Dim strEstadoN As String
+	'    Dim ColunaSin As Integer
+	'    Dim ColunaNSin As Integer
+	'    Dim LinhaSin As Integer
+	'    Dim LinhaNSin As Integer
+	'    Dim strData As String
+	'    Dim strHora As String
+	'    Dim iNumTrens As Integer
+	'
+	'    Dim iFF As Integer
+	'    Dim sLinha As String
+	'
+	'
+	''    strData = Variables.Item("OPCCluster:IconisHMI.DateTime.DLastNotif").Value
+	'    iFF = FreeFile
+	'
+	'
+	''    UpdateTrainList
+	'    MSFlexGrid1.Clear
+	'   '' MSFlexGrid1.Rows = 250
+	'
+	'    'Abre e zera o arquivo texto
+	'       Open "C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt" For Output As iFF
+	'
+	'    Close iFF
+	'
+	'       Open "C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt" For Append As iFF
+	'    Print #iFF, """Local""" & "," & """Trem""" & "," & """Estado""" & "," & """Coment rio"""
+	'    Close iFF
+	'
+	'    ColunaSin = 1
+	'    LinhaSin = 0
+	    
+	
+	'    For i = 0 To UBound(arrList_CDVs)
+	'
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Estado.LongValue").Value = 0 Then strEstado = "Outros"
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Estado.LongValue").Value = 1 Then strEstado = "Opera‡Æo"
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Estado.LongValue").Value = 2 Then strEstado = "Via"
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Estado.LongValue").Value = 3 Then strEstado = "Prepara‡Æo"
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Estado.LongValue").Value = 4 Then strEstado = "Manuten‡Æo"
+	'
+	'        sLocal = Split(arrList_CDVs(i), "_")(1) & " - " & Split(arrList_CDVs(i), "_")(2)
+	'
+	'        If Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".Berth.iCount").Value >= 1 Then
+	'
+	'                MSFlexGrid1.Cols = 5
+	'                MSFlexGrid1.ColWidth(0) = 0
+	'                MSFlexGrid1.ColWidth(1) = 1230
+	'                MSFlexGrid1.ColWidth(2) = 1780
+	'                MSFlexGrid1.ColWidth(3) = 1550
+	'                MSFlexGrid1.ColWidth(4) = 6000
+	'
+	'                If LinhaSin = 0 Then
+	'                    MSFlexGrid1.Rows = 2
+	'                Else
+	'                    MSFlexGrid1.Rows = LinhaSin + 1
+	'                End If
+	'                MSFlexGrid1.FixedRows = 0
+	'
+	'                MSFlexGrid1.TextMatrix(LinhaSin, 1) = Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".Berth.bstrDisplayName1").Value
+	'                MSFlexGrid1.TextMatrix(LinhaSin, 2) = strEstado
+	'                MSFlexGrid1.TextMatrix(LinhaSin, 3) = sLocal
+	'                MSFlexGrid1.TextMatrix(LinhaSin, 4) = Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Comment.StringValue").Value
+	'
+	'                LinhaSin = LinhaSin + 1
+	'
+	'                If Split(arrList_CDVs(i), "_")(1) = "PTL" And chkPatioL = False Then
+	'                    LinhaSin = LinhaSin - 1
+	'                    MSFlexGrid1.RemoveItem (LinhaSin)
+	'                End If
+	'                If Split(arrList_CDVs(i), "_")(1) = "PTS" And chkPatioS = False Then
+	'                    LinhaSin = LinhaSin - 1
+	'                    MSFlexGrid1.RemoveItem (LinhaSin)
+	'                End If
+	'                If Split(arrList_CDVs(i), "_")(1) = "PTN" And chkPatioN = False Then
+	'                    LinhaSin = LinhaSin - 1
+	'                    MSFlexGrid1.RemoveItem (LinhaSin)
+	'                End If
+	'                If Split(arrList_CDVs(i), "_")(1) = "PTO" And chkPatioO = False Then
+	'                    LinhaSin = LinhaSin - 1
+	'                    MSFlexGrid1.RemoveItem (LinhaSin)
+	'                End If
+	'                If Split(arrList_CDVs(i), "_")(1) = "L1A" And chkLinha1A = False Then
+	'                    LinhaSin = LinhaSin - 1
+	'                    MSFlexGrid1.RemoveItem (LinhaSin)
+	'                End If
+	'
+	'                'Gera arquivo texto para exportar para CR
+	'                    If (Split(arrList_CDVs(i), "_")(1) = "PTL" And chkPatioL = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTS" And chkPatioS = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTN" And chkPatioN = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTO" And chkPatioO = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "L1A" And chkLinha1A = True) Then
+	'                           Open "C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt" For Append As iFF
+	'                        Print #iFF, Chr(34) & sLocal & Chr(34) & "," & Chr(34) & Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".Berth.bstrDisplayName1").Value & Chr(34) & ", " & Chr(34) & strEstado & Chr(34) & ", " & _
+	'                        Chr(34) & Variables.Item("OPCCluster:Berth_" & arrList_CDVs(i) & ".HMITrain1.PBH_Comment.StringValue").Value & Chr(34)
+	'                        Close iFF
+	'                    End If
+	'
+	'
+	'        End If
+	'
+	'
+	'        If chkNaoRastr = True Then
+	'            'Nao sinalizado
+	'            If Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainStatus.Value").Value = 0 Then strEstadoN = "Outros"
+	'            If Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainStatus.Value").Value = 1 Then strEstadoN = "Opera‡Æo"
+	'            If Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainStatus.Value").Value = 2 Then strEstadoN = "Via"
+	'            If Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainStatus.Value").Value = 3 Then strEstadoN = "Prepara‡Æo"
+	'            If Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainStatus.Value").Value = 4 Then strEstadoN = "Manuten‡Æo"
+	'
+	'            If Variables("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrain.Value").Value <> "" Then
+	'
+	'                If LinhaSin = 0 Then
+	'                    MSFlexGrid1.Rows = 2
+	'                Else
+	'                    MSFlexGrid1.Rows = LinhaSin + 1
+	'                End If
+	'                MSFlexGrid1.FixedRows = 0
+	'                    MSFlexGrid1.TextMatrix(LinhaSin, 1) = Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrain.Value").Value
+	'                    MSFlexGrid1.TextMatrix(LinhaSin, 2) = strEstadoN
+	'                    MSFlexGrid1.TextMatrix(LinhaSin, 3) = sLocal
+	'                    MSFlexGrid1.TextMatrix(LinhaSin, 4) = Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainComment.Value").Value
+	'
+	'                    LinhaSin = LinhaSin + 1
+	'    '                MSFlexGrid1.ColAlignment(LinhaSin) = 2
+	'                    MSFlexGrid1.ColAlignment(ColunaSin) = 2
+	'
+	'                    If Split(arrList_CDVs(i), "_")(1) = "PTL" And chkPatioL = False Then
+	'                        LinhaSin = LinhaSin - 1
+	'                        MSFlexGrid1.RemoveItem (LinhaSin)
+	'                    End If
+	'                    If Split(arrList_CDVs(i), "_")(1) = "PTS" And chkPatioS = False Then
+	'                        LinhaSin = LinhaSin - 1
+	'                        MSFlexGrid1.RemoveItem (LinhaSin)
+	'                    End If
+	'                    If Split(arrList_CDVs(i), "_")(1) = "PTN" And chkPatioN = False Then
+	'                        LinhaSin = LinhaSin - 1
+	'                        MSFlexGrid1.RemoveItem (LinhaSin)
+	'                    End If
+	'                    If Split(arrList_CDVs(i), "_")(1) = "PTO" And chkPatioO = False Then
+	'                        LinhaSin = LinhaSin - 1
+	'                        MSFlexGrid1.RemoveItem (LinhaSin)
+	'                    End If
+	'                    If Split(arrList_CDVs(i), "_")(1) = "L1A" And chkLinha1A = False Then
+	'                        LinhaSin = LinhaSin - 1
+	'                        MSFlexGrid1.RemoveItem (LinhaSin)
+	'                    End If
+	'                'Gera arquivo texto para exportar para CR
+	'                    If (Split(arrList_CDVs(i), "_")(1) = "PTL" And chkPatioL = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTS" And chkPatioS = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTN" And chkPatioN = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "PTO" And chkPatioO = True) Or _
+	'                     (Split(arrList_CDVs(i), "_")(1) = "L1A" And chkLinha1A = True) Then
+	'                           Open "C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt" For Append As iFF
+	'                        Print #iFF, Chr(34) & sLocal & Chr(34) & "," & Chr(34) & Variables("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrain.Value").Value & Chr(34) & "," & Chr(34) & strEstadoN & Chr(34) & "," & _
+	'                        Chr(34) & Variables.Item("OPCCluster:" & arrList_CDVs(i) & ".VirtualTrainComment.Value").Value & Chr(34)
+	'                        Close iFF
+	'                    End If
+	'
+	'
+	'            End If
+	'        End If
+	'
+	'    Next i
+	
+	    MSFlexGrid1.Sort = 1
+	'[iNumTrens%] = MSFlexGrid1.Rows
+	'[iNumTrens%] = LinhaSin
+	End Sub
+	
+	
+	Private Function RefreshList(ByVal sPrefix As String)
+	    Dim iList As Integer, iTop As Integer, iLeft As Integer
+	    Dim sCDV As String, sFiltro As String, sLocal As String
+	    Dim i As Integer
+	    Dim arrTrainList As Variant
+	    Dim arrTrainListFiltro As Variant
+	    Dim iCount As Integer
+	    Dim sList As String
+	    Dim strEstado As String
+	
+	'    UpdateTrainList
+	    
+	        'Prepara lista de trens
+	'        If sPrefix = "CDV" Then
+	'            arrTrainList = Split([sCDVUsedTrainIDList%], ";")
+	'            sList = [sCDVUsedTrainIDList%]
+	'        Else
+	'            arrTrainList = Split([sCDVUsedTrainIDListBerth%], ";")
+	'            sList = [sCDVUsedTrainIDListBerth%]
+	'        End If
+	'    SortArray arrTrainList
+	    
+	'    If Not IsBounded(arrList_Trains) Then Read_List_Trains
+	'        For i = 0 To UBound(arrList_Trains)
+	'
+	'                If arrList_Trains(i) <> "" And InStr(1, sList, arrList_Trains(i) & ",", vbTextCompare) = 0 Then
+	'                    ReDim Preserve arrTrainList(UBound(arrTrainList) + 1)
+	'                    arrTrainList(UBound(arrTrainList)) = arrList_Trains(i)
+	'                End If
+	'
+	'        Next i
+	'    '
+	
+	'        LimparLista
+	'        sFiltro = ""
+	'        'Prepara filtros
+	'        If chkPatioN Then sFiltro = sFiltro & "_PTN_" & ";"
+	'        If chkPatioS Then sFiltro = sFiltro & "_PTS_" & ";"
+	'        If chkPatioL Then sFiltro = sFiltro & "_PTL_" & ";"
+	'        If chkPatioO Then sFiltro = sFiltro & "_PTO_" & ";"
+	'        If chkLinha1A Then sFiltro = sFiltro & "_L1A_" & ";"
+	'
+	'        ReDim arrTrainListFiltro(0) As Variant
+	'        For i = 0 To UBound(arrTrainList)
+	'             If InStr(arrTrainList(i), ",") > 0 Then
+	'                sCDV = Split(arrTrainList(i), ",")(1)
+	'                sLocal = Split(sCDV, "_")(2)
+	'
+	'                If (InStr(sFiltro, "_" & sLocal & "_") > 0) And sFiltro <> "" Then
+	'                    ReDim Preserve arrTrainListFiltro(UBound(arrTrainListFiltro) + 1)
+	'                    arrTrainListFiltro(UBound(arrTrainListFiltro)) = arrTrainList(i)
+	'                End If
+	'            ElseIf arrTrainList(i) <> "" And chkNaoRastr Then
+	'                ReDim Preserve arrTrainListFiltro(UBound(arrTrainListFiltro) + 1)
+	'                arrTrainListFiltro(UBound(arrTrainListFiltro)) = arrTrainList(i)
+	'            End If
+	'        Next i
+	'
+	'        For i = 1 To UBound(arrTrainListFiltro)
+	'            If InStr(arrTrainListFiltro(i), ",") > 0 Then
+	'                sCDV = Split(arrTrainListFiltro(i), ",")(1)
+	'                sLocal = Split(sCDV, "_")(2)
+	'                If InStr(arrTrainList(i), "_" & sLocal & "_") > 0 Then
+	'
+	'            End If '
+	'
+	'        ElseIf arrTrainListFiltro(i) <> "" Then
+	'            ThisMimic.Graphics.Item("txtTrain" & i).Text = arrTrainListFiltro(i)
+	'            ThisMimic.Graphics.Item("txtEstado" & i).Text = "Desconhecida"
+	'        End If
+	'
+	'
+	'    Next i
+	'    End If
+	
+	
+	End Function
+	
+	Private Function LimparLista()
+	            
+	End Function
+	
+	
+	Private Sub btnFilterCancel_Click()
+	
+	    chkLinha1A = True
+	    chkNaoRastr = True
+	    chkPatioN = True
+	    chkPatioS = True
+	    chkPatioL = True
+	    chkPatioO = True
+	    
+	End Sub
+	
+	Private Sub btnPrint_Click()
+	''''        Call Position
+	''''        Call OpenForms("frmMsgQuestion:9")
+	''''        If bFormMsgQuestion = False Then
+	''''            Exit Sub
+	''''        Else
+	'''''            Wait2 (2)
+	'''''            Call OpenForms("frmprinters")
+	''''
+	''''            If bPrinterCancel Then
+	''''                bPrinterCancel = False
+	''''                Exit Sub
+	''''            End If
+	''''
+	''''            If ActiveMimic.Windows(1).Left > 500 Then
+	'''''                HardCopy1.HardCopy 2, printerSelected
+	''''                HardCopy1.HardCopy 2
+	''''                'thisproject.Application.PrintOut , fvLandscape
+	''''            Else
+	'''''                HardCopy1.HardCopy 1, printerSelected
+	''''                HardCopy1.HardCopy 1
+	''''                'thisproject.Application.PrintOut , fvLandscape
+	''''            End If
+	''''
+	''''        End If
+	
+	
+	'    Dim intTamanho As Integer
+	'    intTamanho = MSFlexGrid1.Width
+	'    MSFlexGrid1.Width = Printer.Width
+	'    Printer.PaintPicture MSFlexGrid1.Picture, 0, 0
+	'    Printer.EndDoc
+	'    MSFlexGrid1.Width = intTamanho
+	
+	
+	
+	'Dim strCaminho As String
+	
+	'strCaminho = ThisProject.Path & "\Working Files\Lista_Trens.txt"
+	    
+	    
+	
+	'    strCommand = "notepad.exe /p ""C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt"""
+	'    strCommand = "Print ""D:\HMI_RIO_PMO\Working Files\Lista_Trem_PMO.rpt"""
+	    
+	'''    strCommand = "Print /D:""CutePDF Writer"" ""C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trens.txt"""
+	'''''    strCommand = "Print /D:printerSelected ""C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trem_PMO.rpt"""
+	'''''    Shell strCommand
+	
+	'Shell.Print ("C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trem_PMO.rpt")
+	
+	
+	
+	
+	'ThisProject.Path & "\Working Files\Lista_Trens.txt
+	
+	''''''''
+	''''''''
+	''''''''Dim CrxApp As New CRAXDRT.Application
+	''''''''
+	''''''''Dim CrxRpt As CRAXDRT.Report
+	''''''''
+	''''''''Dim fn As String
+	''''''''
+	''''''''
+	''''''''fn = "C:\Program Files (x86)\Alstom\ICONIS\S2K\Templates\Server\Reports\ENU\Lista_Trem_PMO.rpt"
+	''''''''
+	''''''''
+	''''''''
+	''''''''Set CrxRpt = CrxApp.OpenReport(fn)
+	''''''''
+	''''''''
+	''''''''CrystalActiveXReportViewer1.ReportSource = CrxRpt
+	''''''''CrystalActiveXReportViewer1.ViewReport
+	
+	
+	
+	End Sub
+	
+	Private Sub chkLinha1A_Click()
+	Refresh_Click
+	End Sub
+	
+	Private Sub chkNaoRastr_Click()
+	Refresh_Click
+	End Sub
+	
+	Private Sub chkPatioL_Click()
+	Refresh_Click
+	
+	End Sub
+	
+	Private Sub chkPatioN_Click()
+	Refresh_Click
+	
+	End Sub
+	
+	Private Sub chkPatioO_Click()
+	Refresh_Click
+	End Sub
+	
+	Private Sub chkPatioS_Click()
+	Refresh_Click
+	
+	End Sub
+	
+	Private Sub chkRefresh_Click()
+	'    timerRefresh.Enabled = chkRefresh
+	    
+	End Sub
+	
+	Private Sub timerRefresh_Timer()
+	    RefreshList "CDV"
+	    RefreshList "Berth"
+	    
+	End Sub
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+	"PrintScreen", 13, 0, "{A2F4506E-A9F5-433F-AA3B-720A68C3EC68}"
+	"MSFlexGridLib", 1, 0, "{5E9E78A0-531B-11CF-91F6-C2863C385E30}"
+	"CrystalActiveXReportViewerLib11", 11, 0, "{FB992564-9055-42B5-B433-FEA84CEA93C4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,224,224,224,0,0,0
+	COLOR,4,240,240,240,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,212,208,200,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,255,255,255,0,0,0
+	COLOR,9,96,96,96,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape5"
+	B,1006,291,2,-2,1006,291,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"chkRefresh"
+	B,725,-102,905,-78,10,60,16383,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnPrint"
+	B,59,250,188,278,59,278,16383,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,4,2,COLOR,2,COLOR,6,0,COLOR,5,0,COLOR,5,0,COLOR,5,0,COLOR,5
+	PP,1,59,250,0,0,FONT,1,"Detalles",37,FONT,1,"Detalles",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detalles",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Detalhes"
+			LANG,END
+		MULTILANG,END
+		PP,"GUA_SEQ_Tela_2","*",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,OCX,"MSFlexGrid1"
+	B,8,45,1001,236,10,60,16383,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Refresh"
+	B,841,250,970,278,841,278,16383,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,4,2,COLOR,2,COLOR,8,0,COLOR,5,0,COLOR,5,0,COLOR,5,0,COLOR,5
+	PP,1,841,250,0,0,FONT,1,"Borrar",37,FONT,1,"Borrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Borrar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Borrar"
+			LANG,END
+		MULTILANG,END
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,335,40,47,2,335,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text6"
+	B,55,9,324,33,55,33,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,55,9,5,0,FONT,1,"Nombre de la Secuencia de Comandos",36,FONT,1,"Nombre de la Secuencia de Comandos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre de la Secuencia de Comandos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,47,40,9,2,47,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,22,13,52,29,22,29,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,22,13,0,0,FONT,1,"N.§",37,FONT,1,"N.§",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"N.§",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape3"
+	B,467,40,335,2,467,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text1"
+	B,359,5,443,35,359,35,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,359,5,0,0,FONT,1,"Fecha/Hora de Creaci¢n",85,FONT,1,"Fecha/Hora de Creaci¢n",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora de Creaci¢n",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Refresh2"
+	B,320,250,449,278,320,278,16383,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,4,2,COLOR,2,COLOR,8,0,COLOR,5,0,COLOR,5,0,COLOR,5,0,COLOR,5
+	PP,1,320,250,0,0,FONT,1,"Ejecutar",37,FONT,1,"Ejecutar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Borrar"
+			LANG,END
+		MULTILANG,END
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Refresh1"
+	B,580,250,709,278,580,278,16383,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,4,2,COLOR,2,COLOR,8,0,COLOR,5,0,COLOR,5,0,COLOR,5,0,COLOR,5
+	PP,1,580,250,0,0,FONT,1,"Crear",37,FONT,1,"Crear",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Crear",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Crear"
+			LANG,END
+		MULTILANG,END
+		PP,"GUA_SEQ_Tela_2","*",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,R,"Shape6"
+	B,600,40,467,2,600,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text4"
+	B,491,5,575,35,491,35,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,491,5,0,0,FONT,1,"Fecha/Hora Planeada",85,FONT,1,"Fecha/Hora Planeada",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora Planeada",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape7"
+	B,732,40,600,2,732,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,615,5,717,35,615,35,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,615,5,0,0,FONT,1,"Necesidad de Confirmaci¢n",85,FONT,1,"Necesidad de Confirmaci¢n",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Necesidad de Confirmaci¢n",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape8"
+	B,866,40,732,2,866,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text7"
+	B,749,5,851,35,749,35,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,749,5,0,0,FONT,1,"Respuesta Est ndar",85,FONT,1,"Respuesta Est ndar",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Respuesta Est ndar",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape11"
+	B,1000,40,866,2,1000,40,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text9"
+	B,883,5,985,35,883,35,16383,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,883,5,0,0,FONT,1,"Usuario",37,FONT,1,"Usuario",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Usuario",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

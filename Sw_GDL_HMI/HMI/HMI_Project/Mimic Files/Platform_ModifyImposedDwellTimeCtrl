@@ -1,0 +1,564 @@
+ASCII32,10,4,2019,17:55,19,1.1
+W,BEGIN,"Platform_ModifyImposedDwellTimeCtrl","Platform_ModifyImposedDwellTimeCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,826,506
+	SIZE,265,185,265,185,0,0,0,1280,1024,259,163
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo de parada STA_PF_NOR_UP"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Plataforma VPT_WL"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo de parada PF_MAR_UP"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,7,1,500,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_ModifyImposedDwellTimeCtrl.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Platform Modify Imposed dwell time message box
+	'* *******************************************************************************************
+	'* Purpose:     Manages the display of the Platform Modify Imposed dwell time message in the message box
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov 16
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	'* *******************************************************************************************
+	
+	Option Explicit
+	Private Const c_PlatformMaxDwellTime As String = ".ATR.RegPoint.InitialMaxDwellTimeImposed"
+	Private Const c_PlatformMinDwellTime As String = ".ATR.RegPoint.InitialMinDwellTimeImposed"
+	Private Const c_PlatformImposedDwellTime As String = ".ATR.RegPoint.DwellTimeImposed"
+	Private Const c_PlatformDwellTimeApply As String = ".ATR.RegPoint.DwellTimeApply"
+	Private Const c_PlatformTrainstopped As String = ".ATR.RegPoint.DwellTimeImposedTrainStoppedFromArrivalTime"
+	Private Const c_PlatformLateChangeFuzzyTime As String = "MainU400LV2.TMMModule.TMManager.LateChangeFuzzyTime"
+	Private Const c_PlatformRemainingDwellTime As String = ".ATR.RegPoint.RemainingDwellTime"
+	Private Const c_charset As String = "+0-0"
+	Private Const c_PlatformList As String = "IconisHMI.PlatformsList.Information.Value"
+	
+	
+	Dim m_strPlatformName As String
+	Dim WithEvents m_OPCSet_DwellTime As Iconis_CLS_OPCSet
+	Dim m_strTxtVal As String
+	Dim m_maxDwellTime As Integer
+	Dim m_minDwellTime As Integer
+	Dim m_OPCSetitemRemainingDwellTime As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatMaxDwellTime As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatTrainStopped As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatFuzzyTime As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatMinDwellTime As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatImposedDwellTime As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemPlatDwellTimeApply As Iconis_CLS_OPCSet_Item
+	Dim WithEvents m_OPC_PlatformList As Variable
+	Private Sub btnOK_Click()
+	    On Error GoTo ErrorHandler
+	
+	    If Not Variables.Item(ThisMimic.Branch & ".Enabled%").Value Then Exit Sub
+	    
+	    If m_OPCSet_DwellTime.IsAllGood Then
+	        If optRetirar Then
+	            'Retirar
+	            m_OPCSetItemPlatTrainStopped.Value = -1
+	            'm_OPCSetItemPlatDwellTimeApply.Value = 0
+	        Else
+	            If m_OPCSetItemPlatDwellTimeApply.Value = 0 Then
+	             'Aplicar
+	                m_OPCSetItemPlatImposedDwellTime.Value = txtNewTime
+	            'm_OPCSetItemPlatDwellTimeApply.Value = 1
+	            ElseIf m_OPCSetitemRemainingDwellTime.Value > m_OPCSetItemPlatFuzzyTime.Value Then
+	                m_OPCSetItemPlatTrainStopped.Value = txtNewTime
+	            Else
+	                m_OPCSetItemPlatImposedDwellTime.Value = txtNewTime
+	            End If
+	        End If
+	        Me.Close fvDoNotSaveChanges
+	    End If
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btnOK_Click", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCSet_DwellTime_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	    On Error GoTo ErrorHandler
+	
+	    optAplicar.Enabled = True
+	    optRetirar.Enabled = True
+	    optAplicar = False
+	    optRetirar = False
+	
+	    If m_OPCSet_DwellTime.IsAllGood Then
+	        If (m_OPCSetItemPlatImposedDwellTime.Value > 0) Then
+	            optRetirar = True
+	        Else
+	            optRetirar.Enabled = False
+	            optAplicar = True
+	        End If
+	    End If
+	
+	'''    If m_OPCSet_DwellTime.IsAllGood Then
+	'''
+	'''        If (m_OPCSetItemPlatTrainStopped.Value = -1) Then
+	'''            optAplicar = True
+	'''            optRetirar.Enabled = False
+	'''            m_minDwellTime = m_OPCSetItemPlatMinDwellTime.Value
+	'''            m_maxDwellTime = m_OPCSetItemPlatMaxDwellTime.Value
+	'''            txtNewTime.Text = "(" & m_minDwellTime & "-" & m_maxDwellTime & ")"
+	'''            txtNewTime.ForeColor = 12632256
+	'''
+	'''        Else
+	'''        optAplicar.Value = False
+	'''        optRetirar.Value = True
+	'''        End If
+	'''    End If
+	'''
+	'''    If m_OPCSet_DwellTime.IsAllGood Then
+	'''
+	'''        If (m_OPCSetItemPlatImposedDwellTime.Value > 0) Then
+	'''            optRetirar = True
+	'''            m_minDwellTime = m_OPCSetItemPlatMinDwellTime.Value
+	'''            m_maxDwellTime = m_OPCSetItemPlatMaxDwellTime.Value
+	'''             txtNewTime.Value = m_OPCSetItemPlatImposedDwellTime.Value
+	'''        ElseIf (m_OPCSetItemPlatTrainStopped.Value > 0) Then
+	'''            optRetirar = True
+	'''            m_minDwellTime = m_OPCSetItemPlatMinDwellTime.Value
+	'''            m_maxDwellTime = m_OPCSetItemPlatMaxDwellTime.Value
+	'''             txtNewTime.Value = m_OPCSetItemPlatTrainStopped.Value
+	'''        Else
+	'''        optRetirar.Value = False
+	'''        End If
+	'''    End If
+	
+	    EnableButtonCommand
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPCSet_DwellTime_OnConnection", Err.Description)
+	End Sub
+	Private Sub m_OPC_PlatformList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_PlatformList) = False Then Exit Sub
+	
+	    Call ReadXMLPlatformList(m_OPC_PlatformList.Value)
+	    Me.Caption = "Tiempo de parada " & m_strPlatformName
+	    'lblMenuTitle.Text = "And‚n "
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : Mimic_Open
+	'Type       : Procedure
+	'Objective  : Manages the initial values of the variables
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub Mimic_Open()
+	    Dim iPlatform As Integer
+	    Dim sPlatformList As String
+	    Dim sOPCCluster As String
+	
+	    On Error GoTo ErrorHandler
+	    
+	    optAplicar = False
+	    optRetirar = False
+	    txtNewTime = ""
+	    
+	    optAplicar.Enabled = True
+	    optRetirar.Enabled = True
+	    'txtNewTime.Enabled = True
+	    Set m_OPC_PlatformList = Variables.Add(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    If ((m_OPC_PlatformList.Status = fvVariableStatusGood) And (m_OPC_PlatformList.EnableEvents = True)) Then
+	        m_OPC_PlatformList_ValueChange
+	    Else
+	        m_OPC_PlatformList.EnableEvents = True
+	    End If
+	    Set m_OPCSet_DwellTime = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    Set m_OPCSetItemPlatMinDwellTime = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformMinDwellTime, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItemPlatImposedDwellTime = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformImposedDwellTime, fvVariableTypeRegister, c_OPCReadWrite)
+	    Set m_OPCSetItemPlatDwellTimeApply = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformDwellTimeApply, fvVariableTypeRegister, c_OPCReadWrite)
+	    Set m_OPCSetItemPlatMaxDwellTime = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformMaxDwellTime, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItemPlatTrainStopped = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformTrainstopped, fvVariableTypeRegister, c_OPCReadWrite)
+	    Set m_OPCSetItemPlatFuzzyTime = m_OPCSet_DwellTime.AddItem(c_strClusterLevel2 & c_PlatformLateChangeFuzzyTime, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetitemRemainingDwellTime = m_OPCSet_DwellTime.AddItem(ThisMimic.Branch & c_PlatformRemainingDwellTime, fvVariableTypeRegister, c_OPCReadOnly)
+	    'Set m_OPCSetItemPlatformList = m_OPCSet_DwellTime.AddItem(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    m_OPCSet_DwellTime.DoConnect (Me.Name & ThisMimic.Branch)
+	 
+	
+	    'ThisMimic.Caption = "Tiempo de parada " & Variables.Item(ThisMimic.Branch & ".Shortname%").Value
+	    
+	    EnableButtonCommand
+	        
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Open", Err.Description)
+	    
+	End Sub
+	
+	Private Sub optAplicar_Click()
+	    On Error GoTo ErrorHandler
+	    
+	    With txtNewTime
+	        .ForeColor = 12632256
+	        .Value = "(" & m_OPCSetItemPlatMinDwellTime.Value & "-" & m_OPCSetItemPlatMaxDwellTime.Value & ")"
+	        .Enabled = True
+	    End With
+	    
+	    EnableButtonCommand
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "optAplicar_Click", Err.Description)
+	End Sub
+	
+	Private Sub optRetirar_Click()
+	    On Error GoTo ErrorHandler
+	    txtNewTime.Enabled = False
+	    txtNewTime = m_OPCSetItemPlatImposedDwellTime.Value
+	    
+	    EnableButtonCommand
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "optRetirar_Click", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : txtNewTime_Change
+	'Type       : Sub
+	'Objective  : To validate the dwell time value before to send the command
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub txtNewTime_Change()
+	    On Error GoTo ErrorHandler
+	
+	    If txtNewTime.ForeColor = 12632256 Then Exit Sub
+	    
+	    If Asc(Right(txtNewTime.Value, 1)) < 48 Or Asc(Right(txtNewTime.Value, 1)) > 57 Then txtNewTime.Value = Left(txtNewTime.Value, Len(txtNewTime.Value) - 1)
+	
+	    EnableButtonCommand
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "txtNewTime_Change", Err.Description)
+	
+	End Sub
+	
+	
+	Private Sub txtNewTime_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+	    On Error GoTo ErrorHandler
+	    
+	    If txtNewTime.ForeColor = 12632256 Then
+	        txtNewTime = ""
+	        txtNewTime.ForeColor = 0
+	    End If
+	        
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "txtNewTime_MouseDown", Err.Description)
+	End Sub
+	
+	
+	Function TxtBXMaxMinLimit(ByVal TxtVal As String, ByVal MinVal As String, ByVal MaxVal As String) As String
+	On Error GoTo ErrorHandler
+	Dim i As Integer
+	Dim bChar As Boolean
+	Dim strChar() As String
+	stop
+	bChar = False
+	strChar = Split(c_charset, "0")
+	For i = 0 To UBound(strChar) - 1
+	If InStr(TxtVal, strChar(i)) Then
+	bChar = True
+	Exit For
+	End If
+	Next
+	
+	If bChar = True Then
+	ElseIf IsNumeric(TxtVal) And Val(TxtVal) < Val(MinVal) And bChar = False Then
+	    m_strTxtVal = TxtVal
+	ElseIf IsNumeric(TxtVal) And Val(TxtVal) > Val(MaxVal) And bChar = False Then
+	ElseIf IsNumeric(TxtVal) And Val(TxtVal) >= Val(MinVal) And Val(TxtVal) <= Val(MaxVal) And bChar = False Then
+	    m_strTxtVal = TxtVal
+	ElseIf TxtVal = "" Then
+	    m_strTxtVal = ""
+	Else
+	    m_strTxtVal = m_strTxtVal
+	End If
+	TxtBXMaxMinLimit = m_strTxtVal
+	
+	
+	
+	  Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "TxtBXMaxMinLimit", Err.Description)
+	End Function
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : EnableButtonCommand
+	'Type       : Function
+	'Objective  : To enable/disable the command button
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2018/08/22     Artur Valverde    Creation
+	'=======================================================================================
+	Private Function EnableButtonCommand()
+	    On Error GoTo ErrorHandler
+	    
+	    If optRetirar Then
+	        Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	    ElseIf Not IsNumeric(txtNewTime.Value) Then
+	        Variables.Item(ThisMimic.Branch & ".Enabled%").Value = False
+	    Else
+	        Variables.Item(ThisMimic.Branch & ".Enabled%").Value = (optAplicar And (CInt(txtNewTime.Value) >= m_OPCSetItemPlatMinDwellTime.Value And CInt(txtNewTime.Value) <= m_OPCSetItemPlatMaxDwellTime.Value))
+	    End If
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "EnableButtonCommand", Err.Description)
+	End Function
+	
+	Private Sub ReadXMLPlatformList(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLPlatformList", "Begin Subroutine")
+	   
+	   'Dim strXMLString As String
+	   Dim oDoc As DOMDocument
+	   Dim oPlatformList As IXMLDOMNodeList
+	   Dim oPlatform As IXMLDOMElement
+	   Dim strName As String
+	   Dim strBranch() As String
+	   Dim strID As String
+	   Dim strStationName As String
+	   Dim strStationID As String
+	   Dim dKM As Double
+	   Dim PlatformManager As Iconis_CLS_Platform
+	   
+	   strXMLString = m_OPC_PlatformList.Value
+	   If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "Platform"
+	                    Set oPlatformList = oDoc.documentElement.selectNodes("Platform")
+	                    If Not (oPlatformList Is Nothing) Then
+	                        If (oPlatformList.length > 0) Then
+	                            For Each oPlatform In oPlatformList
+	                                ' Name attribute
+	                                
+	                                ' ID attribute
+	                                strID = Format(oPlatform.getAttribute("ID"))
+	                                ' StationName attribute
+	'                                strStationName = Format(oPlatform.getAttribute(c_strStationNameAttr))
+	'                                ' StationID attribute
+	'                                strStationID = Format(oPlatform.getAttribute(c_strStationIDAttr))
+	'                                ' KM attribute
+	'                                dKM = oPlatform.getAttribute(c_strKMAttr)
+	                                strBranch = Split(ThisMimic.Branch, ":")
+	                                If ((strID <> "")) Then
+	                                    ' Create an instance of Iconis_CLS_Platform class module
+	                                    If strID = "Stop_" & strBranch(1) Then
+	                                        strName = Format(oPlatform.getAttribute("Name"))
+	                                   End If
+	                                End If
+	                                m_strPlatformName = strName
+	                            Next oPlatform
+	                         End If
+	                        Set oPlatformList = Nothing
+	                    End If
+	                End If
+	            
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", _
+	                     "The OPC variable [" & m_OPC_PlatformList.Name & "] is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", Err.Description)
+	End Sub
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,172,168,153,0,0,0
+	COLOR,6,122,122,122,0,0,0
+	COLOR,7,0,0,0,0,35,0
+	COLOR,8,0,0,0,0,44,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,248,104,8,48,235,104,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnOK"
+	B,33,120,112,149,33,149,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,33,120,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"Enabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,6,COLOR,6
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,145,120,224,149,145,149,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,145,120,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Annulla",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,14,64,133,88,14,88,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,14,64,0,0,FONT,1,"Impose dwell time",36,FONT,1,"Impose dwell time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo a cumplir:",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fuori del turno",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo a cumplir:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtNewTime"
+	B,136,64,228,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text3"
+	B,235,68,254,84,235,89,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,235,68,0,0,FONT,1,"Nominal",36,FONT,1,"Nominal",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"s",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo di sosta di default",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,32,8,120,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,144,8,232,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

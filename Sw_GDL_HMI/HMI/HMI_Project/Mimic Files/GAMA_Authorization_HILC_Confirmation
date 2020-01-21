@@ -1,0 +1,218 @@
+ASCII32,1,2,2018,11:44,39,1.1
+W,BEGIN,"GAMA_Authorization_HILC_Confirmation","GAMA_Authorization_HILC_Confirmation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,330,120,330,120,0,0,0,1280,1024,330,120
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA authorization"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GAMA_Authorization_HILC_Confirmation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  GAMA Authorization HILC confirmation
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of data for confirmation HILC command
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                september '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	
+	
+	'* Module Variables
+	'* ***********************************************
+	Dim m_GamaManager As Iconis_CLS_Gama
+	
+	
+	
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: Init and display data for each device managed by the current sector
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim i As Integer
+	    Dim gamaNames() As String
+	    Dim strStation() As String
+	    '* Disable the "OK" Button
+	    Variables.Item(ThisMimic.Branch & ".GAMA_Authorization_OkActive%").Value = False
+	    
+	    Set m_GamaManager = Iconis_MOD_General.GetGamaManager
+	    strStation = Split(ThisMimic.Branch, "_")
+	    
+	    'fill the combobox
+	    gamaNames = m_GamaManager.Get_GamaNames
+	    ComboBoxDeviceNames.Clear
+	
+	    
+	    
+	    For i = 0 To UBound(gamaNames)
+	    'If (InStr(1, gamaNames(i), strStation(4), vbTextCompare)) Then
+	        ComboBoxDeviceNames.AddItem (gamaNames(i))
+	    'End If
+	    Next i
+	    
+	    
+	    'reset the array
+	    ComboBoxDeviceNames.ListIndex = 0
+	    ComboBoxDeviceNames_Change
+	    
+	    'Enable the combo box
+	    ComboBoxDeviceNames.Enabled = True
+	    ComboBoxDeviceNames.Value = ""
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: Cbx_Gama_Change
+	'* update the data selected
+	'* ************************************************************************************************
+	Private Sub ComboBoxDeviceNames_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDeviceNames_Change", "Begin Subroutine")
+	    
+	    Dim GamaID As String
+	
+	
+	    If (ComboBoxDeviceNames.Text <> "") Then
+	    
+	        GamaID = m_GamaManager.Get_GamaID(ComboBoxDeviceNames.Text)
+	
+	        Variables.Item("@ConfPhaseVar%").Value = GamaID
+	
+	        '* Enable the OK button of the parent mimic
+	        Variables.Item(ThisMimic.Branch & ".GAMA_Authorization_OkActive%").Value = True
+	    Else
+	        '* Disable the "OK" Button
+	        Variables.Item(ThisMimic.Branch & ".GAMA_Authorization_OkActive%").Value = False
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDeviceNames_Change", Err.Description)
+	End Sub
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,216,216,216,0,0,0
+	COLOR,7,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,305,110,15,15,305,110,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnClose1"
+	B,80,40,180,60,80,60,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,80,40,0,0,FONT,1,"Interruptor <Identificador del interruptor>",36,FONT,1,"Interruptor <Identificador del interruptor>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Zona GAMA",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,OCX,"ComboBoxDeviceNames"
+	B,80,63,240,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,25,6,122,22,25,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,0,25,6,0,0,FONT,1,"Preparaci¢n",36,FONT,1,"Preparaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmacion",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnClose6"
+	B,30,115,290,140,30,140,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,30,115,0,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"HILCStatus%"
+	A,END
+O,END

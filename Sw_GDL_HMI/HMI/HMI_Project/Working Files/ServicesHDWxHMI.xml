@@ -1,0 +1,198 @@
+<!-- 
+HMI VARIABLE REFERENCE
+
+This file is used to search the reference between Services and HMI design of the services.
+You must follow the order below!
+
+SERVICES
+'TZA_TCC - Service0%
+'TZA_PAT - Service1%
+'TZA_FED - Service2%
+'TZA_QCI - Service3%
+'TZA_N1L - Service4%
+'PAT_TCC - Service5%
+'FED_TCC - Service6%
+'QCI_TCC - Service7%
+'N1L_TCC - Service8%
+'FED_QCI - Service9%
+'PAT_N1L - Service10%
+'TZA_CTD - Service11%
+'CTD_TCC - Service12%
+'PAT_CTD - Service13%
+'CTD_N1L - Service14%
+
+'TERMINALS
+TZA via 1 - ServiceTZAv1%
+TZA via 2 - ServiceTZAv2%
+TZA via anden - ServiceTZAanden%
+TCC via 1 - ServiceTCCv1%
+TCC via 2 - ServiceTCCv2%
+TCC via anden - ServiceTCCanden%
+
+HMI_VARLIST= It must be declared in the order above, from left to right.
+			First the services variables and alter the Terminals one. Example:
+			HMI_VARLIST="<ServiceId1>;<Serviceid2>;<TZA variables...>;<finaly TCC variables>"
+ -->
+<SERVICES>
+	 <SERVICE ID="0" NAME="Service_Null" HMI_VARLIST=""/>
+	 <SERVICE ID="1" NAME="SVC_HoraPunta1_07T_TCC_13T_TZA" HMI_VARLIST="Service0%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="2" NAME="SVC_HoraPunta2_07T_TCC_16T_TZA" HMI_VARLIST="Service0%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="3" NAME="SVC_HoraPunta3_08T_TCC_13T_TZA" HMI_VARLIST="Service0%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="4" NAME="SVC_HoraPunta4_08T_TCC_16T_TZA" HMI_VARLIST="Service0%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="5" NAME="SVC_HoraValle1_07T_TCC_TZA2" HMI_VARLIST="Service0%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="6" NAME="SVC_HoraValle2_08T_TCC_TZA2" HMI_VARLIST="Service0%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="7" NAME="SVC_HoraValle3_TCC1_16T_TZA" HMI_VARLIST="Service0%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="8" NAME="SVC_HoraValle4_TCC1_13T_TZA" HMI_VARLIST="Service0%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="9" NAME="SVC_HoraValle5_TCC1_TZA2" HMI_VARLIST="Service0%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="10" NAME="SVC_SP01_PAT2_TZA1_16T_TZA" HMI_VARLIST="Service1%;ServiceTZAv2%"/>
+	 <SERVICE ID="11" NAME="SVC_SP02_PAT2_TZA1_13T_TZA" HMI_VARLIST="Service1%;ServiceTZAv1%"/>
+	 <SERVICE ID="12" NAME="SVC_SP03_PAT2_TZA2" HMI_VARLIST="Service1%;ServiceTZAanden%"/>
+	 <SERVICE ID="13" NAME="SVC_SP04_FED2_TZA1_16T_TZA" HMI_VARLIST="Service2%;ServiceTZAv2%"/>
+	 <SERVICE ID="14" NAME="SVC_SP05_FED2_TZA1_13T_TZA" HMI_VARLIST="Service2%;ServiceTZAv1%"/>
+	 <SERVICE ID="15" NAME="SVC_SP06_FED2_TZA2" HMI_VARLIST="Service2%;ServiceTZAanden%"/>
+	 <SERVICE ID="16" NAME="SVC_SP07_CTD2_TZA1_16T_TZA" HMI_VARLIST="Service11%;ServiceTZAv2%"/>
+	 <SERVICE ID="17" NAME="SVC_SP08_CTD2_TZA1_13T_TZA" HMI_VARLIST="Service11%;ServiceTZAv1%"/>
+	 <SERVICE ID="18" NAME="SVC_SP09_CTD2_TZA2" HMI_VARLIST="Service11%;ServiceTZAanden%"/>
+	 <SERVICE ID="19" NAME="SVC_SP10_QCI2_TZA1_16T_TZA" HMI_VARLIST="Service3%;ServiceTZAv2%"/>
+	 <SERVICE ID="20" NAME="SVC_SP11_QCI2_TZA1_13T_TZA" HMI_VARLIST="Service3%;ServiceTZAv1%"/>
+	 <SERVICE ID="21" NAME="SVC_SP12_QCI2_TZA2" HMI_VARLIST="Service3%;ServiceTZAanden%"/>
+	 <SERVICE ID="22" NAME="SVC_SP13_NIL2_TZA1_16T_TZA" HMI_VARLIST="Service4%;ServiceTZAv2%"/>
+	 <SERVICE ID="23" NAME="SVC_SP14_NIL2_TZA1_13T_TZA" HMI_VARLIST="Service4%;ServiceTZAv1%"/>
+	 <SERVICE ID="24" NAME="SVC_SP15_NIL2_TZA2" HMI_VARLIST="Service4%;ServiceTZAanden%"/>
+	 <SERVICE ID="25" NAME="SVC_SP16_07T_TCC_TCC1_PAT1_07T_PAT" HMI_VARLIST="Service5%;ServiceTCCv1%"/>
+	 <SERVICE ID="26" NAME="SVC_SP17_08T_TCC_TCC1_PAT1_07T_PAT" HMI_VARLIST="Service5%;ServiceTCCv2%"/>
+	 <SERVICE ID="27" NAME="SVC_SP18_TCC1_PAT1_07T_PAT" HMI_VARLIST="Service5%;ServiceTCCanden%"/>
+	 <SERVICE ID="28" NAME="SVC_SP19_07T_TCC_TCC1_FED1_17T_NOR" HMI_VARLIST="Service6%;ServiceTCCv1%"/>
+	 <SERVICE ID="29" NAME="SVC_SP20_08T_TCC_TCC1_FED1_17T_NOR" HMI_VARLIST="Service6%;ServiceTCCv2%"/>
+	 <SERVICE ID="30" NAME="SVC_SP21_TCC1_FED1_17T_NOR" HMI_VARLIST="Service6%;ServiceTCCanden%"/>
+	 <SERVICE ID="31" NAME="SVC_SP22_07T_TCC_TCC1_CTD1_03T_NOR" HMI_VARLIST="Service12%;ServiceTCCv1%"/>
+	 <SERVICE ID="32" NAME="SVC_SP23_08T_TCC_TCC1_CTD1_03T_NOR" HMI_VARLIST="Service12%;ServiceTCCv2%"/>
+	 <SERVICE ID="33" NAME="SVC_SP24_TCC1_CTD1_03T_NOR" HMI_VARLIST="Service12%;ServiceTCCanden%"/>
+	 <SERVICE ID="34" NAME="SVC_SP25_07T_TCC_TCC1_QCI1_03T_BAN" HMI_VARLIST="Service7%;ServiceTCCv1%"/>
+	 <SERVICE ID="35" NAME="SVC_SP26_08T_TCC_TCC1_QCI1_03T_BAN" HMI_VARLIST="Service7%;ServiceTCCv2%"/>
+	 <SERVICE ID="36" NAME="SVC_SP27_TCC1_QCI1_03T_BAN" HMI_VARLIST="Service7%;ServiceTCCanden%"/>
+	 <SERVICE ID="37" NAME="SVC_SP28_07T_TCC_TCC1_NIL1_11T_NIL" HMI_VARLIST="Service8%;ServiceTCCv1%"/>
+	 <SERVICE ID="38" NAME="SVC_SP29_08T_TCC_TCC1_NIL1_11T_NIL" HMI_VARLIST="Service8%;ServiceTCCv2%"/>
+	 <SERVICE ID="39" NAME="SVC_SP30_TCC1_NIL1_11T_NIL" HMI_VARLIST="Service8%;ServiceTCCanden%"/>
+	 <SERVICE ID="40" NAME="SVC_SP31_CTD2_PAT1_07T_PAT" HMI_VARLIST="Service13%"/>
+	 <SERVICE ID="41" NAME="SVC_SP32_QCI2_FED1_17T_NOR" HMI_VARLIST="Service9%"/>
+	 <SERVICE ID="42" NAME="SVC_SP33_NIL2_PAT1_07T_PAT" HMI_VARLIST="Service10%"/>
+	 <SERVICE ID="43" NAME="SVC_SP34_NIL2_CTD1_03T_NOR" HMI_VARLIST="Service14%"/>
+	 <SERVICE ID="44" NAME="SVC_SP01+SP19" HMI_VARLIST="Service1%;Service6%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="45" NAME="SVC_SP01+SP20" HMI_VARLIST="Service1%;Service6%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="46" NAME="SVC_SP01+SP21" HMI_VARLIST="Service1%;Service6%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="47" NAME="SVC_SP02+SP19" HMI_VARLIST="Service1%;Service6%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="48" NAME="SVC_SP02+SP20" HMI_VARLIST="Service1%;Service6%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="49" NAME="SVC_SP02+SP21" HMI_VARLIST="Service1%;Service6%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="50" NAME="SVC_SP03+SP19" HMI_VARLIST="Service1%;Service6%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="51" NAME="SVC_SP03+SP20" HMI_VARLIST="Service1%;Service6%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="52" NAME="SVC_SP03+SP21" HMI_VARLIST="Service1%;Service6%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="53" NAME="SVC_SP01+SP22" HMI_VARLIST="Service1%;Service12%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="54" NAME="SVC_SP01+SP23" HMI_VARLIST="Service1%;Service12%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="55" NAME="SVC_SP01+SP24" HMI_VARLIST="Service1%;Service12%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="56" NAME="SVC_SP02+SP22" HMI_VARLIST="Service1%;Service12%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="57" NAME="SVC_SP02+SP23" HMI_VARLIST="Service1%;Service12%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="58" NAME="SVC_SP02+SP24" HMI_VARLIST="Service1%;Service12%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="59" NAME="SVC_SP03+SP22" HMI_VARLIST="Service1%;Service12%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="60" NAME="SVC_SP03+SP23" HMI_VARLIST="Service1%;Service12%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="61" NAME="SVC_SP03+SP24" HMI_VARLIST="Service1%;Service12%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="62" NAME="SVC_SP01+SP25" HMI_VARLIST="Service1%;Service7%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="63" NAME="SVC_SP01+SP26" HMI_VARLIST="Service1%;Service7%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="64" NAME="SVC_SP01+SP27" HMI_VARLIST="Service1%;Service7%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="65" NAME="SVC_SP02+SP25" HMI_VARLIST="Service1%;Service7%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="66" NAME="SVC_SP02+SP26" HMI_VARLIST="Service1%;Service7%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="67" NAME="SVC_SP02+SP27" HMI_VARLIST="Service1%;Service7%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="68" NAME="SVC_SP03+SP25" HMI_VARLIST="Service1%;Service7%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="69" NAME="SVC_SP03+SP26" HMI_VARLIST="Service1%;Service7%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="70" NAME="SVC_SP03+SP27" HMI_VARLIST="Service1%;Service7%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="71" NAME="SVC_SP01+SP28" HMI_VARLIST="Service1%;Service8%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="72" NAME="SVC_SP01+SP29" HMI_VARLIST="Service1%;Service8%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="73" NAME="SVC_SP01+SP30" HMI_VARLIST="Service1%;Service8%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="74" NAME="SVC_SP02+SP28" HMI_VARLIST="Service1%;Service8%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="75" NAME="SVC_SP02+SP29" HMI_VARLIST="Service1%;Service8%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="76" NAME="SVC_SP02+SP30" HMI_VARLIST="Service1%;Service8%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="77" NAME="SVC_SP03+SP28" HMI_VARLIST="Service1%;Service8%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="78" NAME="SVC_SP03+SP29" HMI_VARLIST="Service1%;Service8%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="79" NAME="SVC_SP03+SP30" HMI_VARLIST="Service1%;Service8%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="80" NAME="SVC_SP01+SP28+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="81" NAME="SVC_SP01+SP29+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="82" NAME="SVC_SP01+SP30+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="83" NAME="SVC_SP02+SP28+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="84" NAME="SVC_SP02+SP29+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="85" NAME="SVC_SP02+SP30+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="86" NAME="SVC_SP03+SP28+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="87" NAME="SVC_SP03+SP29+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="88" NAME="SVC_SP03+SP30+SP32" HMI_VARLIST="Service1%;Service8%;Service9%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="89" NAME="SVC_SP01+SP32" HMI_VARLIST="Service1%;Service9%;ServiceTZAv2%"/>
+	 <SERVICE ID="90" NAME="SVC_SP02+SP32" HMI_VARLIST="Service1%;Service9%;ServiceTZAv1%"/>
+	 <SERVICE ID="91" NAME="SVC_SP03+SP32" HMI_VARLIST="Service1%;Service9%;ServiceTZAanden%"/>
+	 <SERVICE ID="92" NAME="SVC_SP01+SP34" HMI_VARLIST="Service1%;Service14%;ServiceTZAv2%"/>
+	 <SERVICE ID="93" NAME="SVC_SP02+SP34" HMI_VARLIST="Service1%;Service14%;ServiceTZAv1%"/>
+	 <SERVICE ID="94" NAME="SVC_SP03+SP34" HMI_VARLIST="Service1%;Service14%;ServiceTZAanden%"/>
+	 <SERVICE ID="95" NAME="SVC_SP04+SP22" HMI_VARLIST="Service2%;Service12%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="96" NAME="SVC_SP04+SP23" HMI_VARLIST="Service2%;Service12%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="97" NAME="SVC_SP04+SP24" HMI_VARLIST="Service2%;Service12%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="98" NAME="SVC_SP05+SP22" HMI_VARLIST="Service2%;Service12%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="99" NAME="SVC_SP05+SP23" HMI_VARLIST="Service2%;Service12%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="100" NAME="SVC_SP05+SP24" HMI_VARLIST="Service2%;Service12%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="101" NAME="SVC_SP06+SP22" HMI_VARLIST="Service2%;Service12%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="102" NAME="SVC_SP06+SP23" HMI_VARLIST="Service2%;Service12%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="103" NAME="SVC_SP06+SP24" HMI_VARLIST="Service2%;Service12%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="104" NAME="SVC_SP04+SP25" HMI_VARLIST="Service2%;Service7%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="105" NAME="SVC_SP04+SP26" HMI_VARLIST="Service2%;Service7%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="106" NAME="SVC_SP04+SP27" HMI_VARLIST="Service2%;Service7%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="107" NAME="SVC_SP05+SP25" HMI_VARLIST="Service2%;Service7%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="108" NAME="SVC_SP05+SP26" HMI_VARLIST="Service2%;Service7%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="109" NAME="SVC_SP05+SP27" HMI_VARLIST="Service2%;Service7%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="110" NAME="SVC_SP06+SP25" HMI_VARLIST="Service2%;Service7%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="111" NAME="SVC_SP06+SP26" HMI_VARLIST="Service2%;Service7%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="112" NAME="SVC_SP06+SP27" HMI_VARLIST="Service2%;Service7%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="113" NAME="SVC_SP04+SP28" HMI_VARLIST="Service2%;Service8%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="114" NAME="SVC_SP04+SP29" HMI_VARLIST="Service2%;Service8%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="115" NAME="SVC_SP04+SP30" HMI_VARLIST="Service2%;Service8%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="116" NAME="SVC_SP05+SP28" HMI_VARLIST="Service2%;Service8%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="117" NAME="SVC_SP05+SP29" HMI_VARLIST="Service2%;Service8%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="118" NAME="SVC_SP05+SP30" HMI_VARLIST="Service2%;Service8%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="119" NAME="SVC_SP06+SP28" HMI_VARLIST="Service2%;Service8%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="120" NAME="SVC_SP06+SP29" HMI_VARLIST="Service2%;Service8%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="121" NAME="SVC_SP06+SP30" HMI_VARLIST="Service2%;Service8%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="122" NAME="SVC_SP04+SP34" HMI_VARLIST="Service2%;Service14%;ServiceTZAv2%"/>
+	 <SERVICE ID="123" NAME="SVC_SP05+SP34" HMI_VARLIST="Service2%;Service14%;ServiceTZAv1%"/>
+	 <SERVICE ID="124" NAME="SVC_SP06+SP34" HMI_VARLIST="Service2%;Service14%;ServiceTZAanden%"/>
+	 <SERVICE ID="125" NAME="SVC_SP07+SP25" HMI_VARLIST="Service7%;Service11%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="126" NAME="SVC_SP07+SP26" HMI_VARLIST="Service7%;Service11%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="127" NAME="SVC_SP07+SP27" HMI_VARLIST="Service7%;Service11%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="128" NAME="SVC_SP08+SP25" HMI_VARLIST="Service7%;Service11%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="129" NAME="SVC_SP08+SP26" HMI_VARLIST="Service7%;Service11%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="130" NAME="SVC_SP08+SP27" HMI_VARLIST="Service7%;Service11%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="131" NAME="SVC_SP09+SP25" HMI_VARLIST="Service7%;Service11%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="132" NAME="SVC_SP09+SP26" HMI_VARLIST="Service7%;Service11%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="133" NAME="SVC_SP09+SP27" HMI_VARLIST="Service7%;Service11%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="134" NAME="SVC_SP07+SP28" HMI_VARLIST="Service8%;Service11%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="135" NAME="SVC_SP07+SP29" HMI_VARLIST="Service8%;Service11%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="136" NAME="SVC_SP07+SP30" HMI_VARLIST="Service8%;Service11%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="137" NAME="SVC_SP08+SP28" HMI_VARLIST="Service8%;Service11%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="138" NAME="SVC_SP08+SP29" HMI_VARLIST="Service8%;Service11%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="139" NAME="SVC_SP08+SP30" HMI_VARLIST="Service8%;Service11%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="140" NAME="SVC_SP09+SP28" HMI_VARLIST="Service8%;Service11%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="141" NAME="SVC_SP09+SP29" HMI_VARLIST="Service8%;Service11%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="142" NAME="SVC_SP09+SP30" HMI_VARLIST="Service8%;Service11%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="143" NAME="SVC_SP10+SP28" HMI_VARLIST="Service3%;Service8%;ServiceTZAv2%;ServiceTCCv1%"/>
+	 <SERVICE ID="144" NAME="SVC_SP10+SP29" HMI_VARLIST="Service3%;Service8%;ServiceTZAv2%;ServiceTCCv2%"/>
+	 <SERVICE ID="145" NAME="SVC_SP10+SP30" HMI_VARLIST="Service3%;Service8%;ServiceTZAv2%;ServiceTCCanden%"/>
+	 <SERVICE ID="146" NAME="SVC_SP11+SP28" HMI_VARLIST="Service3%;Service8%;ServiceTZAv1%;ServiceTCCv1%"/>
+	 <SERVICE ID="147" NAME="SVC_SP11+SP29" HMI_VARLIST="Service3%;Service8%;ServiceTZAv1%;ServiceTCCv2%"/>
+	 <SERVICE ID="148" NAME="SVC_SP11+SP30" HMI_VARLIST="Service3%;Service8%;ServiceTZAv1%;ServiceTCCanden%"/>
+	 <SERVICE ID="149" NAME="SVC_SP12+SP28" HMI_VARLIST="Service3%;Service8%;ServiceTZAanden%;ServiceTCCv1%"/>
+	 <SERVICE ID="150" NAME="SVC_SP12+SP29" HMI_VARLIST="Service3%;Service8%;ServiceTZAanden%;ServiceTCCv2%"/>
+	 <SERVICE ID="151" NAME="SVC_SP12+SP30" HMI_VARLIST="Service3%;Service8%;ServiceTZAanden%;ServiceTCCanden%"/>
+	 <SERVICE ID="152" NAME="SVC_SP25+SP31" HMI_VARLIST="Service7%;Service13%;ServiceTCCv1%"/>
+	 <SERVICE ID="153" NAME="SVC_SP26+SP31" HMI_VARLIST="Service7%;Service13%;ServiceTCCv2%"/>
+	 <SERVICE ID="154" NAME="SVC_SP27+SP31" HMI_VARLIST="Service7%;Service13%;ServiceTCCanden%"/>
+	 <SERVICE ID="155" NAME="SVC_SP28+SP31" HMI_VARLIST="Service8%;Service13%;ServiceTCCv1%"/>
+	 <SERVICE ID="156" NAME="SVC_SP29+SP31" HMI_VARLIST="Service8%;Service13%;ServiceTCCv2%"/>
+	 <SERVICE ID="157" NAME="SVC_SP30+SP31" HMI_VARLIST="Service8%;Service13%;ServiceTCCanden%"/>
+	 <SERVICE ID="158" NAME="SVC_SP28+SP32" HMI_VARLIST="Service8%;Service9%;ServiceTCCv1%"/>
+	 <SERVICE ID="159" NAME="SVC_SP29+SP32" HMI_VARLIST="Service8%;Service9%;ServiceTCCv2%"/>
+	 <SERVICE ID="160" NAME="SVC_SP30+SP32" HMI_VARLIST="Service8%;Service9%;ServiceTCCanden%"/>
+</SERVICES>

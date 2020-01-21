@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Platforms>
+	<Platform Name = "STA_COD_01T_TCC_BH"	Stopping_Area_ID = "TF V1"	/>
+	<Platform Name = "STA_COD_07T_TCC_BH"  Stopping_Area_ID = "CM TCC V1" />
+	<Platform Name = "STA_COD_11T_TCC_BH"  Stopping_Area_ID = "TCC V1" />
+	<Platform Name = "STA_COD_07T_N1L_DN"  Stopping_Area_ID = "NIL V1" />
+	<Platform Name = "STA_COD_11T_N1L_BH"  Stopping_Area_ID = "NIL VER V1" />
+	<Platform Name = "STA_COD_17T_N1L_DN"  Stopping_Area_ID = "QCI V1" />
+	<Platform Name = "STA_COD_03T_BAN_DN"  Stopping_Area_ID = "QCI TN V1" />
+	<Platform Name = "STA_COD_07T_BAN_BH"  Stopping_Area_ID = "VY V1" />
+	<Platform Name = "STA_COD_09T_BAN_BH"  Stopping_Area_ID = "BAN V1" />
+	<Platform Name = "STA_COD_19T_BAN_DN"  Stopping_Area_ID = "CTF V1" />
+	<Platform Name = "STA_COD_03T_NOR_BH"  Stopping_Area_ID = "CTD SAN V1" />
+	<Platform Name = "STA_COD_13T_NOR_DN"  Stopping_Area_ID = "FED V1" />
+	<Platform Name = "STA_COD_17T_NOR_BH"  Stopping_Area_ID = "FED CUR V1" />
+	<Platform Name = "STA_COD_03T_PAT_DN"  Stopping_Area_ID = "PAT V1" />
+	<Platform Name = "STA_COD_07T_PAT_BH"  Stopping_Area_ID = "PAT BAS V1" />
+	<Platform Name = "STA_COD_09T_TZA_BH"  Stopping_Area_ID = "TZA V1" />
+	<Platform Name = "STA_COD_13T_TZA_DN"  Stopping_Area_ID = "CM TZA 11" />
+	<Platform Name = "STA_COD_15T_TZA_DN"  Stopping_Area_ID = "CM TZA 12" />
+	<Platform Name = "STA_COD_02T_TCC_BH"  Stopping_Area_ID = "TF V2" />
+	<Platform Name = "STA_COD_08T_TCC_BH"  Stopping_Area_ID = "CM TCC V1" />
+	<Platform Name = "STA_COD_12T_TCC_BH"  Stopping_Area_ID = "TCC V2" />
+	<Platform Name = "STA_COD_10T_N1L_DN"  Stopping_Area_ID = "NIL V2" />
+	<Platform Name = "STA_COD_02T_BAN_DN"  Stopping_Area_ID = "QCI V2" />
+	<Platform Name = "STA_COD_08T_BAN_UP"  Stopping_Area_ID = "BAN V2" />
+	<Platform Name = "STA_COD_02T_NOR_DN"  Stopping_Area_ID = "CTD V2" />
+	<Platform Name = "STA_COD_16T_NOR_DN"  Stopping_Area_ID = "FED V2" />
+	<Platform Name = "STA_COD_06T_PAT_DN"  Stopping_Area_ID = "PAT V2" />
+	<Platform Name = "STA_COD_12T_TZA_BH"  Stopping_Area_ID = "TZA V2" />
+	<Platform Name = "STA_COD_16T_TZA_DN"  Stopping_Area_ID = "CM TZA 11" />
+	<Platform Name = "STA_COD_18T_TZA_DN"  Stopping_Area_ID = "CM TZA 12" />
+	<Platform Name = "STA_PF_NOD_UP"  Stopping_Area_ID = "NOD V1" />
+	<Platform Name = "STA_PF_NOD_DN"  Stopping_Area_ID = "NOD V2" />
+	<Platform Name = "STA_PF_TLQ_UP"  Stopping_Area_ID = "TLQ V1" />
+	<Platform Name = "STA_PF_TLQ_DN"  Stopping_Area_ID = "TLQ V2" />
+	<Platform Name = "STA_PF_REV_UP"  Stopping_Area_ID = "VER V1" />
+	<Platform Name = "STA_PF_REV_DN"  Stopping_Area_ID = "VER V2" />
+	<Platform Name = "STA_PF_IND_UP"  Stopping_Area_ID = "IND V1" />
+	<Platform Name = "STA_PF_IND_DN"  Stopping_Area_ID = "IND V2" />
+	<Platform Name = "STA_PF_SAN_UP"  Stopping_Area_ID = "SAN V1" />
+	<Platform Name = "STA_PF_SAN_DN"  Stopping_Area_ID = "SAN V2" />
+	<Platform Name = "STA_PF_NOR_UP"  Stopping_Area_ID = "NOR V1" />
+	<Platform Name = "STA_PF_NOR_DN"  Stopping_Area_ID = "NOR V2" />
+	<Platform Name = "STA_PF_CIR_UP"  Stopping_Area_ID = "CIR V1" />
+	<Platform Name = "STA_PF_CIR_DN"  Stopping_Area_ID = "CIR V2" />
+	<Platform Name = "STA_PF_BAS_UP"  Stopping_Area_ID = "BAS V1" />
+	<Platform Name = "STA_PF_BAS_DN"  Stopping_Area_ID = "BAS V2" />
+	<Platform Name = "STA_PF_MAR_UP"  Stopping_Area_ID = "MAR V1" />
+	<Platform Name = "STA_PF_MAR_DN"  Stopping_Area_ID = "MAR V2" />
+	<Platform Name = "STA_PF_BEL_UP"  Stopping_Area_ID = "BEL V1" />
+	<Platform Name = "STA_PF_BEL_DN"  Stopping_Area_ID = "BEL V2" />
+</Platforms>

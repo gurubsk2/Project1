@@ -1,0 +1,956 @@
+ASCII32,16,10,2019,14:3,53,1.1
+W,BEGIN,"Platform_InspectorPanel_Control","PLAT_InspectorPanel_Control"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,320,390,320,390,0,0,0,1920,1080,320,390
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"CDV "
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_InspectorPanel_Control.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name: Platform Inspector Panel Control
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector Panel Control Tab
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov '16
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	'* *******************************************************************************************
+	Option Explicit
+	
+	Private Const c_sHoldStatus As String = ".HoldSkip.HSMPoint.OperatorHold"
+	Private Const c_sSkipStatus As String = ".HoldSkip.HSMPoint.OperatorSkip"
+	Private Const c_sSecurity As String = ".ATR.RegPoint.Security"
+	Private Const c_sSingleTrack As String = ".STM.STMHMIPoint.SingleTrackState"
+	Private Const c_sDwellTimeApply As String = ".ATR.RegPoint.DwellTimApply"
+	Private Const c_PointOutAutomaton As String = ".Point.OutAutomaton"
+	Private Const c_TrainLocalized As String = ".GDLL3Attributes.HMITETrain.boolPlug_1"
+	Private Const c_TrainSpeed As String = ".GDLL3Attributes.HMITETrain.longPlug_1"
+	Private Const c_sSingleTrackOrigin As String = ".STMOrigin.STMOriginPoint.Activate"
+	
+	
+	Dim WithEvents m_OPC_HoldStatus As Variable
+	Dim WithEvents m_OPC_SkipStatus As Variable
+	Dim m_OPC_DwellTimeApply As Variable
+	Dim m_OPC_SingleTrack As Variable
+	Dim m_OPC_Security As Variable
+	Dim m_OPC_SingleTrackOrigin As Variable
+	Dim WithEvents m_OPC_PointOutAutomaton As Variable
+	Dim WithEvents m_OPC_TrainLocalized As Variable
+	Dim WithEvents m_OPC_TrainSpeed As Variable
+	
+	Dim m_bTrainLocalized As Boolean
+	Dim m_bTrainSpeed As Boolean
+	Dim m_strSTAName As String
+	
+	
+	Private Sub cmdLibera_Click()
+	On Error GoTo ErrorHandler
+	
+	    If Not (m_OPC_Security.Value < 63) Or Not [@UserAccessCommand%] And Not Check_OPC_Variable(m_OPC_Security) Then Exit Sub
+	    If Variables.Item(c_strClusterLevel2 & m_strSTAName & ".TrainStopped%") Then '' m_OPC_DwellTimeApply.Value > 0 Then
+	    Call OpenMimicInCenter("PF_ReleaseTrain_ValidationMsgBox", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	    
+	Exit Sub
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdMarcha_Click(", Err.Description)
+	End Sub
+	
+	
+	
+	''Private Sub cmdLibera_Click()
+	''    '=(@Plug% == 0) and (@UserAccessCommand%)
+	''    [@UserAccessCommand%] = True
+	''    If [@Plug%] <> 0 Or Not [@UserAccessCommand%] Then Exit Sub
+	''    If ModalQuestion("¨Confirma la liberaci¢n" & Chr(10) & "del tren en este and‚n?", "Libera tren " & Variables(Me.Branch & ".Shortname%").Value) Then
+	''        ''Send command
+	''    End If
+	''
+	''End Sub
+	
+	Private Sub cmdMarcha_Click()
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	     On Error GoTo ErrorHandler
+	    If Variables.Item(ThisMimic.Branch & ".ATR.RegPoint.Security").Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	   
+	    Call OpenMimicInCenter("Platform_Running_Mode", ThisMimic.Branch, Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdMarcha_Click(", Err.Description)
+	End Sub
+	
+	Private Sub cmdRec_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdRec_Click", "Begin subroutine")
+	 '=(@Plug% == 0) and (@UserAccessCommand%)
+	    If m_OPC_Security.Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	    If Check_OPC_Variable(m_OPC_Security) Then
+	        'Call Mimics.OpenInCenter("Platform_TiempoRecorrido", Me.Branch, , , , "*", , fvCenterOnParent)
+	        Call OpenMimicInCenter("Platform_TiempoRecorrido", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdRec_Click(", Err.Description)
+	End Sub
+	
+	Private Sub cmdSI_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSI_Click", "Begin subroutine")
+	    
+	    If Not (m_OPC_Security.Value < 63) Or Not [@UserAccessCommand%] Or Not Check_OPC_Variable(m_OPC_Security) Then Exit Sub
+	
+	    If Variables.Item(c_strClusterLevel2 & m_strSTAName & ".TrainStopped%") Then  'Check_OPC_Variable(m_OPC_DwellTimeApply) And m_OPC_DwellTimeApply.Value > 0 Then
+	       Call OpenMimicInCenter("PF_ImmediateDeparture_ValidationMsgBox", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSI_Click", Err.Description)
+	End Sub
+	
+	Private Sub cmdTD_Click()
+	On Error GoTo ErrorHandler
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdTD_Click", "Begin subroutine")
+	If m_OPC_Security.Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	   If Check_variable(m_OPC_SkipStatus) Then
+	    If m_OPC_SkipStatus.Value = True Then
+	        Variables.Item(ThisMimic.Branch & ".Skip%").Value = 1
+	        'Mimics.OpenInCenter "PlatformSkip_ValidationMessageBox", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	        Call OpenMimicInCenter("PlatformSkip_ValidationMessageBox", ThisMimic.Branch, Getmousepointerpossition)
+	    ElseIf m_OPC_SkipStatus.Value = False Then
+	        Variables.Item(ThisMimic.Branch & ".Skip%").Value = 1
+	        'Mimics.OpenInCenter "PlatformSkip_ValidationMessageBox", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	        Call OpenMimicInCenter("PlatformSkip_ValidationMessageBox", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	   
+	End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdTD_Click", Err.Description)
+	End Sub
+	
+	Private Sub cmdTP_Click()
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdTP_Click", "Begin subroutine")
+	    If m_OPC_Security.Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	    If Check_OPC_Variable(m_OPC_Security) Then
+	        'Call Mimics.OpenInCenter("Platform_ModifyImposedDwellTimeCtrl", Me.Branch, , , , "*", , fvCenterOnParent)
+	         Call OpenMimicInCenter("Platform_ModifyImposedDwellTimeCtrl", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdTP_Click", Err.Description)
+	End Sub
+	
+	Private Sub cmdTR_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdTR_Click", "Begin subroutine")
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	If m_OPC_Security.Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	If Check_variable(m_OPC_HoldStatus) Then
+	    If m_OPC_HoldStatus.Value = True Then
+	        Variables.Item(ThisMimic.Branch & ".Hold%").Value = 1
+	        'Mimics.OpenInCenter "Platform_ValidationMessagebox", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	        Call OpenMimicInCenter("Platform_ValidationMessagebox", ThisMimic.Branch, Getmousepointerpossition)
+	    ElseIf m_OPC_HoldStatus.Value = False Then
+	        Variables.Item(ThisMimic.Branch & ".Hold%").Value = 1
+	        'Mimics.OpenInCenter "Platform_ValidationMessagebox", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	         Call OpenMimicInCenter("Platform_ValidationMessagebox", ThisMimic.Branch, Getmousepointerpossition)
+	    End If
+	  
+	End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdTR_Click", Err.Description)
+	End Sub
+	''Private Sub cmdVUT_Click()
+	''On Error GoTo ErrorHandler
+	''    '=(@Plug% == 0) and (@UserAccessCommand%)
+	''    If Variables.Item(ThisMimic.Branch & ".ATR.RegPoint.Security").Value = 63 Or Not [@UserAccessCommand%] Then Exit Sub
+	''    Call Mimics.OpenInCenter("Platform_VUT", Me.Branch, , , , "*", , fvCenterOnParent)
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdVUT_Click", Err.Description)
+	''End Sub
+	
+	Private Sub cmdVUT_Click()
+	
+	   On Error GoTo ErrorHandler
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	  'If Not (m_OPC_Security.Value < 63) Or Not [@UserAccessCommand%] Then Exit Sub
+	 If Not (m_OPC_Security.Value < 63) Or Not [@UserAccessCommand%] Or Not (Variables.Item(ThisMimic.Branch & ".OriginAvailable%").Value = True) _
+	   Or Not (Variables.Item(c_strClusterLevel2 & "CATS.ModeMgmt.ModeVal").Value = 1) Then Exit Sub
+	
+	    If Variables.Item(c_strClusterLevel2 & "MainKernelExtended.ATRModule.ATRTPMA.AtrMode").Value = 2 And Variables.Item(ThisMimic.Branch & ".OriginAvailable%").Value = True Then
+	        Call OpenMimicInCenter("Platform_VUT", ThisMimic.Branch, Getmousepointerpossition)
+	       
+	      'Call Mimics.OpenInCenter("Platform_VUT", Me.Branch, , , , "*", , fvCenterOnParent)
+	    End If
+	
+	 
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem8_Click", Err.Description)
+	End Sub
+	
+	
+	Private Sub grpInsp_Click()
+	    Dim sInspPanelName As String
+	    
+	    On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpInsp_Click", "Begin suroutine")
+	    sInspPanelName = Replace(ThisMimic.FileName, "_Control", "")
+	    Mimics(sInspPanelName, ThisMimic.Branch).Activate
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "grpInsp_Click", Err.Description)
+	End Sub
+	
+	Private Sub CloseParent()
+	    Dim sInspPanelName As String, sInspPanelBranch As String
+	    
+	On Error GoTo ErrorHandler
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "CloseParent", "Begin subroutine")
+	    sInspPanelName = Replace(ThisMimic.FileName, "_Control", "")
+	    Mimics(sInspPanelName, ThisMimic.Branch).Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "CloseParent", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_HoldStatus_ValueChange()
+	On Error GoTo ErrorHandler
+	If Check_variable(m_OPC_HoldStatus) Then
+	 If m_OPC_HoldStatus.Value = True Then
+	    ThisMimic.cmdTR.Text = "Retirar tren retiene..."
+	    Else
+	    ThisMimic.cmdTR.Text = "Aplicar tren retiene..."
+	End If
+	End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_BeforeClose", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_SkipStatus_ValueChange()
+	On Error GoTo ErrorHandler
+	If Check_variable(m_OPC_SkipStatus) Then
+	 If m_OPC_SkipStatus.Value = True Then
+	    ThisMimic.cmdTD.Text = "Retirar tren directo..."
+	    Else
+	    ThisMimic.cmdTD.Text = "Aplicar tren directo..."
+	End If
+	End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_SkipStatus_ValueChange", Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin subroutine")
+	If Not (m_OPC_HoldStatus Is Nothing) Then
+	    Variables.Remove (m_OPC_HoldStatus.Name)
+	    Set m_OPC_HoldStatus = Nothing
+	End If
+	If Not (m_OPC_SkipStatus Is Nothing) Then
+	    Variables.Remove (m_OPC_SkipStatus.Name)
+	    Set m_OPC_SkipStatus = Nothing
+	End If
+	If Not (m_OPC_Security Is Nothing) Then
+	    Variables.Remove (m_OPC_Security.Name)
+	    Set m_OPC_Security = Nothing
+	End If
+	If Not (m_OPC_SingleTrack Is Nothing) Then
+	    Variables.Remove (m_OPC_SingleTrack.Name)
+	    Set m_OPC_SingleTrack = Nothing
+	End If
+	If Not (m_OPC_TrainLocalized Is Nothing) Then
+	    Variables.Remove (m_OPC_TrainLocalized.Name)
+	    Set m_OPC_TrainLocalized = Nothing
+	End If
+	If Not (m_OPC_TrainSpeed Is Nothing) Then
+	    Variables.Remove (m_OPC_TrainSpeed.Name)
+	    Set m_OPC_TrainSpeed = Nothing
+	End If
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_BeforeClose", Err.Description)
+	End Function
+	Private Sub Mimic_Open()
+	 On Error GoTo ErrorHandler
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin subroutine")
+	
+	 Dim arrTemp() As String
+	
+	    If InStr(1, ThisMimic.Branch, ":") Then
+	        arrTemp = Split(ThisMimic.Branch, ":")
+	        m_strSTAName = arrTemp(UBound(arrTemp))
+	    End If
+	     
+	    [@UserAccessCommand%] = True
+	    Variables.Add(ThisMimic.Branch & ".Hold%").Value = 1
+	    Variables.Add(ThisMimic.Branch & ".Skip%").Value = 1
+	    'Set Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	    Set m_OPC_HoldStatus = Variables.Add(ThisMimic.Branch & c_sHoldStatus, fvVariableTypeBit)
+	    Set m_OPC_SkipStatus = Variables.Add(ThisMimic.Branch & c_sSkipStatus, fvVariableTypeBit)
+	    Set m_OPC_Security = Variables.Add(ThisMimic.Branch & c_sSecurity, fvVariableTypeRegister)
+	    Set m_OPC_SingleTrack = Variables.Add(ThisMimic.Branch & c_sSingleTrack, fvVariableTypeRegister)
+	    Set m_OPC_DwellTimeApply = Variables.Add(ThisMimic.Branch & c_sDwellTimeApply, fvVariableTypeRegister)
+	    Set m_OPC_SingleTrackOrigin = Variables.Add(ThisMimic.Branch & c_sSingleTrackOrigin, fvVariableTypeText)
+	    If ((m_OPC_HoldStatus.Status = fvVariableStatusGood) And (m_OPC_HoldStatus.EnableEvents = True)) Then
+	            m_OPC_HoldStatus_ValueChange
+	        Else
+	            m_OPC_HoldStatus.EnableEvents = True
+	    End If
+	    If ((m_OPC_SkipStatus.Status = fvVariableStatusGood) And (m_OPC_SkipStatus.EnableEvents = True)) Then
+	            m_OPC_SkipStatus_ValueChange
+	        Else
+	            m_OPC_SkipStatus.EnableEvents = True
+	    End If
+	    If Check_variable(m_OPC_SingleTrackOrigin) Then
+	        Variables.Item(ThisMimic.Branch & ".OriginAvailable%").Value = True
+	    Else
+	        Variables.Item(ThisMimic.Branch & ".OriginAvailable%").Value = False
+	    End If
+	    '* Train stopped
+	    
+	    m_bTrainSpeed = False
+	    m_bTrainLocalized = False
+	    
+	    Variables.Item(c_strClusterLevel2 & m_strSTAName & ".TrainStopped%") = False
+	    
+	    Set m_OPC_PointOutAutomaton = Variables.Add(c_strClusterLevel1 & m_strSTAName & c_PointOutAutomaton, fvVariableTypeText)
+	    
+	    If ((m_OPC_PointOutAutomaton.Status = fvVariableStatusGood) And (m_OPC_PointOutAutomaton.EnableEvents = True)) Then
+	        m_OPC_PointOutAutomaton_ValueChange
+	    Else
+	        m_OPC_PointOutAutomaton.EnableEvents = True
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_PointOutAutomaton_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	    
+	    If Check_OPC_Variable(m_OPC_PointOutAutomaton) = False Then Exit Sub
+	
+	    Call ReadXMLTrainSpeed(m_OPC_PointOutAutomaton.Value)
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_TrainLocalized_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_TrainLocalized_ValueChange", "Begin subroutine")
+	    
+	
+	    m_bTrainLocalized = (Check_OPC_Variable(m_OPC_TrainLocalized) And m_OPC_TrainLocalized.Value)
+	    
+	    Call TrainStoppedAtSTA
+	 
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_TrainLocalized_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_TrainSpeed_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_TrainSpeed_ValueChange", "Begin subroutine")
+	        
+	
+	    m_bTrainSpeed = (Check_OPC_Variable(m_OPC_TrainSpeed) And (m_OPC_TrainSpeed.Value = 0))
+	    
+	    Call TrainStoppedAtSTA
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_TrainLocalized_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'-------------------------------------------------------------------------------
+	' Name:         ReadXMLTrainSpeed
+	' Input:        none
+	' Output:       none
+	' Description:  Read the string (XML format) containing the train speed at platform or stop area
+	'-------------------------------------------------------------------------------
+	Private Sub ReadXMLTrainSpeed(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLTrainSpeed", "Begin Subroutine")
+	   
+	   Dim oDoc As DOMDocument
+	   Dim oTrainLocalised As IXMLDOMNode
+	   Dim oTrainList As IXMLDOMElement
+	   Dim strTrainID As String
+	   Dim iCounter As Integer
+	   If (strXMLString <> "") Then
+	   
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "speed"
+	                    Set oTrainLocalised = oDoc.documentElement.selectSingleNode("TrainsLocalization")
+	                    If Not (oTrainLocalised Is Nothing) Then
+	                    
+	                        Set oTrainList = oTrainLocalised.selectSingleNode("Train")
+	                        If Not (oTrainList Is Nothing) Then
+	
+	                                strTrainID = "Train" & Format(oTrainList.getAttribute("TrainID"), "000")
+	                                
+	                                Set m_OPC_TrainLocalized = Variables.Add(c_strClusterLevel1 & strTrainID & c_TrainLocalized, fvVariableTypeBit)
+	    
+	                                If ((m_OPC_TrainLocalized.Status = fvVariableStatusGood) And (m_OPC_TrainLocalized.EnableEvents = True)) Then
+	                                    m_OPC_TrainLocalized_ValueChange
+	                                Else
+	                                    m_OPC_TrainLocalized.EnableEvents = True
+	                                End If
+	                                
+	                                Set m_OPC_TrainSpeed = Variables.Add(c_strClusterLevel1 & strTrainID & c_TrainSpeed, fvVariableTypeRegister)
+	
+	                                 If ((m_OPC_TrainSpeed.Status = fvVariableStatusGood) And (m_OPC_TrainSpeed.EnableEvents = True)) Then
+	                                        m_OPC_TrainSpeed_ValueChange
+	                                 Else
+	                                        m_OPC_TrainSpeed.EnableEvents = True
+	                                 End If
+	                                 
+	                        Else
+	                            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLTrainSpeed", _
+	                                         "No Speed restriction has been defined in the OPC variable")
+	                        End If
+	                        Set oTrainLocalised = Nothing
+	                        Set oTrainList = Nothing
+	                    End If
+	                End If
+	            Else
+	                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLTrainSpeed", _
+	                             "The content of the OPC variable has not been loaded")
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLTrainSpeed", _
+	                     "The OPC variable  is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLTrainSpeed", Err.Description)
+	End Sub
+	
+	Private Sub TrainStoppedAtSTA()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "TrainStopped%AtSTA", "Begin subroutine")
+	
+	    
+	    Variables.Item(c_strClusterLevel2 & m_strSTAName & ".TrainStopped%") = (m_bTrainSpeed And m_bTrainLocalized)
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "TrainStopped%AtSTA", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,96,96,96,0,0,0
+	COLOR,6,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,P,"Poly1"
+	B,10,10,305,369,181,25,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,122,10,212,10,218,18,218,41,305,41
+	PP,305,368,10,369,10,41,114,41,114,18
+O,END
+O,BEGIN,T,"Text1"
+	B,122,18,207,34,122,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,122,18,0,0,FONT,1,"Comandos",37,FONT,1,"Comandos",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Control",FONT,1,37
+			ROLE,0,"Control",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"@UserAccessCommand%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,GRP,"grpInsp"
+	B,10,10,114,41,10,41,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,10,10,114,41,18,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,18,10,106,10,114,18,114,41,10,41
+		PP,10,18
+	O,END
+	O,BEGIN,T,"Text4"
+		B,18,18,103,34,18,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,18,18,0,0,FONT,1,"Inspe‡Ýo",37,FONT,1,"Inspe‡Ýo",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Informati¢n",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"Informaci¢n",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,2.000000,0,0,0
+		ADVSENDVALUE,2,2
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,293,235,14,44,293,235,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape1"
+	B,293,359,14,242,293,359,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"cmdTD"
+	B,52,86,233,115,52,115,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,86,0,0,FONT,1,"?",37,FONT,1,"?",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform Skip Apply ...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Aplicar tren directo...",FONT,1,37
+			ROLE,0,"Tren directo aplicar ...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(Skip%)and(ATR.RegPoint.Security<63)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdLibera"
+	B,52,164,233,193,52,193,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,164,0,0,FONT,1,"Tempo de parada...",37,FONT,1,"Tempo de parada...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Release Train...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Liberar tren...",FONT,1,37
+			ROLE,0,"Liberar tren...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.Security<63) or (TrainStopped%) or (@UserAccessCommand%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdSI"
+	B,52,125,233,154,52,154,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,125,0,0,FONT,1,"Hor rio de partida (HMA)...",37,FONT,1,"Hor rio de partida (HMA)...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Immediate Departure...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Salida inmediata...",FONT,1,37
+			ROLE,0,"Salida inmediata...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(TrainStopped%) or (ATR.RegPoint.Security<63) or (@UserAccessCommand%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdTP"
+	B,52,202,233,231,52,231,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,202,0,0,FONT,1,"Pr¢xima partida (Motivo)",37,FONT,1,"Pr¢xima partida (Motivo)",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposed Dwell Time...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo de parada...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.Security<63) and (@UserAccessCommand%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,6,COLOR,6
+	A,END
+O,END
+O,BEGIN,T,"cmdVUT"
+	B,52,325,233,354,52,354,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,325,0,0,FONT,1,"Avisa partida iminente (Sin. Son.)",37,FONT,1,"Avisa partida iminente (Sin. Son.)",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"VUT...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"VUT...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.Security<63) and (@UserAccessCommand%)and(@CATS.ModeMgmt.ModeVal==1)and(OriginAvailable%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdRec"
+	B,52,247,233,276,52,276,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,247,0,0,FONT,1,"NRE...",37,FONT,1,"NRE...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Trip Time...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tiempo de recorrido...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.Security<63) and (@UserAccessCommand%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdTR"
+	B,52,50,233,79,52,79,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,50,0,0,FONT,1,"Autoriza Partida (AP)",37,FONT,1,"Autoriza Partida (AP)",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform Hold Remove ...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Aplicar tren retiene...",FONT,1,37
+			ROLE,0,"Tren retiene aplicar ...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim3",0,0,"",""
+		PP,"=(Hold%)and(ATR.RegPoint.Security<63)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdMarcha"
+	B,52,286,233,315,52,315,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,5,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,52,286,0,0,FONT,1,"TCA",37,FONT,1,"TCA",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"running Mode...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Modo de marcha...",FONT,1,37
+			ROLE,0,"Modo de marcha...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.Security<63) and (@UserAccessCommand%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,P,"Poly2"
+	B,115,9,218,42,115,42,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,115,42,115,17,125,9,211,9,218,20
+	PP,218,42
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,209,35,124,16,209,35,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim1",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape7"
+	B,105,36,20,17,105,36,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim1",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END

@@ -1,0 +1,278 @@
+[Categories]
+AV_GENERALCONF=1
+AV_DISPLAYINGATTRIB=1
+AV_OPERATORACTIONS=1
+AV_SORTINGATTRIB=1
+AV_TOOLBARCONF=1
+AV_BANDCONF=1
+AV_LISTSCONF=1
+AV_COLORCONF=1
+AV_FONTCONF=1
+AV_BKGDCOLORCONF=1
+AV_QUALITYCONF=1
+AV_GROUPFIELDS=1
+AV_GROUPDISPLAYINGATTRIB=1
+AV_GROUPHIERARCHYCONF=1
+AV_PRESENTFIELDS=1
+AV_PRESENTCONF=1
+AV_PRESENTSTRATEGY=1
+AV_STATESFIELDS=1
+AV_STATESCONF=1
+AV_STATESSTRATEGY=1
+AV_EVENTSFIELDS=1
+AV_EVENTSCONF=1
+AV_EVENTSSTRATEGY=1
+AV_ARCHIVEDFIELDS=1
+AV_ARCHIVEDCONF=1
+AV_ARCHIVEDSTRATEGY=1
+AV_TAGSFIELDS=1
+AV_TAGSCONF=1
+AV_TAGSSTRATEGY=1
+AS_FILTERSORT=1
+AS_MULTISELECTION=1
+AS_PRINT=1
+AS_ACK=64
+AS_ACKPAGE=1
+AS_ACKALL=1
+AS_CLEAR=64
+AS_CLEARPAGE=1
+AS_CLEARALL=1
+AS_MASKUNMASK=64
+AS_MASKUNMASKPAGE=1
+AS_MASKUNMASKALL=1
+AS_ACKGROUP=64
+AS_CLEARGROUP=64
+AS_MASKUNMASKGROUP=64
+AS_APPLYGROUPFILTER=1
+AS_SELECTRESETPAGE=1
+AS_JUMPTOMIMIC=1
+AS_FILTERGROUP=1
+AS_EXPANDCOLLAPSE=1
+AS_SPLITTER=1
+AS_CHANGELISTS=1
+AS_RESIZE=1
+AS_SORT=1
+AS_FILTER=1
+AS_EDITOBJECT=1
+AS_EDITMULTIOBJECTS=1
+AS_EXPANDOBJECTEDITOR=1
+AS_CONTROLPROPERTY=64
+AS_JOBREQUEST=1
+AS_SCHEMATIC=1
+AS_INSPECTORPANEL=1
+AV_SUSPENDVIEWERUPDATES=1
+AV_ENABLESUSPENDUPDATES=1
+AV_EDITOPERATORNOTES=1
+AV_VIEWARCHIVED=1
+AS_CREATETAG=64
+AS_MODIFYTAG=64
+AS_DELETETAG=64
+AS_SETATTACHMENT=1
+
+
+[Category\AV_GENERALCONF]
+0000=AlarmViewer: General Configuration of Alarm Viewer
+
+[Category\AV_DISPLAYINGATTRIB]
+0000=AlarmViewer: Configuration of Displaying Attributes
+
+[Category\AV_OPERATORACTIONS]
+0000=AlarmViewer: Configuration of Operator Actions
+
+[Category\AV_SORTINGATTRIB]
+0000=AlarmViewer: Configuration of Sorting Attributes
+
+[Category\AV_TOOLBARCONF]
+0000=AlarmViewer: Configuration of the ToolBar
+
+[Category\AV_BANDCONF]
+0000=AlarmViewer: Configuration of the Band Mode
+
+[Category\AV_LISTSCONF]
+0000=AlarmViewer: Configuration of the Displayed Lists
+
+[Category\AV_COLORCONF]
+0000=AlarmViewer: Configuration of the Colors
+
+[Category\AV_FONTCONF]
+0000=AlarmViewer: Configuration of the Font
+
+[Category\AV_BKGDCOLORCONF]
+0000=AlarmViewer: Configuration of the Background Color
+
+[Category\AV_QUALITYCONF]
+0000=AlarmViewer: Configuration of the Quality Display
+
+[Category\AV_GROUPFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the Group Browser
+
+[Category\AV_GROUPDISPLAYINGATTRIB]
+0000=AlarmViewer: Configuration of the Displaying Attributes for the Group Browser
+
+[Category\AV_GROUPHIERARCHYCONF]
+0000=AlarmViewer: Configuration of the Hierarchy for the Group Browser
+
+[Category\AV_PRESENTFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the Present List
+
+[Category\AV_PRESENTCONF]
+0000=AlarmViewer: Configuration of the Attributes for the Present List
+
+[Category\AV_PRESENTSTRATEGY]
+0000=AlarmViewer: Configuration of the Window Strategy for the Present List
+
+[Category\AV_STATESFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the States List
+
+[Category\AV_STATESCONF]
+0000=AlarmViewer: Configuration of the Attributes for the States List
+
+[Category\AV_STATESSTRATEGY]
+0000=AlarmViewer: Configuration of the Window Strategy for the States List
+
+[Category\AV_EVENTSFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the Events List
+
+[Category\AV_EVENTSCONF]
+0000=AlarmViewer: Configuration of the Attributes for the Events List
+
+[Category\AV_EVENTSSTRATEGY]
+0000=AlarmViewer: Configuration of the Window Strategy for the Events List
+
+[Category\AV_ARCHIVEDFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the Archived List
+
+[Category\AV_ARCHIVEDCONF]
+0000=AlarmViewer: Configuration of the Attributes for the Archived List
+
+[Category\AV_ARCHIVEDSTRATEGY]
+0000=AlarmViewer: Configuration of the Window Strategy for the Archived List
+
+[Category\AV_TAGSFIELDS]
+0000=AlarmViewer: Configuration of the Columns for the Tags List
+
+[Category\AV_TAGSCONF]
+0000=AlarmViewer: Configuration of the Attributes for the Tags List
+
+[Category\AV_TAGSSTRATEGY]
+0000=AlarmViewer: Configuration of the Window Strategy for the Tags List
+
+[Category\AS_FILTERSORT]
+0000=AlarmViewer: Popup the Sort/Filter Dialog Box
+
+[Category\AS_MULTISELECTION]
+0000=AlarmViewer: Popup the MultiSelection Dialog Box
+
+[Category\AS_PRINT]
+0000=AlarmViewer: Popup the Print Dialog Box/Direct Print From the ToolBar
+
+[Category\AS_ACK]
+0000=AlarmViewer: Acknowledge Alarm Unitary 
+
+[Category\AS_ACKPAGE]
+0000=AlarmViewer: Acknowledge Alarms by Page
+
+[Category\AS_ACKALL]
+0000=AlarmViewer: Acknowledge All Alarms
+
+[Category\AS_CLEAR]
+0000=AlarmViewer: Clear Alarm Unitary
+
+[Category\AS_CLEARPAGE]
+0000=AlarmViewer: Clear Alarms by Page
+
+[Category\AS_CLEARALL]
+0000=AlarmViewer: Clear All Alarms
+
+[Category\AS_MASKUNMASK]
+0000=AlarmViewer: Unitary Mask/Unmask Object
+
+[Category\AS_MASKUNMASKPAGE]
+0000=AlarmViewer: Mask/Unmask Objects by Page
+
+[Category\AS_MASKUNMASKALL]
+0000=AlarmViewer: Mask/Unmask All Objects
+
+[Category\AS_ACKGROUP]
+0000=AlarmViewer: Acknowledge Group
+
+[Category\AS_CLEARGROUP]
+0000=AlarmViewer: Clear Group
+
+[Category\AS_MASKUNMASKGROUP]
+0000=AlarmViewer: Mask/Unmask Group
+
+[Category\AS_APPLYGROUPFILTER]
+0000=AlarmViewer: Apply Group Filter
+
+[Category\AS_SELECTRESETPAGE]
+0000=AlarmViewer: Select/Reset Page
+
+[Category\AS_JUMPTOMIMIC]
+0000=AlarmViewer: Jump To Mimic
+
+[Category\AS_FILTERGROUP]
+0000=AlarmViewer: Filter On Group Browser
+
+[Category\AS_EXPANDCOLLAPSE]
+0000=AlarmViewer: Expand/Collapse On Group Browser
+
+[Category\AS_SPLITTER]
+0000=AlarmViewer: Resize The Group Browser with The Splitter
+
+[Category\AS_CHANGELISTS]
+0000=AlarmViewer: Change The Lists with The Tab Control
+
+[Category\AS_RESIZE]
+0000=AlarmViewer: Resize The List Columns
+
+[Category\AS_SORT]
+0000=AlarmViewer: Sort The List Columns
+
+[Category\AS_FILTER]
+0000=AlarmViewer: Filter The List
+
+[Category\AS_EDITOBJECT]
+0000=AlarmViewer: Object Editor on Simple Selection
+
+[Category\AS_EDITMULTIOBJECTS]
+0000=AlarmViewer: Object Editor on Multiple Selection
+
+[Category\AS_EXPANDOBJECTEDITOR]
+0000=AlarmViewer: Expand the detailed Dialog of Object Editor
+
+[Category\AS_CONTROLPROPERTY]
+0000=AlarmViewer: Control a property On the Object Editor
+
+[Category\AS_JOBREQUEST]
+0000=AlarmViewer: Open job request
+
+[Category\AS_SCHEMATIC]
+0000=AlarmViewer: Open Schematic
+
+[Category\AS_INSPECTORPANEL]
+0000=AlarmViewer: Open inspector panel
+
+[Category\AV_SUSPENDVIEWERUPDATES]
+0000=AlarmViewer: Suspend or resume Alarm Viewer updates from the server
+
+[Category\AV_ENABLESUSPENDUPDATES]
+0000=AlarmViewer: Enable or disable the Suspend Updates feature
+
+[Category\AV_EDITOPERATORNOTES]
+0000=AlarmViewer: Create, edit, or delete operator notes for an event
+
+[Category\AV_VIEWARCHIVED]
+0000=AlarmViewer: View the Archived data pane
+
+[Category\AS_CREATETAG]
+0000=AlarmViewer: Create a Tag
+
+[Category\AS_MODIFYTAG]
+0000=AlarmViewer: Modify a Tag
+
+[Category\AS_DELETETAG]
+0000=AlarmViewer: Delete a Tag
+
+[Category\AS_SETATTACHMENT]
+0000=AlarmViewer: Set Attachment

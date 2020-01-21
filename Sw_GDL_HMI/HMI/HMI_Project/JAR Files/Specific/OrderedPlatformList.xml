@@ -1,0 +1,34 @@
+<OrderedPlatformList>
+<Path direction="LEFT">
+	<Platform id="Stop_STA_PF_VPT_WL_S1" name="VPT1"/>
+	<Platform id="Stop_STA_PF_TTI_WL_S1" name="TTI1"/>
+	<Platform id="Stop_STA_PF_SAC_WL_S1" name="SAC1"/>
+	<Platform id="Stop_STA_PF_AIP_WL_S1" name="AIP1"/>
+	<Platform id="Stop_STA_PF_IMG_WR_S1" name="IMG1"/>
+	<Platform id="Stop_STA_PF_CKB_WR_S1" name="CKB1"/>
+	<Platform id="Stop_STA_PF_ANR_WR_S1" name="ANR1"/>
+	<Platform id="Stop_STA_PF_PSO_WL_S1" name="PSO1"/>
+	<Platform id="Stop_STA_PF_BGD_WR_S1" name="BGD1"/>
+	<Platform id="Stop_STA_PF_TRI_WR_S1" name="TRI1"/>
+	<Platform id="Stop_STA_PF_CNS_WR_S1" name="CNS1"/>
+	<Platform id="Stop_STA_PF_CLI_WL_S1" name="CLI1"/>
+	<Platform id="Stop_STA_PF_SUM_WL_S1" name="SUM1"/>
+	<Platform id="Stop_STA_PF_VMD_WL_S1" name="VMD1"/>
+</Path>
+<Path direction="RIGHT">
+	<Platform id="Stop_STA_PF_VMD_ER_S1" name="VMD2"/>
+	<Platform id="Stop_STA_PF_SUM_ER_S1" name="SUM2"/>
+	<Platform id="Stop_STA_PF_CLI_ER_S1" name="CLI2"/>
+	<Platform id="Stop_STA_PF_CNS_EL_S1" name="CNS2"/>
+	<Platform id="Stop_STA_PF_TRI_EL_S1" name="TRI2"/>
+	<Platform id="Stop_STA_PF_BGD_EL_S1" name="BGD2"/>
+	<Platform id="Stop_STA_PF_PSO_ER_S1" name="PSO2"/>
+	<Platform id="Stop_STA_PF_ANR_EL_S1" name="ANR2"/>
+	<Platform id="Stop_STA_PF_CKB_EL_S1" name="CKB2"/>
+	<Platform id="Stop_STA_PF_IMG_EL_S1" name="IMG2"/>
+	<Platform id="Stop_STA_PF_AIP_ER_S1" name="AIP2"/>
+	<Platform id="Stop_STA_PF_SAC_ER_S1" name="SAC2"/>
+	<Platform id="Stop_STA_PF_TTI_ER_S1" name="TTI2"/>
+	<Platform id="Stop_STA_PF_VPT_ER_S1" name="VPT2"/>
+</Path>
+</OrderedPlatformList>

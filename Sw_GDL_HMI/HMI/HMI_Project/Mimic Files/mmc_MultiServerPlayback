@@ -1,0 +1,1303 @@
+ASCII32,20,6,2019,16:59,54,1.1
+W,BEGIN,"mmc_MultiServerPlayback","mmc_MultiServerPlayback"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1016,188
+	SIZE,659,370,659,370,0,0,0,1920,1080,653,345
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Playback"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0
+	GRID,0,0,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_MultiServerPlayback.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: PlayBack Launcing
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of Playback
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vasanth M
+	'* Date:                April '17
+	'* Change:              All
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	Private Const strPlayBackPathLv1 As String = "D:\IconisARC\ATS\L1" ' Level1 PlayBack path
+	'Private Const strPlayBackPathLv1 As String = "D:\IconisTM4\Archiving\" 'for testing purpose
+	Private Const strPlayBackPathLv2 As String = "D:\IconisARC\ATS\L2" ' Level2 PlayBack path
+	'Private Const strPlayBackPathLv2 As String = "D:\IconisTM4\Archiving\" 'for testing purpose
+	   
+	Private Const strApplPath As String = "D:\IconisTM4\IconisAppl" ' Iconis Appl path
+	Private Const c_strBreakpointDateTag = "S2KPlayback.Monitor.DBreakPointDate"
+	Private Const c_strBreakpointActivationTag = "S2KPlayback.Monitor.BreakPointActivation"
+	Private Const c_strHMIConnetionStatusTag = "IconisHMI.HeartBit.Value"
+	Private Const c_iAppNoLv1 As Integer = 2
+	Private Const c_iAppNoLv2 As Integer = 2
+	
+	Private Const c_strProjectName As String = "UEVOL_REG_GDL_L3"
+	Private Const c_strLogPathLv1 As String = "D:\IconisTM4\Log\UEVOL_REG_GDL_L3"
+	Private Const c_strLogPathLv2 As String = "D:\IconisTM4\Log\UEVOL_REG_GDL_L3"
+	
+	' OPC Set Items
+	Dim WithEvents m_OPCSet_HMIConnetionStatus As Iconis_CLS_OPCSet
+	
+	' OPC Variables
+	Dim WithEvents m_OPC_Lv1Selected As Variable
+	
+	'* Local Variables
+	'* ******************************************************
+	
+	Dim exportedPath As String 'The path that is accessible from HMI
+	Dim strBranchNameLvl1 As String ' Level1 Cluster path
+	Dim strBranchNameLvl2 As String ' Level2 Cluster path
+	Dim strBranchNameLvl3 As String ' DCC Cluster path
+	Dim f, fs, f1, fc
+	Dim m_iLv1Selected As Integer
+	Dim strEcho As String
+	Dim strPlayDate As String
+	Dim strServer As String
+	Dim strFirstServer As String
+	Dim strSecondServer As String
+	Dim strLevel1 As String
+	Dim strLevel2 As String
+	'Dim strLevel3 As String
+	Dim DateBeginReplay As String
+	Dim strL1Path As String
+	Dim strL2Path As String
+	'Dim strL3Path As String
+	Dim bfound As Boolean
+	Dim dateString As String
+	
+	'Dim WithEvents m_OPC_txtBreakpointDateLv1 As Variable
+	'Dim WithEvents m_OPC_bBreakpointActivationLv1 As Variable
+	'Dim WithEvents m_OPC_txtBreakpointDateLv2 As Variable
+	'Dim WithEvents m_OPC_bBreakpointActivationLv2 As Variable
+	
+	Dim txtDCurrentDate As Graphic
+	Dim txtDSnapshotDate As Graphic
+	Dim txtDEndDate As Graphic
+	Dim txtDBreakPointDate As Graphic
+	Dim bL1 As Boolean
+	Dim bL2 As Boolean
+	'Dim bL3 As Boolean
+	
+	Private Sub Mimic_Open()
+	
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "Mimic_Open", "Begin subroutine")
+	
+	'* Default Level1 server selection
+	Call Variables.Add("@LV1SVRSelected%", fvVariableTypeRegister)
+	
+	    Variables.Item("@LV1SVRSelected%").Value = c_iAppNoLv1
+	
+	
+	Variables.Item("@Playback_BP_CloseActive%").Value = True
+	'* Variable to hold level1 application number
+	Set m_OPC_Lv1Selected = Variables.Add("@LV1SVRSelected%", fvVariableTypeRegister)
+	
+	If (m_OPC_Lv1Selected.EnableEvents = True) Then
+	    m_OPC_Lv1Selected_ValueChange
+	Else
+	   m_OPC_Lv1Selected.EnableEvents = True
+	End If
+	
+	'* To Initialize
+	
+	Call Intialize
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub FillFilesList(Folder As String, Listbox As Object)
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "FillFilesList", "Begin subroutine")
+	    
+	    '* To fill the list box values of playback
+	    
+	    Set fs = CreateObject("Scripting.FileSystemObject")
+	    Set f = fs.GetFolder(Folder)
+	    '* Set fc = f.Files
+	    Set fc = f.SubFolders
+	    For Each f1 In fc
+	        Listbox.AddItem f1.Name
+	        Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "FillFilesList", f1.Name)
+	    Next
+	    
+	    If Listbox.ListCount > 0 Then
+	       Listbox.Enabled = True
+	    End If
+	    Set f = Nothing
+	    Set fs = Nothing
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "FillFilesList", Err.Description)
+	End Sub
+	
+	
+	Private Sub btn_Ok_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "btn_Ok_Click", "Begin subroutine")
+	
+	  
+	    Call PlayBackLvl1_Click
+	    Call PlayBackLvl2_Click
+	       
+	   If Variables.Item("@Sync_BP_CloseActive%").Value And ValidateParameter And m_iLv1Selected > 0 Then
+	      Dim strAppNameL1 As String
+	      Dim strAppNameL2 As String
+	      Call KillServer
+	      
+	      '* Intialze the variable(To determine server connection status for the launched playbacks)
+	      Variables.Item("@bServerConnected%").Value = 0
+	      
+	      strAppNameL1 = "ATS_" & m_iLv1Selected
+	        strAppNameL2 = "ATS_" & c_iAppNoLv2 & "_LV2"
+	
+	    
+	      dateString = DateBeginReplay + "-" + CStr(Format(DateTimePicker.Hour, "00")) + "-" + CStr(Format(DateTimePicker.Minute, "00")) 'CStr(Format(Month(DateBeginReplay), "00")) + "-" + CStr(Format(Year(DateBeginReplay), "00")) + "-" + CStr(Format(Hour(DateBeginReplay), "00")) + "-" + CStr(Format(Minute(DateBeginReplay), "00")) '+ "-" + CStr(Format(Second(DateBeginReplay), "00"))
+	             
+	      '* Content to write inside the batch file
+	      strEcho = "@echo on"
+	      strPlayDate = "Set PlayDate=" + dateString + ""
+	      
+	  
+	      strServer = "Set S2K=S2KServer.exe"
+	      strLevel1 = "Start %S2K% /Root S2KRootContainer.1 /Project " & c_strProjectName & " /Application " & strAppNameL1 & " /LoadingMode Cache /ReplayDirectory " & strL1Path & " /ReplayStart %PlayDate% /Version 1.0.0 /TraceFilePath " & c_strLogPathLv1 & " /TrayIcon"
+	      strFirstServer = "Set S2KFirst=S2KServerFirst.exe"
+	      strLevel2 = "Start %S2KFirst% /Root S2KRootContainer.1 /Project " & c_strProjectName & " /Application " & strAppNameL2 & " /LoadingMode Cache /ReplayDirectory " & strL2Path & " /ReplayStart %PlayDate% /Version 1.0.0 /TraceFilePath " & c_strLogPathLv2 & " /TrayIcon"
+	    
+	  
+	            
+	      Dim fso As FileSystemObject
+	      Dim t As TextStream
+	      Dim i As Integer
+	      
+	      Set fso = New Scripting.FileSystemObject
+	      '* Writing batch file
+	        If fso.FileExists(strApplPath & "\Start_Server_171_CER_HMI_PBK.bat") = True Then
+	        Set t = fso.OpenTextFile(strApplPath & "\Start_Server_171_CER_HMI_PBK.bat", ForWriting)
+	                    
+	        t.WriteLine (strEcho)
+	        t.WriteLine (strPlayDate)
+	        If bL1 = True Then t.WriteLine (strServer)
+	        If bL2 = True Then t.WriteLine (strFirstServer)
+	
+	        If bL1 = True Then t.WriteLine (strLevel1)
+	        If bL2 = True Then t.WriteLine (strLevel2)
+	
+	        End If
+	                
+	      t.Close
+	      Set t = Nothing
+	      Set fso = Nothing
+	            
+	      Shell (ThisProject.Path & "\Working Files\Playback.bat")
+	                
+	      PlayBackLvl1.Enabled = False
+	      PlayBackLvl2.Enabled = False
+	'      PlayBackLvl3.Enabled = False
+	      DateTimePicker.Enabled = False
+	      Variables.Item("@Sync_BP_CloseActive%").Value = False
+	      dtBreakpointTime.Min = DateTimePicker.Value
+	    End If
+	             
+	
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btn_Ok_Click", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCSet_HMIConnetionStatus_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.FileName, "m_OPCSet_HMIConnetionStatus", "Begin Subroutine")
+	 
+	    If m_OPCSet_HMIConnetionStatus.IsAllConnected And m_OPCSet_HMIConnetionStatus.IsAllGood Then
+	        Variables.Item("@bServerConnected%").Value = 1
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPCSet_HMIConnetionStatus", Err.Description)
+	End Sub
+	
+	Private Sub btn_Close_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    Variables.Item("@Playback_BP_CloseHover%").Value = True
+	End Sub
+	
+	Private Sub btn_Close_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    Variables.Item("@Playback_BP_CloseHover%").Value = False
+	End Sub
+	Private Sub btn_Stop_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "btn_Pause_Click", "Begin subroutine")
+	
+	' dtBreakpointTime.Enabled = True
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btn_Pause_Click", Err.Description)
+	End Sub
+	
+	
+	
+	'---------------------------------------------------------------------------------------
+	' Name:         KillServer
+	' Input:        none
+	' Output:       none
+	' Description:  Kills the S2K server
+	'---------------------------------------------------------------------------------------
+	Public Sub KillServer()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.FileName, "KillServer", "Begin Subroutine")
+	    
+	    Dim strCommand As String
+	    
+	    ' Kill S2K command line
+	    strCommand = "taskkill /IM ""cmd.exe"" /f"
+	    ShellAndWait strCommand, vbMinimizedNoFocus, 500
+	
+	    ' Kill S2K command line
+	    strCommand = "taskkill /IM ""S2KServer.exe"" /f"
+	    ShellAndWait strCommand, vbMinimizedNoFocus, 500
+	
+	    ' Kill S2K command line
+	    strCommand = "taskkill /IM ""S2KServerFirst.exe"" /f"
+	    ShellAndWait strCommand, vbMinimizedNoFocus, 500
+	    
+	'    ' Kill S2K command line
+	'    strCommand = "taskkill /IM ""S2KServerSecond.exe"" /f"
+	'    ShellAndWait strCommand, vbMinimizedNoFocus, 500
+	    
+	    ' Kill  command line
+	    strCommand = "taskkill /IM ""cmd.exe"" /f"
+	    ShellAndWait strCommand, vbMinimizedNoFocus, 500
+	
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "KillServer", Err.Description)
+	End Sub
+	
+	Private Sub btn_Kill_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.FileName, "btn_Stop_Click", "Begin Subroutine")
+	    
+	    If m_OPCSet_HMIConnetionStatus.IsAllGood Then
+	        If MsgBox("Playback mode inprogress, Do you want to kill the servers. ", vbYesNo) = vbNo Then Exit Sub
+	    End If
+	        
+	    
+	    If Not (m_OPCSet_HMIConnetionStatus Is Nothing) Then
+	        m_OPCSet_HMIConnetionStatus.Destroy
+	        Set m_OPCSet_HMIConnetionStatus = Nothing
+	    End If
+	    
+	    Call KillServer
+	    
+	    PlayBackLvl1.Enabled = True
+	    PlayBackLvl2.Enabled = True
+	    DateTimePicker = True
+	    Variables.Item("@Sync_BP_CloseActive%").Value = True
+	    DateTimePicker.Enabled = True
+	    bL1 = False
+	    bL2 = False
+	    Variables.Item("@bServerConnected%").Value = 0
+	  
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btn_Stop_Click", Err.Description)
+	End Sub
+	
+	Private Sub btn_Close_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "btn_Close_Click", "Begin subroutine")
+	
+	    If MsgBox("Are you sure, Do you want to close playback mode.", vbYesNo) = vbNo Then
+	    
+	        Exit Sub
+	    
+	    Else
+	        Call KillServer
+	    
+	        Me.Close
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btn_Close_Click", Err.Description)
+	End Sub
+	
+	Private Sub Intialize()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "Intialize", "Begin subroutine")
+	    
+	    'Intialize the mimic
+	    Call KillServer
+	    
+	    PlayBackLvl1.Clear
+	    PlayBackLvl2.Clear
+	
+	    strBranchNameLvl1 = "OPCCluster_ATS:"
+	    strBranchNameLvl2 = "OPCCluster_ATS_LV2:"
+	
+	    Variables.Item("@Sync_BP_CloseActive%").Value = True
+	
+	
+	    'Fill the list box
+	    If m_OPC_Lv1Selected.Value = c_iAppNoLv1 Then ' Level1 Server
+	        FillFilesList strPlayBackPathLv1, PlayBackLvl1
+	        FillFilesList strPlayBackPathLv2, PlayBackLvl2
+	
+	    Else
+	        FillFilesList strPlayBackPathLv1, PlayBackLvl1
+	        FillFilesList strPlayBackPathLv2, PlayBackLvl2
+	
+	    End If
+	    
+	    DateTimePicker.Enabled = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Intialize", Err.Description)
+	End Sub
+	
+	
+	Private Sub PlayBackLvl1_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "PlayBackLvl1_Click", "Begin subroutine")
+	     
+	bL1 = False
+	
+	If IsNull(PlayBackLvl1.Text) = False And PlayBackLvl1.Text <> "" And PlayBackLvl1.Value <> "" Then bL1 = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "PlayBackLvl1_Click", Err.Description)
+	End Sub
+	Private Sub PlayBackLvl2_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "PlayBackLvl2_Click", "Begin subroutine")
+	
+	bL2 = False
+	    
+	If IsNull(PlayBackLvl2.Text) = False And PlayBackLvl2.Text <> "" And PlayBackLvl2.Value <> "" Then bL2 = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "PlayBackLvl2_Click", Err.Description)
+	End Sub
+	Private Sub PlayBackLvl3_Click()
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "PlayBackLvl1_Click", "Begin subroutine")
+	
+	bL3 = False
+	    
+	If IsNull(PlayBackLvl3.Text) = False And PlayBackLvl3.Text <> "" And PlayBackLvl3.Value <> "" Then bL3 = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "PlayBackLvl3_Click", Err.Description)
+	End Sub
+	
+	Private Function ValidateParameter() As Boolean
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "ValidateParameter", "Begin subroutine")
+	
+	    '* OPC set subscription based on server file seleted
+	    Set m_OPCSet_HMIConnetionStatus = MOD_General.CreateNew_Iconis_CLS_OPCSet
+	
+	    If bL1 = True And bL2 = True And StrComp(PlayBackLvl1.Value, PlayBackLvl2.Value, vbTextCompare) = 0 Then
+	        'If MsgBox("Only level1 and level2 servers are selected, Do you want to continue anyway", vbYesNo) = vbNo Then Exit Function
+	        m_OPCSet_HMIConnetionStatus.AddItem strBranchNameLvl1 & c_strHMIConnetionStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	        m_OPCSet_HMIConnetionStatus.AddItem strBranchNameLvl2 & c_strHMIConnetionStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	        ' Path
+	        DateBeginReplay = Left(PlayBackLvl1.Value, 10)
+	        strL1Path = strPlayBackPathLv1 + "\" + PlayBackLvl1.Value + "\S2KPlayback"
+	        DateBeginReplay = Left(PlayBackLvl2.Value, 10)
+	        strL2Path = strPlayBackPathLv2 + "\" + PlayBackLvl2.Value + "\S2KPlayback"
+	        ValidateParameter = True
+	
+	    ElseIf bL1 = True Then
+	        If MsgBox("Only level1 is selected, Do you want to continue anyway", vbYesNo) = vbNo Then Exit Function
+	        m_OPCSet_HMIConnetionStatus.AddItem strBranchNameLvl1 & c_strHMIConnetionStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	        DateBeginReplay = Left(PlayBackLvl1.Value, 10)
+	        strL1Path = strPlayBackPathLv1 + "\" + PlayBackLvl1.Value + "\S2KPlayback"
+	        ValidateParameter = True
+	    ElseIf bL2 = True Then
+	        If MsgBox("Only level2 is selected, Do you want to continue anyway", vbYesNo) = vbNo Then Exit Function
+	        m_OPCSet_HMIConnetionStatus.AddItem strBranchNameLvl2 & c_strHMIConnetionStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	        DateBeginReplay = Left(PlayBackLvl2.Value, 10)
+	        strL2Path = strPlayBackPathLv2 + "\" + PlayBackLvl2.Value + "\S2KPlayback"
+	        ValidateParameter = True
+	    Else
+	       ValidateParameter = False
+	       MsgBox ("Selected parameter does not match")
+	    End If
+	    
+	    m_OPCSet_HMIConnetionStatus.Doconnect ("m_OPCSet_HMIConnetionStatus" & ThisMimic.Branch)
+	
+	
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ValidateParameter", Err.Description)
+	End Function
+	Private Sub m_OPC_Lv1Selected_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_Lv1Selected_ValueChange", "Begin Subroutine")
+	  
+	     m_iLv1Selected = m_OPC_Lv1Selected.Value
+	 
+	 '* To Initialize
+	    Call Intialize
+	 
+	  
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_Lv1Selected_ValueChange", Err.Description)
+	End Sub
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler:
+	Call CBTrace(CBTRACE_VBA, Me.FileName, "Mimic_BeforeClose", "Begin subroutine")
+	
+	
+	    If Not (m_OPCSet_HMIConnetionStatus Is Nothing) Then
+	        m_OPCSet_HMIConnetionStatus.Destroy
+	        Set m_OPCSet_HMIConnetionStatus = Nothing
+	    End If
+	    
+	    If Not (m_OPC_Lv1Selected Is Nothing) Then
+	        Variables.Remove (m_OPC_Lv1Selected.Name)
+	        Set m_OPC_Lv1Selected = Nothing
+	    End If
+	   
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"Scripting", 1, 0, "{420B2830-E718-11CF-893D-00A0C9054228}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,400,0,0,"Tahoma",0,0
+	FONT,3,-13,0,600,0,0,"Segoe UI Semibold",0,0
+	FONT,4,-11,0,400,0,0,"Tahoma",0,0
+	FONT,5,-12,0,400,0,0,"Tahoma",0,0
+	FONT,6,-13,0,700,0,0,"Tahoma",0,0
+	FONT,7,-13,0,400,0,0,"Segoe UI",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,49,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,0,255,0,0,0,0
+	COLOR,6,0,0,0,0,33,0
+	COLOR,7,0,0,0,0,32,0
+	COLOR,8,105,105,105,0,0,0
+	COLOR,9,255,255,255,0,0,0
+	COLOR,10,64,64,64,0,0,0
+	COLOR,11,238,238,238,0,0,0
+	COLOR,12,255,0,255,0,0,0
+	COLOR,13,96,96,96,0,0,0
+	COLOR,14,128,128,128,0,0,0
+	COLOR,15,0,0,0,0,56,0
+	COLOR,16,0,238,0,0,0,0
+	COLOR,17,0,0,0,0,54,0
+COLORS,END
+O,BEGIN,R,"Shape5"
+	B,1399,252,1014,20,1399,239,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"PlayBackLvl1"
+	B,16,31,315,170,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"PlayBackLvl2"
+	B,322,31,621,170,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape2"
+	B,1350,167,1338,156,1350,167,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.BreakPointActivation"
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+O,END
+O,BEGIN,T,"Text10"
+	B,1217,216,1377,240,1217,240,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,1217,216,0,0,FONT,1,"Replay Speed",37,FONT,1,"Replay Speed",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Replay Speed",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",1,"",0,0,0,1,0,0,4.000000,0,0,1
+	A,END
+O,END
+O,BEGIN,T,"Text11"
+	B,1389,167,1441,191,1389,191,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,2,COLOR,3,0,COLOR,9,0,COLOR,9,0,COLOR,8,0,COLOR,8
+	PP,1,1389,167,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.CustomSpeed",1,"",0,0,0,1,0,0,1.000000,0,0,1
+	A,END
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"OPCCluster_ATS_LV2:@S2KPlayback.Monitor.CustomSpeed",1,"",0,0,0,1,0,0,1.000000,0,0,1
+	A,END
+O,END
+O,BEGIN,R,"Shape6"
+	B,1350,196,1338,185,1350,196,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"OPCCluster_ATS_LV2:@S2KPlayback.Monitor.BreakPointActivation"
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+O,END
+O,BEGIN,T,"Text18"
+	B,1386,217,1546,241,1386,241,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,1386,217,0,0,FONT,1,"Replay Speed",37,FONT,1,"Replay Speed",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Replay Speed",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"OPCCluster_ATS_LV2:@S2KPlayback.Monitor.ReplaySpeed",""
+	A,END
+O,END
+O,BEGIN,T,"Text15"
+	B,171,226,296,250,171,250,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,10,COLOR,10,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+	PP,1,171,226,0,0,FONT,3,"Replay Start Time",37,FONT,3,"Replay Start Time",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Replay Start Time",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text21"
+	B,67,12,267,28,67,28,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,67,12,0,0,FONT,3,"Available files for level 1 server",37,FONT,3,"Available files for level 1 server",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Available files for level 1 server",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text22"
+	B,366,12,570,28,366,28,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,366,12,0,0,FONT,3,"Available files for level 2 server",37,FONT,3,"Available files for level 2 server",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Available files for level 2 server",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape7"
+	B,1401,380,1013,268,1401,374,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape1"
+	B,337,201,328,192,337,201,65535,0,6400,0,1,0,0
+	ST,0,2,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"opccluster_ats_lv2:@IconisHMI.HeartBit.Value"
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,3
+		COL,1,COLOR,12,COLOR,12
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,OCX,"dtBreakpointTime"
+	B,1334,88,1413,109,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text24"
+	B,470,188,627,203,470,203,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,470,188,0,0,FONT,3,"<dd/mm/yyy hh:nn:ss>",36,FONT,3,"<dd/mm/yyy hh:nn:ss>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<dd/mm/yyy hh:nn:ss>",FONT,3,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text25"
+	B,167,188,325,203,167,203,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,167,188,0,0,FONT,3,"<dd/mm/yyy hh:nn:ss>",36,FONT,3,"<dd/mm/yyy hh:nn:ss>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<dd/mm/yyy hh:nn:ss>",FONT,3,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text26"
+	B,1017,7,1113,31,1017,31,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,1017,7,0,0,FONT,2,"Replay Control",37,FONT,2,"Replay Control",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Replay Control",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text27"
+	B,1017,257,1201,281,1017,281,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,1017,257,0,0,FONT,2,"Servers status and playing time",37,FONT,2,"Servers status and playing time",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Servers status and playing time",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape8"
+	B,31,201,22,192,31,201,65535,0,6400,0,1,0,0
+	ST,0,2,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"OPCCluster_ATS:@IconisHMI.HeartBit.Value"
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,3
+		COL,1,COLOR,12,COLOR,12
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"txt_BreakDate"
+	B,1226,91,1322,106,1226,106,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,1226,91,0,0,FONT,2,"<dd/mm/yyyy>",36,FONT,2,"<dd/mm/yyyy>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<dd/mm/yyyy>",FONT,2,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy @t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy @t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,1214,149,1334,173,1214,173,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,1214,149,0,0,FONT,2,"Level 1 break point ",37,FONT,2,"Level 1 break point ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Level 1 break point ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,1215,178,1333,202,1215,202,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,1215,178,0,0,FONT,2,"Level 2  break point ",37,FONT,2,"Level 2  break point ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Level 2  break point ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"Group5"
+	B,1226,33,1265,72,1226,72,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,GRP,"Group2"
+		B,1234,36,1260,68,1234,68,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly10"
+			B,1234,36,1250,68,1234,36,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,1234,36,1234,68,1250,52
+		O,END
+		O,BEGIN,P,"Poly2"
+			B,1244,36,1260,68,1244,36,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,1244,36,1244,68,1260,52
+		O,END
+	O,END
+	O,BEGIN,R,"btn_Play4"
+		B,1265,72,1226,33,1265,72,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SR,"Anim3",0,0,"",""
+			PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,1,1,0,0,1.000000,0,0,1
+			ADVSENDVALUE,2,1
+			ADVSCALE,2,1,2,3
+		A,END
+		A,BEGIN,SR,"Anim2",0,0,"",""
+			PP,"OPCCluster_ATS_LV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,1,1,0,0,1.000000,0,0,1
+			ADVSENDVALUE,2,1
+			ADVSCALE,2,1,2,3
+		A,END
+	O,END
+O,END
+O,BEGIN,GRP,"Group7"
+	B,1426,81,1465,120,1426,120,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,P,"Poly1"
+		B,1429,85,1461,117,1429,85,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+		PP,1429,85,1429,117,1461,101
+	O,END
+	O,BEGIN,R,"Shape13"
+		B,1462,117,1457,85,1462,117,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"btn_Fwd"
+		B,1465,120,1426,81,1465,120,65535,0,6400,0,2,1,1
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"NotUsed%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END
+O,BEGIN,E,"Shape11"
+	B,1492,196,1460,164,1492,196,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"btn_Stop"
+	B,1496,199,1457,160,1496,199,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,7.000000,0,0,1
+		ADVSENDVALUE,2,7
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCCluster_ATS_LV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,7.000000,0,0,1
+		ADVSENDVALUE,2,7
+		ADVSCALE,2,0,2,100
+	A,END
+O,END
+O,BEGIN,R,"Shape10"
+	B,476,295,476,295,476,295,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text8"
+	B,1697,58,1797,71,1697,71,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,1697,58,0,0,FONT,4,"XXXXXXXXXXXXXXXX",36,FONT,4,"XXXXXXXXXXXXXXXX",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"XXXXXXXXXXXXXXXX",FONT,4,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0," LATS_WKS1",FONT,5,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"OPCCluster:@S2KRootContainer.S2KServerState.ServerID"
+	A,END
+O,END
+O,BEGIN,T,"Text9"
+	B,1697,73,1797,86,1697,86,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,1697,73,0,0,FONT,4,"XXXXXXXXXXXXXXXX",36,FONT,4,"XXXXXXXXXXXXXXXX",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"XXXXXXXXXXXXXXXX",FONT,4,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0," LATS_WKS1",FONT,5,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"OPCCluster_ATS_LV2:@S2KRootContainer.S2KServerState.ServerID"
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,40,188,159,203,40,203,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+	PP,1,40,188,0,0,FONT,3,"XXXXXXXXXXXXXXX",36,FONT,3,"XXXXXXXXXXXXXXX",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"XXXXXXXXXXXXXXX",FONT,3,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0," LATS_WKS1",FONT,5,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"OPCCluster:@S2KRootContainer.S2KServerState.ServerID"
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,345,188,464,203,345,203,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+	PP,1,345,188,0,0,FONT,3,"XXXXXXXXXXXXXXXX",36,FONT,3,"XXXXXXXXXXXXXXXX",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"XXXXXXXXXXXXXXXX",FONT,3,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0," LATS_WKS1",FONT,5,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KRootContainer.S2KServerState.ServerID"
+	A,END
+O,END
+O,BEGIN,T,"Text17"
+	B,769,188,926,204,769,204,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,769,188,0,0,FONT,6,"<dd/mm/yyy hh:nn:ss>",36,FONT,6,"<dd/mm/yyy hh:nn:ss>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<dd/mm/yyy hh:nn:ss>",FONT,6,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"OPCClusterDATS:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"btn_Close"
+	B,554,304,634,329,554,329,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+	PP,1,554,304,0,0,FONT,7,"Close",37,FONT,7,"Close",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Close",FONT,7,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Playback_BP_CloseHover%","Playback_BP_CloseActive%","",""
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,14,COLOR,14
+		COL,1,COLOR,10,COLOR,10
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,13,COLOR,13
+		COL,1,COLOR,13,COLOR,13
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,9,COLOR,9
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btn_Ok"
+	B,393,227,473,252,393,252,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+	PP,1,393,227,0,0,FONT,7,"Sync",37,FONT,7,"Sync",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sync",FONT,7,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Sync_BP_CloseHover%","Sync_BP_CloseActive%","",""
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,14,COLOR,14
+		COL,1,COLOR,10,COLOR,10
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,13,COLOR,13
+		COL,1,COLOR,13,COLOR,13
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,9,COLOR,9
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,OCX,"DateTimePicker"
+	B,304,227,380,256,10,60,65535,0,6400,0,1,1,1
+	ST,5,2,COLOR,2,COLOR,2,1,0,COLOR,15,0,COLOR,15,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape9"
+	B,476,254,390,224,476,253,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,BM,"Bitmap4"
+	B,193,288,224,319,193,319,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,15,0,COLOR,15,0,COLOR,2,0,COLOR,2
+	PP,"PBS pause.bmp",0,COLOR,12
+O,END
+O,BEGIN,BM,"Bitmap5"
+	B,243,288,274,319,243,319,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,15,0,COLOR,15,0,COLOR,2,0,COLOR,2
+	PP,"PBK Play.bmp",0,COLOR,12
+O,END
+O,BEGIN,BM,"Bitmap6"
+	B,293,288,324,319,293,319,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"PBK stop.bmp",0,COLOR,12
+O,END
+O,BEGIN,R,"Shape4"
+	B,435,327,180,281,435,326,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,14,COLOR,14,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,14,COLOR,2,0,COLOR,9,0,COLOR,9,0,COLOR,8,0,COLOR,8
+O,END
+O,BEGIN,R,"btn_Pause"
+	B,225,319,194,288,225,319,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,4.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,4
+		ADVSCALE,2,0,2,4
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,4.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,4
+		ADVSCALE,2,0,2,4
+	A,END
+O,END
+O,BEGIN,R,"btn_Play"
+	B,274,319,243,288,274,319,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,1.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,1
+		ADVSCALE,2,0,2,1
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,1.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,1
+		ADVSCALE,2,0,2,1
+	A,END
+O,END
+O,BEGIN,R,"btn_Kill"
+	B,324,319,293,288,324,319,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group3"
+	B,340,288,372,320,340,320,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape7"
+		B,372,320,340,288,372,320,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,16,0,COLOR,16,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,GRP,"Group7"
+		B,349,296,365,312,349,312,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly12"
+			B,349,296,358,312,352,308,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,17,COLOR,17,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+			PP,351,296,350,296,349,297,349,298,353,304
+			PP,349,309,349,310,350,312,351,312,358,304
+		O,END
+		O,BEGIN,P,"Poly13"
+			B,355,296,365,312,358,308,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,17,COLOR,17,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+			PP,357,296,356,296,355,297,355,298,360,304
+			PP,355,309,355,310,356,312,357,312,365,304
+		O,END
+	O,END
+O,END
+O,BEGIN,R,"btn_Play9"
+	B,372,319,341,288,372,319,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,2.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,2
+		ADVSCALE,2,0,2,1
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,2.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,2
+		ADVSCALE,2,0,2,1
+	A,END
+O,END
+O,BEGIN,GRP,"Group4"
+	B,385,288,417,320,385,320,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape7"
+		B,417,320,385,288,417,320,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,16,0,COLOR,16,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,GRP,"Group9"
+		B,391,296,410,313,391,313,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly12"
+			B,391,296,399,313,394,308,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,17,COLOR,17,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+			PP,393,296,392,296,391,297,391,298,395,304
+			PP,391,310,391,311,392,313,393,313,399,304
+		O,END
+		O,BEGIN,P,"Poly13"
+			B,397,296,406,313,400,308,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,17,COLOR,17,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+			PP,399,296,398,296,397,297,397,298,401,304
+			PP,397,310,397,311,398,313,399,313,406,304
+		O,END
+		O,BEGIN,P,"Poly14"
+			B,406,296,410,313,410,308,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,17,COLOR,17,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+			PP,410,297,408,296,407,296,406,297,406,311
+			PP,407,313,408,313,410,311
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 3)"
+			COL,1,COLOR,7,COLOR,7
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,7,COLOR,7
+			COL,0,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,7,COLOR,7
+		A,END
+	O,END
+O,END
+O,BEGIN,R,"btn_Play2"
+	B,417,321,386,290,417,321,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,3.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,3
+		ADVSCALE,2,0,2,1
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"OPCClusterATSLV2:@S2KPlayback.Monitor.ReplaySpeed",0,"",0,0,3,1,0,0,3.000000,0,0,1
+		AUTH,"=(@bServerConnected%==1)",1,0,0
+		ADVSENDVALUE,2,3
+		ADVSCALE,2,0,2,1
+	A,END
+O,END

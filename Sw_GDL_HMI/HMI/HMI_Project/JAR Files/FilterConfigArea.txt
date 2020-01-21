@@ -1,0 +1,6 @@
+SIG;Area_TCC;LI_GDL_L3/ML_GDL_L3/Territory_1/Area_TCC
+SIG;Area_N1L;LI_GDL_L3/ML_GDL_L3/Territory_2/Area_N1L
+SIG;Area_BAN;LI_GDL_L3/ML_GDL_L3/Territory_3/Area_BAN
+SIG;Area_NOR;LI_GDL_L3/ML_GDL_L3/Territory_4/Area_NOR
+SIG;Area_PAT;LI_GDL_L3/ML_GDL_L3/Territory_5/Area_PAT
+SIG;Area_TZA;LI_GDL_L3/ML_GDL_L3/Territory_6/Area_TZA

@@ -1,0 +1,598 @@
+ASCII32,12,9,2018,6:32,58,1.1
+W,BEGIN,"Add_Equipments","Selector_de_Variables"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,2210,250
+	SIZE,406,667,406,667,0,0,0,2560,1024,400,645
+	BACKCOLOR,212,208,200,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Selector de variables"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,1,0,1,1,0,0,0,0,1,1,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Add_Equipments.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	Private XMLDoc As MSXML2.DOMDocument
+	
+	Const XMLFILENAME As String = "\Working Files\DataSourceNames.xml"
+	Const ATR_NAME As String = "NAME"
+	Const ATR_DISPLAYNAME As String = "DISPLAYNAME"
+	Const ATR_STATION As String = "STATION"
+	Const ATR_EQPFAMILY As String = "EQPFAMILY"
+	Const ATR_VARIABLETYPE As String = "VARIABLETYPE"
+	Const ATR_DESCRIPTION As String = "DESCRIPTION"
+	Const ATR_PLOTMIN As String = "PLOTMIN"
+	Const ATR_PLOTMAX As String = "PLOTMAX"
+	
+	
+	Private pListBox As ListBox
+	Private pTrend As TREND
+	Private pMaxPens As Integer
+	Private pCloseAfterAdd As Boolean
+	
+	
+	Private ConstrainList As Dictionary
+	Private SelectedEQP As Dictionary
+	Private Messages As Dictionary
+	
+	
+	Private Sub Initialize()
+	 On Error GoTo Error
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Initialize", "Begin Sub")
+	Dim i As Integer
+	
+	    Set XMLDoc = New DOMDocument
+	    XMLDoc.async = False
+	    XMLDoc.validateOnParse = False
+	    XMLDoc.Load (thisproject.Path & XMLFILENAME)
+	    
+	    Dim strBranch As String
+	    strBranch = ThisMimic.Branch
+	    Dim tokens() As String
+	    tokens = Split(strBranch, STR_TREND_DELIM)
+	    Dim strFN As String: strFN = tokens(0)
+	    For i = 1 To TheseMimics.count
+	    If TheseMimics.Item(i).FileName = "GDL_Historico" Then
+	    Set pTrend = TheseMimics.Item(i).Graphics.Item(tokens(1))
+	    Set pListBox = TheseMimics.Item(i).Graphics.Item(tokens(2))
+	    End If
+	Next i
+	    'Set pTrend = TheseMimics.Item(strFN).Graphics.Item(tokens(1))
+	    'Set pListBox = TheseMimics.Item(strFN).Graphics.Item(tokens(2))
+	'    Set pListBox = TheseMimics.Item(3).Graphics.Item(tokens(2))
+	    pMaxPens = tokens(3)
+	    pCloseAfterAdd = (tokens(4) = General.STR_CLOSE_AFTER_ADD)
+	    
+	    
+	    
+	    Set ConstrainList = New Dictionary
+	    Set SelectedEQP = New Dictionary
+	    Set Messages = New Dictionary
+	    
+	    ' Clear all listboxses
+	    StationListBox.Clear
+	    EQPFamilyListBox.Clear
+	    VariableTypeListBox.Clear
+	    EQPListBox.Clear
+	    
+	    '* Query the station list box with unique station names
+	    Dim strQuery As String
+	    strQuery = GetXPathQuery(Nothing)
+	    QueryListBox strQuery, StationListBox, ATR_STATION
+	    
+	    '* Clear the message text
+	    ClearMessage
+	    
+	    Exit Sub
+	    
+	Error:
+	    DisplayMessage General.STR_TRENDTXT_EQP_ADDED_ERROR
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Initialize", Err.Description)
+	
+	End Sub
+	
+	
+	Private Sub AddButton_Click()
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddButton_Click", "Begin Function")
+	    'Clear the message text
+	    ClearMessage
+	    
+	    
+	    If (IsListBoxSelected(StationListBox) And IsListBoxSelected(EQPFamilyListBox) And IsListBoxSelected(VariableTypeListBox) And IsListBoxSelected(EQPListBox)) Then
+	        
+	        Dim i As Integer, iStation As Integer, strQuery As String
+	        Dim count As Integer: count = 0
+	        Dim StationCount As Integer: StationCount = 0
+	        Dim oSDDList As IXMLDOMNodeList
+	        Dim oSDD As IXMLDOMElement
+	        
+	        Dim theEQP As Dictionary
+	        Dim strResult As String
+	        
+	        Dim eqpNode As IXMLDOMNode
+	        
+	        For iStation = 0 To StationListBox.ListCount - 1
+	            If StationListBox.Selected(iStation) Then
+	                StationCount = StationCount + 1
+	                strQuery = "//Equipment[@STATION = '" & StationListBox.List(iStation) & "']"
+	                count = 0
+	                For i = 0 To EQPListBox.ListCount - 1
+	                    If EQPListBox.Selected(i) Then
+	                        count = count + 1
+	                        Set theEQP = New Dictionary
+	                        'strQuery = strQuery & "'] [@DESCRIPTION = '" & EQPListBox.List(i) & "']"
+	                        Set eqpNode = XMLDoc.selectSingleNode(strQuery)
+	                        If (Not eqpNode Is Nothing) Then
+	                            strQuery = "//Equipment[@DESCRIPTION = '" & EQPListBox.List(i) & "']"
+	                            Set oSDDList = eqpNode.selectNodes(strQuery)
+	                            If Not (oSDDList Is Nothing) Then
+	                                If (oSDDList.length > 0) Then
+	                                    For Each oSDD In oSDDList
+	                                        If oSDD.getAttribute(ATR_STATION) = StationListBox.List(iStation) And oSDD.getAttribute(ATR_DESCRIPTION) = EQPListBox.List(i) Then
+	                                            theEQP.Add ATR_NAME, oSDD.getAttribute(ATR_NAME)
+	                                            theEQP.Add ATR_PLOTMIN, oSDD.getAttribute(ATR_PLOTMIN)
+	                                            theEQP.Add ATR_PLOTMAX, oSDD.getAttribute(ATR_PLOTMAX)
+	                                            theEQP.Add ATR_DESCRIPTION, oSDD.getAttribute(ATR_DESCRIPTION)
+	                                            theEQP.Add ATR_DISPLAYNAME, oSDD.getAttribute(ATR_DISPLAYNAME)
+	                                            Exit For
+	                                        End If
+	                                    Next
+	                                    Set oSDDList = Nothing
+	                                End If
+	                                
+	                            End If
+	                            Set eqpNode = Nothing
+	                        End If
+	                        If (theEQP.count > 0) Then
+	                            strResult = General.Add_DataSource_Pen(theEQP, pTrend, pListBox, pMaxPens)
+	                            DisplayMessage strResult
+	                            If (pCloseAfterAdd) Then
+	                                ThisMimic.Close
+	                            End If
+	                            Exit For
+	                        End If
+	                    End If
+	                Next
+	            End If
+	        Next
+	    Else
+	        DisplayMessage General.STR_TRENDTXT_PLS_SELECT_EQP
+	    End If
+	    Exit Sub
+	
+	Error:
+	    DisplayMessage General.STR_TRENDTXT_EQP_ADDED_ERROR
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "AddButton_Click", Err.Description)
+	End Sub
+	
+	Private Sub CancelButton_Click()
+	    ThisMimic.Close fvDoNotSaveChanges
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	End Function
+	
+	Private Sub Mimic_Open()
+	    Initialize
+	End Sub
+	
+	Private Sub Mimic_Run()
+	    Initialize
+	End Sub
+	
+	
+	Private Function ConstraintStations() As String
+	    ConstraintStations = Constraints(StationListBox, ATR_STATION)
+	End Function
+	
+	Private Function ConstraintEqpFamilies() As String
+	    ConstraintEqpFamilies = Constraints(EQPFamilyListBox, ATR_EQPFAMILY)
+	End Function
+	
+	Private Function ConstraintVariableTypes() As String
+	    ConstraintVariableTypes = Constraints(VariableTypeListBox, ATR_VARIABLETYPE)
+	End Function
+	
+	Private Function ConstraintEQPs() As String
+	    ConstraintEQPs = Constraints(EQPListBox, ATR_DESCRIPTION)
+	End Function
+	
+	Private Function ConstraintEQP2(strDisplayName As String) As String
+	    
+	End Function
+	
+	
+	Private Function GetXPathQuery(cList As Dictionary) As String
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "GetXPathQuery", "Begin Function")
+	
+	    Dim strResult As String
+	    
+	    If (cList Is Nothing) Then
+	        strResult = "//Equipment"
+	    Else
+	    
+	        strResult = "//Equipment["
+	        
+	        Dim i As Integer
+	        Dim k As String
+	        
+	        For i = 0 To cList.count - 1
+	            
+	            strResult = strResult & cList.Keys(i)
+	                If i < cList.count - 1 Then
+	                strResult = strResult & " and "
+	            End If
+	        Next
+	    
+	        strResult = strResult & "]"
+	    End If
+	    
+	    GetXPathQuery = strResult
+	    
+	    Exit Function
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "GetXPathQuery", Err.Description)
+	    ThisMimic.Close
+	    
+	End Function
+	
+	
+	'* Return the selected values or () if not selected
+	Private Function Constraints(LB As ListBox, atrname As String) As String
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Constraints", "Begin Function")
+	
+	    Dim strResult As String
+	    
+	    strResult = "("
+	    Dim k As Integer
+	    
+	    
+	    Dim selectedCount As Integer
+	    selectedCount = 0
+	    For k = 0 To LB.ListCount - 1
+	        If LB.Selected(k) = True Then
+	            selectedCount = selectedCount + 1
+	        End If
+	    Next
+	        
+	        
+	    Dim seen As Integer
+	    seen = 0
+	    For k = 0 To LB.ListCount - 1
+	        If LB.Selected(k) = True Then
+	            strResult = strResult & "@" & atrname & "='" & LB.List(k) & "' "
+	            seen = seen + 1
+	            If (seen < selectedCount) Then
+	                strResult = strResult & " or "
+	            End If
+	        End If
+	    Next
+	    
+	    strResult = strResult & ")"
+	    
+	    Constraints = strResult
+	    Exit Function
+	
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Constraints", Err.Description)
+	    ThisMimic.Close
+	
+	End Function
+	
+	
+	Private Sub QueryEQP(strQuery As String)
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "QueryEQP", "Begin Sub")
+	    
+	    SelectedEQP.removeAll
+	    
+	    'Allow to select a single eqp at a time only
+	    Dim eqpNode As IXMLDOMNode
+	    Set eqpNode = XMLDoc.selectSingleNode(strQuery)
+	    
+	    If (Not eqpNode Is Nothing) Then
+	        
+	        SelectedEQP.Add ATR_NAME, eqpNode.Attributes.getNamedItem(ATR_NAME).Text
+	        SelectedEQP.Add ATR_PLOTMIN, eqpNode.Attributes.getNamedItem(ATR_PLOTMIN).Text
+	        SelectedEQP.Add ATR_PLOTMAX, eqpNode.Attributes.getNamedItem(ATR_PLOTMAX).Text
+	        SelectedEQP.Add ATR_DESCRIPTION, eqpNode.Attributes.getNamedItem(ATR_DESCRIPTION).Text
+	        SelectedEQP.Add ATR_DISPLAYNAME, eqpNode.Attributes.getNamedItem(ATR_DISPLAYNAME).Text
+	    End If
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "QueryEQP", Err.Description)
+	    ThisMimic.Close
+	End Sub
+	
+	
+	''Populate the given listbox
+	Private Sub QueryListBox(strQuery As String, LB As ListBox, Atri As String)
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "QueryListBox", "Begin Sub")
+	
+	    LB.Clear
+	    
+	    Dim nodes As IXMLDOMNodeList
+	    Set nodes = XMLDoc.selectNodes(strQuery)
+	    Dim node As IXMLDOMNode
+	    Dim itemname As String
+	    
+	    Dim UniqueList  As Dictionary
+	    Set UniqueList = New Dictionary
+	    
+	    For Each node In nodes
+	        itemname = node.Attributes.getNamedItem(Atri).Text
+	        If (Not UniqueList.Exists(itemname)) Then
+	            UniqueList.Add itemname, ""
+	            LB.AddItem itemname
+	        End If
+	    Next
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "QueryListBox", Err.Description)
+	    ThisMimic.Close
+	End Sub
+	
+	
+	
+	
+	
+	Private Sub StationListBox_Change()
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "StationListBox_Change", "Begin Sub")
+	
+	    EQPFamilyListBox.Clear
+	    VariableTypeListBox.Clear
+	    EQPListBox.Clear
+	    
+	    If (IsListBoxSelected(StationListBox)) Then
+	        ConstrainList.removeAll
+	        ConstrainList.Add ConstraintStations, ""
+	        Dim strQuery As String
+	        strQuery = GetXPathQuery(ConstrainList)
+	        QueryListBox strQuery, EQPFamilyListBox, ATR_EQPFAMILY
+	    End If
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "StationListBox_Change", Err.Description)
+	    ThisMimic.Close
+	End Sub
+	
+	
+	Private Sub EQPFamilyListBox_Change()
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "EQPFamilyListBox_Change", "Begin Sub")
+	
+	    VariableTypeListBox.Clear
+	    EQPListBox.Clear
+	    
+	    If (IsListBoxSelected(StationListBox) And IsListBoxSelected(EQPFamilyListBox)) Then
+	        ConstrainList.removeAll
+	        ConstrainList.Add ConstraintStations, ""
+	        ConstrainList.Add ConstraintEqpFamilies, ""
+	        Dim strQuery As String
+	        strQuery = GetXPathQuery(ConstrainList)
+	        QueryListBox strQuery, VariableTypeListBox, ATR_VARIABLETYPE
+	    End If
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EQPFamilyListBox_Change", Err.Description)
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub StatusLabel_Click()
+	    ClearMessage
+	End Sub
+	
+	Private Sub DisplayMessage(strMsg As String)
+	    StatusLabel.Text = strMsg
+	End Sub
+	
+	Private Sub ClearMessage()
+	    StatusLabel.Text = ""
+	End Sub
+	
+	
+	Private Sub VariableTypeListBox_Change()
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "VariableTypeListBox_Change", "Begin Sub")
+	    
+	    EQPListBox.Clear
+	
+	    If (IsListBoxSelected(StationListBox) And IsListBoxSelected(EQPFamilyListBox) And IsListBoxSelected(VariableTypeListBox)) Then
+	        ConstrainList.removeAll
+	        ConstrainList.Add ConstraintStations, ""
+	        ConstrainList.Add ConstraintEqpFamilies, ""
+	        ConstrainList.Add ConstraintVariableTypes, ""
+	        Dim strQuery As String
+	        strQuery = GetXPathQuery(ConstrainList)
+	        QueryListBox strQuery, EQPListBox, ATR_DESCRIPTION
+	    End If
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "VariableTypeListBox_Change", Err.Description)
+	    ThisMimic.Close
+	End Sub
+	
+	'* Make sure the user can only select upto INT_MAXPENS
+	Private Sub EQPListBox_Change()
+	On Error GoTo Error
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "EQPListBox_Change", "Begin Sub")
+	    
+	    ClearMessage
+	    
+	    If (IsListBoxSelected(StationListBox) And IsListBoxSelected(EQPFamilyListBox) And IsListBoxSelected(VariableTypeListBox) And IsListBoxSelected(EQPListBox)) Then
+	        Dim count As Integer
+	        count = 0
+	        Dim i As Integer
+	        For i = 0 To EQPListBox.ListCount - 1
+	            If (EQPListBox.Selected(i)) Then
+	                count = count + 1
+	                If (count > pMaxPens Or General.HasReachedMaximumPens(pTrend, pMaxPens)) Then
+	                        EQPListBox.Selected(i) = False
+	                        DisplayMessage STR_TRENDTXT_EQP_MAX_SELECTION_REACHED
+	                End If
+	            End If
+	        Next
+	    End If
+	    Exit Sub
+	Error:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EQPListBox_Change", Err.Description)
+	    ThisMimic.Close
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"Scripting", 1, 0, "{420B2830-E718-11CF-893D-00A0C9054228}"
+	"TRENDLib", 1, 0, "{78D13555-527F-11D2-88F8-000000000000}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,0,1
+COLORS,END
+O,BEGIN,T,"AddButton"
+	B,55,587,231,619,38,629,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,55,587,0,0,FONT,1,"A¤adir",37,FONT,1,"A¤adir",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"A¤adir",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"CancelButton"
+	B,239,587,312,619,233,629,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,239,587,0,0,FONT,1,"Cerrar",37,FONT,1,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,OCX,"EQPListBox"
+	B,2,335,391,575,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text5"
+	B,8,314,100,346,-1,356,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,8,314,0,0,FONT,2,"Equipos",84,FONT,2,"Equipos",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Equipos",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"EQPFamilyListBox"
+	B,137,42,260,296,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text2"
+	B,137,8,229,40,128,50,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,137,8,0,0,FONT,2,"Familias de equipos",84,FONT,2,"Familias de equipos",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Familias de equipos",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"StationListBox"
+	B,2,42,125,296,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,5,8,97,40,-4,50,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,5,8,0,0,FONT,2,"Estaciones",84,FONT,2,"Estaciones",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estaciones",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"VariableTypeListBox"
+	B,270,42,393,296,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text4"
+	B,270,8,362,40,261,50,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,270,8,0,0,FONT,2,"Tipos de variables",84,FONT,2,"Tipos de variables",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipos de variables",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"StatusLabel"
+	B,6,612,395,636,-2,644,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,6,612,0,0,FONT,3,"",36,FONT,3,"",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"",FONT,3,36
+		LANG,END
+	MULTILANG,END
+O,END

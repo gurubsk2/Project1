@@ -1,0 +1,15 @@
+; Client Builder Project File
+; Note to user: NEVER DELETE OR CHANGE THIS FILE IN ANY WAY.
+
+[General]
+Id=FVProjectFile
+Version=1.00
+[SubFolders]
+Config Files=Config Files
+Bitmap Files=Bitmap Files
+Symbol Files=Symbol Files
+Mimic Files=Mimic Files
+Template Files=Template Files
+Script Files=Script Files
+JAR Files=JAR Files
+Libraries=Libraries

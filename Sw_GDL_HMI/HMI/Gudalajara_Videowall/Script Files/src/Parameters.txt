@@ -1,0 +1,10 @@
+VBA_PROJECTINFO,BEGIN
+	"Description", ""
+	"HelpFile", ""
+	"HelpContextID", 0
+	"Version", 1
+	"Protection", "0"
+VBA_PROJECTINFO,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END

@@ -1,0 +1,808 @@
+ASCII32,6,8,2019,9:18,11,1.1
+W,BEGIN,"mmc_TrainAssociate_WithoutTT","mmc_TrainAssociate_WithoutTT"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,809,478
+	SIZE,300,240,300,240,0,0,0,1280,1024,294,216
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,""
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Asociar servicio 7"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,1,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_TrainAssociate_WithoutTT.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	
+	' OPC tags used for retrieving data
+	Private Const c_sCurTrainIDTag As String = ".HMITrain.iTrainID"
+	Private Const c_sCurHMITrainIDTag As String = ".Attributes.HMITETrain.bstrPlug_6"
+	Private Const c_sCurServiceNumTag As String = ".Attributes.HMITETrain.bstrPlug_1"
+	Private Const c_strTrainOriginCodeTag As String = ".Attributes.HMITETrain.bstrPlug_2"
+	Private Const c_strTrainDestinationCodeTag As String = ".Attributes.HMITETrain.bstrPlug_3"
+	' OPC tag used for retrieving origin and destination list
+	Private Const c_strOriginDestinationListTag As String = "IconisHMI.UO.OriginDestinationList.Information.Value"
+	' OPC tags used for command sending
+	Private Const c_sOPCsTrainInterposeCmdTag As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeBerth"
+	' Constant used to read the XML string containing the list of origins and destinations
+	Private Const c_strOriginsNode As String = "Origins"
+	Private Const c_strOriginNode As String = "Origin"
+	Private Const c_strDestinationNode As String = "Destination"
+	Private Const c_strIDAttr As String = "ID"
+	Private Const c_strNameAttr As String = "Name"
+	Private Const c_strDestinationSeparator As String = ";"
+	'* *******************************************************************************************
+	'* Variables
+	'* *******************************************************************************************
+	' OPC Set Items
+	Dim WithEvents m_OPC_OriginDestinationList As Variable
+	Dim WithEvents m_OPCSet_CurTrainStatus As Iconis_CLS_OPCSet
+	Dim m_OPCSetItemCurTrainID As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemCurHMITrainID As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItemCurServiceNum As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_OriginCode As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_DestinationCode As Iconis_CLS_OPCSet_Item
+	' Train interpose command variable to identify the train
+	Dim m_OPCsTrainInterposeCmd As Variable
+	
+	' Current train attributes
+	Dim m_iCurTrainID As String
+	Dim m_sCurHMITrainID As String
+	Dim m_sCurServiceNum As String
+	Dim m_strTrainOriginCode As String
+	Dim m_strTrainDestinationCode As String
+	' Initialization done
+	Dim m_bInitDone As Boolean
+	' XML string containing list of origins and destinations
+	Dim m_strOriginDestinationList As String
+	' OPC Cluster
+	Dim m_strClusterName As String
+	' Collection of stations
+	Dim m_collStations As Collection
+	Dim m_collOriginDestinations As Collection
+	Sub AddStation(ID As String, Name As String)
+	On Error GoTo ErrorHandler
+	    m_collStations.Add ID, Name
+	Exit Sub
+	
+	ErrorHandler:
+	    Select Case Err.Number
+	        Case 457 'Duplicate Key name
+	            Exit Sub
+	        Case Else
+	            Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	    End Select
+	End Sub
+	Sub AddOriginDestinations(Origin As String, Destinations As String)
+	    m_collOriginDestinations.Add Array(Origin, Destinations), Origin
+	End Sub
+	'* *******************************************************************************************
+	'* Mimic_Open
+	'* *******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	    m_bInitDone = False
+	    ThisMimic.Caption = ""
+	    ' Initialize the mimic
+	    Initialize
+	    
+	    ' Extract the cluster name from the branch of the mimic
+	    m_strClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    Set m_OPC_OriginDestinationList = Variables.Add(c_strClusterLevel2 & c_strOriginDestinationListTag, fvVariableTypeText)
+	    
+	    If (m_OPC_OriginDestinationList.EnableEvents = True) Then
+	        m_OPC_OriginDestinationList_ValueChange
+	    Else
+	        m_OPC_OriginDestinationList.EnableEvents = True
+	    End If
+	    ' Set the command variables
+	    Set m_OPCsTrainInterposeCmd = Variables.Add(c_strClusterLevel2 & c_sOPCsTrainInterposeCmdTag, fvVariableTypeText)
+	    
+	    ' Create the OPCSet to read the current status
+	    Set m_OPCSet_CurTrainStatus = Iconis_Mod_General.CreateNew_Iconis_CLS_OPCSet
+	    Set m_OPCSetItemCurTrainID = m_OPCSet_CurTrainStatus.AddItem(ThisMimic.Branch & c_sCurTrainIDTag, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItemCurHMITrainID = m_OPCSet_CurTrainStatus.AddItem(ThisMimic.Branch & c_sCurHMITrainIDTag, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItemCurServiceNum = m_OPCSet_CurTrainStatus.AddItem(ThisMimic.Branch & c_sCurServiceNumTag, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItem_OriginCode = m_OPCSet_CurTrainStatus.AddItem(ThisMimic.Branch & c_strTrainOriginCodeTag, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItem_DestinationCode = m_OPCSet_CurTrainStatus.AddItem(ThisMimic.Branch & c_strTrainDestinationCodeTag, fvVariableTypeText, c_OPCReadOnly)
+	    m_OPCSet_CurTrainStatus.DoConnect (Me.Name & ThisMimic.Branch)
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Mimic_BeforeClose
+	'* *******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	
+	    If Not (m_OPCSet_CurTrainStatus Is Nothing) Then
+	        m_OPCSet_CurTrainStatus.Destroy
+	        Set m_OPCSetItemCurTrainID = Nothing
+	        Set m_OPCSetItemCurHMITrainID = Nothing
+	        Set m_OPCSetItemCurServiceNum = Nothing
+	        Set m_OPCSetItem_OriginCode = Nothing
+	        Set m_OPCSetItem_DestinationCode = Nothing
+	    End If
+	        Set m_collStations = Nothing
+	    Set m_collOriginDestinations = Nothing
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* *******************************************************************************************
+	'* Initialize: Set the mimic with the default settings
+	'* *******************************************************************************************
+	Sub Initialize()
+	On Error GoTo ErrorHandler
+	
+	    ' Set the title label with the HMITrainID
+	     SetHMITrainID ("[ID]")
+	    
+	    ' Text boxes cleared
+	    TextBox_1.Value = ""
+	     '' List boxes cleared
+	    ListBox_1.Value = ""
+	    ListBox_2.Value = ""
+	    
+	    ' Enable or disable OK button
+	    ManageOKButton
+	    
+	   
+	
+	    ' Enable the cancel button
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Active%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Initialize", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPCSet_CurTrainStatus_OnConnection: Set the display of the current data
+	'* *******************************************************************************************
+	Private Sub m_OPCSet_CurTrainStatus_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	
+	    m_iCurTrainID = m_OPCSetItemCurTrainID.Value
+	    m_sCurHMITrainID = m_OPCSetItemCurHMITrainID.Value
+	    m_sCurServiceNum = m_OPCSetItemCurServiceNum.Value
+	    
+	    UpdateMimicWithCurrentValues
+	    
+	    m_bInitDone = True
+	    ThisMimic.Caption = "Asociar servicio " & m_iCurTrainID
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCSet_CurTrainStatus_OnConnection", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* UpdateMimicWithCurrentValues: Fill the mimic according the current train data
+	'* *******************************************************************************************
+	Function UpdateMimicWithCurrentValues()
+	On Error GoTo ErrorHandler
+	   
+	    ' Set the title label with the HMITrainID
+	    SetHMITrainID (m_sCurHMITrainID)
+	    
+	    ' Set the text boxes according the current data
+	    TextBox_1.Value = m_sCurServiceNum
+	    
+	    ListBox_1.Value = m_strTrainOriginCode
+	    ListBox_2.Value = m_strTrainDestinationCode
+	    ' Enable or disable OK button
+	    ManageOKButton
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "UpdateMimicWithCurrentValues", Err.Description)
+	End Function
+	'* *******************************************************************************************
+	'* ListBox_1_Change: Manage the modification of origin code
+	'* *******************************************************************************************
+	Private Sub ListBox_1_Change()
+	On Error GoTo ErrorHandler
+	
+	    ' Fill the list of destinations according the origin selected
+	    If (ListBox_1.Value <> "") Then
+	        BuildListbox_2 (ListBox_1.Value)
+	    End If
+	
+	    ' Enable or disable confirmation button
+	     ManageOKButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ListBox_1_Change", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* ListBox_2_Change: Manage the modification of destination code
+	'* *******************************************************************************************
+	Private Sub ListBox_2_Change()
+	On Error GoTo ErrorHandler
+	
+	    ' Enable or disable confirmation button
+	      ManageOKButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ListBox_2_Change", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* m_OPC_OriginDestinationList_ValueChange: Manage the change of m_OPC_OriginDestinationList
+	'* *******************************************************************************************
+	Private Sub m_OPC_OriginDestinationList_ValueChange()
+	On Error GoTo ErrorHandler
+	    
+	    If Check_OPC_Variable(m_OPC_OriginDestinationList) Then
+	        
+	        ' Set the variable
+	        m_strOriginDestinationList = m_OPC_OriginDestinationList.Value
+	        
+	        ' Read the XML file
+	        ReadXML
+	        
+	        ' Build the list box containing origin stations
+	        BuildListbox_1
+	        
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_OriginDestinationList_ValueChange", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* ReadXML: Read the XML string
+	'* *******************************************************************************************
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	
+	    Dim oDoc As DOMDocument
+	    
+	    Dim oOriginsList As IXMLDOMNodeList
+	    Dim oOrigin As IXMLDOMElement
+	    Dim strOriginID As String
+	    Dim strOriginName As String
+	    
+	    Dim oDestinationsList As IXMLDOMNodeList
+	    Dim oDestination As IXMLDOMElement
+	    Dim strDestinationID As String
+	    Dim strDestinationName As String
+	    
+	    Dim NbDestinations As Integer
+	    Dim strDestinations As String
+	
+	    Set m_collStations = New Collection
+	    Set m_collOriginDestinations = New Collection
+	
+	    If (m_strOriginDestinationList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strOriginDestinationList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oOriginsList = oDoc.documentElement.selectNodes(c_strOriginNode)
+	                    If Not (oOriginsList Is Nothing) Then
+	                        If (oOriginsList.length > 0) Then
+	                         
+	                            For Each oOrigin In oOriginsList
+	                                
+	                                strOriginID = Format(oOrigin.getAttribute(c_strIDAttr))
+	                                strOriginName = Format(oOrigin.getAttribute(c_strNameAttr))
+	                                If (strOriginID <> "" And strOriginName <> "") Then
+	                                    
+	                                    AddStation strOriginID, strOriginName
+	                                    
+	                                    Set oDestinationsList = oOrigin.selectNodes(c_strDestinationNode)
+	                                    If Not (oDestinationsList Is Nothing) Then
+	                                        If (oDestinationsList.length > 0) Then
+	                                            
+	                                            NbDestinations = 0
+	                                            strDestinations = ""
+	                                            For Each oDestination In oDestinationsList
+	                                    
+	                                                strDestinationID = Format(oDestination.getAttribute(c_strIDAttr))
+	                                                strDestinationName = Format(oDestination.getAttribute(c_strNameAttr))
+	                                                
+	                                                AddStation strDestinationID, strDestinationName
+	                                                
+	                                                If (NbDestinations < oDestinationsList.length - 1) Then
+	                                                    strDestinations = strDestinations & strDestinationName & c_strDestinationSeparator
+	                                                Else
+	                                                    strDestinations = strDestinations & strDestinationName
+	                                                End If
+	                                                
+	                                                NbDestinations = NbDestinations + 1
+	                                            
+	                                            Next oDestination
+	                                            AddOriginDestinations strOriginName, strDestinations
+	                                        End If
+	                                        Set oDestinationsList = Nothing
+	                                    End If
+	                                End If
+	                            Next oOrigin
+	                        End If
+	                        Set oOriginsList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* BuildListbox_1: Build the list box containing origin stations
+	'* *******************************************************************************************
+	Private Sub BuildListbox_1()
+	On Error GoTo ErrorHandler
+	
+	    ListBox_1.Clear
+	    
+	    Dim OriginDestinations
+	    For Each OriginDestinations In m_collOriginDestinations
+	    
+	        ListBox_1.AddItem (OriginDestinations(0))
+	    
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* BuildListbox_1: Build the list box containing destination stations
+	'* *******************************************************************************************
+	Private Sub BuildListbox_2(strOrigin As String)
+	On Error GoTo ErrorHandler
+	
+	    ListBox_2.Clear
+	    
+	    Dim OriginDestinations
+	    For Each OriginDestinations In m_collOriginDestinations
+	        
+	        If (OriginDestinations(0) = strOrigin) Then
+	        
+	            Dim strDestinations
+	            strDestinations = OriginDestinations(1)
+	            
+	            Dim arrDestinations
+	            arrDestinations = Split(OriginDestinations(1), c_strDestinationSeparator)
+	            
+	            Dim Destination
+	            For Each Destination In arrDestinations
+	             
+	                ListBox_2.AddItem (Destination)
+	            
+	            Next
+	            
+	        End If
+	        
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Manage the modification of service number
+	'* *******************************************************************************************
+	Private Sub TextBox_1_Change()
+	On Error GoTo ErrorHandler
+	
+	    ManageOKButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "TextBox_1_Change", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* ManageOKButton
+	'* *******************************************************************************************
+	Private Sub ManageOKButton()
+	On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = (TextBox_1.Value <> "") And _
+	                                                                   (Val(TextBox_1.Value) >= 1) And _
+	                                                                   (Val(TextBox_1.Value) <= 9999) And (ListBox_1.Value <> "") And _
+	                                                                   (ListBox_2.Value <> "")
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageOKButton", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Manage the click on OK button
+	'* *******************************************************************************************
+	Private Sub Button_1_Click()
+	On Error GoTo ErrorHandler
+	
+	    Dim sInterposeCmd       As String
+	    Dim strTrainServiceID   As String
+	    If Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value Then
+	    
+	        If (m_iCurTrainID <> "") Then 'And (TextBox_1.Value <> m_sCurServiceNum) Then
+	            strTrainServiceID = TextBox_1.Value
+	            
+	            While Len(m_OPCSetItemCurServiceNum.Value) > Len(strTrainServiceID)
+	                
+	                strTrainServiceID = "0" & strTrainServiceID
+	            
+	            Wend
+	
+	            sInterposeCmd = "%UniqueID%|" & m_iCurTrainID & "|ManualAssociationToTimetableService|" & strTrainServiceID
+	            WriteTrainInterposeCmd sInterposeCmd
+	            If (m_iCurTrainID > 0) And ((ListBox_1.Value <> m_strTrainOriginCode) Or (ListBox_1.Value <> m_strTrainDestinationCode)) Then 'EEE
+	                sInterposeCmd = "%UniqueID%|" & m_iCurTrainID & "|ManualAssociationToNonTimetableTrip|" & m_collStations.Item(ListBox_1.Value) & "*" & m_collStations.Item(ListBox_2.Value)
+	                WriteTrainInterposeCmd sInterposeCmd
+	            End If
+	         
+	''            sInterposeCmd = "%UniqueID%|" & m_iCurTrainID & "|ManualAssociationToTimetableService|" & strTrainServiceID
+	''            WriteTrainInterposeCmd sInterposeCmd
+	        End If
+	        
+	        Me.Close
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_Click", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* WriteTrainInterposeCmd: Write the interpose command to OPC plug
+	'* *******************************************************************************************
+	Private Sub WriteTrainInterposeCmd(StringCmd As String)
+	On Error GoTo ErrorHandler
+	    
+	    If (Check_OPC_Variable(m_OPCsTrainInterposeCmd)) And (StringCmd <> "") Then
+	        m_OPCsTrainInterposeCmd.Value = StringCmd
+	        Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "interpose Command Written", StringCmd)
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "WriteTrainInterposeCmd", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* SetHMITrainID
+	'* *******************************************************************************************
+	Private Sub SetHMITrainID(strHMITrainID As String)
+	On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Title%").Value = Replace(Label_1.Text, "[ID]", strHMITrainID)
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "SetHMITrainID", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call Variables.Add(ThisMimic.Branch & ".Button_1_Hover%", fvVariableTypeRegister)
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_MouseEnter", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	 Call Variables.Add(ThisMimic.Branch & ".Button_1_Hover%", fvVariableTypeRegister)
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = False
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_MouseLeave", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	     Call Variables.Add(ThisMimic.Branch & ".Button_2_Hover%", fvVariableTypeRegister)
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = True
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_2_MouseEnter", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = False
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_2_MouseLeave", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,191,191,191,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,64,64,64,0,0,0
+	COLOR,8,240,240,240,0,0,0
+COLORS,END
+O,BEGIN,T,"Label_1"
+	B,15,5,130,30,15,30,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,15,5,0,0,FONT,1,"",36,FONT,1,"",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Train [ID]",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Title%"
+	A,END
+O,END
+O,BEGIN,T,"Label_2"
+	B,40,34,115,59,40,59,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,40,34,0,0,FONT,1,"",38,FONT,1,"",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Servicio",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Servicio",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"TextBox_1"
+	B,121,34,176,59,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Button_1"
+	B,60,185,140,210,60,210,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,60,185,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Ejecutar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Button_1_Hover%","Button_1_Active%","",""
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",1,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Button_2"
+	B,150,185,230,210,150,210,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,150,185,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Button_2_Hover%","Button_2_Active%","",""
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Label_3"
+	B,7,80,112,105,7,105,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,7,80,0,0,FONT,1,"Origin code",38,FONT,1,"Origin code",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Origen",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Origen",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ListBox_1"
+	B,121,80,241,105,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Label_4"
+	B,7,120,112,145,7,145,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,7,120,0,0,FONT,1,"Destination code",38,FONT,1,"Destination code",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destino",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Destino",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ListBox_2"
+	B,121,120,241,145,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END

@@ -1,0 +1,100 @@
+ASCII32,3,1,2017,12:30,19,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,238,238,238,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,105,105,105,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2016. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name:      GDL_Command_Creation_Window
+	'* *******************************************************************************************
+	'* Purpose:     To Swap the order of the selected Command Sequence
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Dec '16
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* *******************************************************************************************
+	
+	Option Explicit
+	Const c_sStation As String = "@STATION"
+	
+	Private Sub Symbol_Click()
+	On Error GoTo ErrorHandler
+	Dim sarrSelSerailNumber As String
+	Dim sarrSelStationName As String
+	Dim sarrSelEqpType As String
+	Dim sarrSelEqpID As String
+	Dim sarrSelCommand As String
+	Dim sarrSelDelay As String
+	Dim sCurTemp As String
+	
+	sCurTemp = Variables.Item("@SelectedSeq%").Value
+	    
+	  If (sCurTemp > 0 And sCurTemp <= 10 And Variables.Item(c_sStation & (sCurTemp + 1) & ".Number%").Value <> "") Then
+	        
+	
+	        'sarrSelSerailNumber = Variables.Item(c_sStation & (sCurTemp + 1) & ".Number%").Value
+	        sarrSelStationName = Variables.Item(c_sStation & (sCurTemp + 1) & ".StationName%").Value
+	        sarrSelEqpType = Variables.Item(c_sStation & (sCurTemp + 1) & ".EqpType%").Value
+	        sarrSelEqpID = Variables.Item(c_sStation & (sCurTemp + 1) & ".EqpID%").Value
+	        sarrSelCommand = Variables.Item(c_sStation & (sCurTemp + 1) & ".Command%").Value
+	        sarrSelDelay = Variables.Item(c_sStation & (sCurTemp + 1) & ".Delay%").Value
+	        
+	        'sCurTemp = Variables.Item(c_sStation & (sCurTemp +1) & ".Number%").Value
+	        
+	        'Variables.Item(c_sStation & (sCurTemp + 1) & ".Number%").Value = Variables.Item(c_sStation & sCurTemp & ".Number%").Value
+	        Variables.Item(c_sStation & (sCurTemp + 1) & ".StationName%").Value = Variables.Item(c_sStation & sCurTemp & ".StationName%").Value
+	        Variables.Item(c_sStation & (sCurTemp + 1) & ".EqpType%").Value = Variables.Item(c_sStation & sCurTemp & ".EqpType%").Value
+	        Variables.Item(c_sStation & (sCurTemp + 1) & ".EqpID%").Value = Variables.Item(c_sStation & sCurTemp & ".EqpID%").Value
+	        Variables.Item(c_sStation & (sCurTemp + 1) & ".Command%").Value = Variables.Item(c_sStation & sCurTemp & ".Command%").Value
+	        Variables.Item(c_sStation & (sCurTemp + 1) & ".Delay%").Value = Variables.Item(c_sStation & sCurTemp & ".Delay%").Value
+	        
+	        'Variables.Item(c_sStation & sCurTemp & ".Number%").Value = sarrSelSerailNumber
+	        Variables.Item(c_sStation & sCurTemp & ".StationName%").Value = sarrSelStationName
+	        Variables.Item(c_sStation & sCurTemp & ".EqpType%").Value = sarrSelEqpType
+	        Variables.Item(c_sStation & sCurTemp & ".EqpID%").Value = sarrSelEqpID
+	        Variables.Item(c_sStation & sCurTemp & ".Command%").Value = sarrSelCommand
+	        Variables.Item(c_sStation & sCurTemp & ".Delay%").Value = sarrSelDelay
+	      
+	    Variables.Item("@SelectedSeq%").Value = (sCurTemp + 1)
+	    
+	  End If
+	  
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	
+	End Sub
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Group1"
+	B,15,322,42,343,15,343,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape11"
+		B,42,322,15,343,42,322,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,6,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	O,END
+	O,BEGIN,P,"Poly2"
+		B,24,335,34,330,24,330,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,1,0,COLOR,1
+		PP,24,330,34,330,29,335,29,335
+	O,END
+O,END

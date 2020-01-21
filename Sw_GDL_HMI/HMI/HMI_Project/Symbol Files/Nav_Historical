@@ -1,0 +1,73 @@
+ASCII32,18,9,2018,20:47,24,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,0,255,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'Private Sub Shape20_Click()
+	'On Error GoTo ErrorHandler
+	''OpenMimicOnScreen GetmousepointerPossition, VIEW_Alarms, ""
+	'Call OpenMimicInCenter("GUA_Event", "*", Getmousepointerpossition)
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	'End Sub
+	'
+	'Private Sub btnHistoric_Click()
+	'On Error GoTo ErrorHandler
+	''OpenMimicOnScreen GetmousepointerPossition, VIEW_Historical, ""
+	'Call OpenMimicInCenter("GDL_Historico", "*", Getmousepointerpossition)
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	'End Sub
+	'
+	'Private Sub Symbol_Click()
+	'On Error GoTo ErrorHandler
+	''OpenMimicOnScreen GetmousepointerPossition, VIEW_Alarms, ""
+	'Call OpenMimicInCenter("GDL_Historico", "*", Getmousepointerpossition)
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	'End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol20"
+	B,1868,99,1909,142,1868,142,65535,0,6400,0,1,0,0
+	O,BEGIN,BM,"Bitmap2"
+		B,1868,100,1909,142,1868,142,65535,0,6400,0,2,1,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,"Botao_Consumo.jpg",0,COLOR,3
+	O,END
+	O,BEGIN,R,"btnHistoric"
+		B,1909,141,1868,99,1909,141,65535,0,6400,0,2,1,1
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,4,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,2058
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Ventana de alarmas"
+				LANG,END
+				LANG,BEGIN,2058
+					ROLE_DEFAULT,0
+					ROLE,0,"@Ventana de alarmas"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

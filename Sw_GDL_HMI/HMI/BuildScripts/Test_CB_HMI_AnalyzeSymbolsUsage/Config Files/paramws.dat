@@ -1,0 +1,15 @@
+MainWindow,2,251,0,1024,738,0x00ABABAB,0x000001BE,1,0,"","",0,0
+ControlBar,0,1
+MenuBar,1,1,0,450,0,	0,0,15150,375
+TBAnim,1,0,3,0,0,	0,0,0,0
+TBModes,1,1,0,7770,0,	0,0,3570,450
+TBDraw,1,1,2,0,0,	0,0,450,9255
+TBArrange,1,1,1,0,0,	0,0,11340,450
+TBLevels,1,1,1,11340,0,	0,0,3810,450
+TBStandard,1,1,0,0,0,	0,0,7770,450
+ScreenSystem,0,1,1
+RightCloseCde,0,0
+Warnings,0,1
+AdvancedMode,0,0
+ArrangeStyle,0,0
+

@@ -1,0 +1,524 @@
+ASCII32,19,12,2017,8:57,3,1.1
+W,BEGIN,"SDD_Group_InOperation_HILC_Confirmation","SDD_Group_InOperation_HILC_Confirmation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,325,300,325,300,0,0,0,1280,1024,325,300
+	BACKCOLOR,216,216,216,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"SDD group in operation"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SDD_Group_InOperation_HILC_Confirmation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2011. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SDD Group In Operation HILC Ctrl Conf Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manage the combo box displaying the list of names of each SDD Group managed
+	'*              by the same ZC FEP server as this one of SDD group of the preparation phase
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Omar HAFADI
+	'* Date:                May 2015
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSeparator As String = "\n"
+	
+	'* Type of HILC command
+	Private Const c_strHILCCtrlName As String = ".HILC."
+	
+	'* Path of the "SDD List In Operation HILC Ctrl" mimic
+	Private Const c_strSDDListMimicName As String = "SDD_List_InOperation_HILCCtrl_Confirmation"
+	
+	'* Used to read the string (XML format) containing the list of SDD groups
+	Private Const c_strSDDGroupNode As String = "SDDGroup"
+	Private Const c_strIDAttr As String = "ID"
+	Private Const c_strNameAttr As String = "Name"
+	Private Const c_strZCAttr As String = "ZC"
+	
+	'* Path of the OPC variables containing the list of SDD groups belonging to the track plan
+	Private Const c_strDevicesListTag As String = "IconisHMI.SDDGroupList.Information.Value"
+	
+	'* Path of OPC variables used in the building of the confirmation message
+	Private Const c_strSDDGroupID As String = ".UEID.Value"
+	
+	
+	'* OPC variables
+	'*******************************************************
+	Dim WithEvents m_OPC_SDDGroupsList As Variable
+	Dim WithEvents m_OPC_SDDGroupID As Variable
+	
+	'* Module variables
+	'*******************************************************
+	'* Name of the OPC cluster
+	Dim m_strClusterName As String
+	Dim m_lCurrentIndex As Integer
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: At the opening of the mimic, add the OPC variable and local variable
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    '* Retrieve the OPC Cluster name
+	    m_strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	        
+	    '* Clear the combo box
+	    ComboBoxDeviceNames.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxDeviceNames.Value = ""
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    '* Init variable containing the index of the sector selected in the combo box
+	    m_lCurrentIndex = -1
+	    
+	    
+	    '* Add and init a variable containing the OPC variable name of the SDD group
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%", fvVariableTypeText
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value = ""
+	    
+	        '* Add and init a variable containing the OPC variable name of the SDD group add in combobox
+	    Variables.Add ThisMimic.Branch & ".ListOfSDDGroupNames%", fvVariableTypeText
+	    Variables.Item(ThisMimic.Branch & ".ListOfSDDGroupNames%").Value = ""
+	    
+	
+	    
+	    '* Add the OPC variable containing the list of SDD groups belonging to the track plan
+	    Set m_OPC_SDDGroupsList = Variables.Add(m_strClusterName & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_SDDGroupsList.Status = fvVariableStatusGood) And (m_OPC_SDDGroupsList.EnableEvents = True)) Then
+	        m_OPC_SDDGroupsList_ValueChange
+	    Else
+	        m_OPC_SDDGroupsList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, unsubscribe the local variables and OPC variables
+	'*          previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseSDDGroupID%")
+	
+	  
+	    If Not (m_OPC_SDDGroupsList Is Nothing) Then
+	        Variables.Remove (m_OPC_SDDGroupsList.Name)
+	        Set m_OPC_SDDGroupsList = Nothing
+	    End If
+	   
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* SubRoutine: EnableOKButton
+	'* Purpose: Enable the OK button if conditions are fullfilled
+	'* ******************************************************************************************
+	Private Sub EnableOKButton()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "EnableOKButton", "Begin Subroutine")
+	    
+	    '* Check if values of all OPC variables have been received
+	    If Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value <> "" Then
+	        '* Enable the OK button
+	        Variables.Item(ThisMimic.Branch & ".SDDGroup_InOperation_OkActive%").Value = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableOKButton", Err.Description)
+	End Sub
+	
+	'* SubRoutine: AddOPCVariables
+	'* Purpose: Add OPC variables used in the building of the Confirmation message
+	'*          and decoding of the Confirmation Return Code message
+	'* ******************************************************************************************
+	Private Sub AddOPCVariables(ByVal strOPCVarName As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddOPCVariables", "Begin Subroutine")
+	  
+	    Dim strOPCVarPath As String
+	   
+	    If Not (m_OPC_SDDGroupsList Is Nothing) Then
+	        Variables.Remove (m_OPC_SDDGroupsList.Name)
+	        Set m_OPC_SDDGroupsList = Nothing
+	    End If
+	    
+	        
+	    '* Add the variable UEID.Value
+	    Set m_OPC_SDDGroupsList = Variables.Add(m_strClusterName & strOPCVarName & m_OPC_SDDGroupsList, fvVariableTypeText)
+	    If ((m_OPC_SDDGroupsList.Status = fvVariableStatusGood) And (m_OPC_SDDGroupsList.EnableEvents = True)) Then
+	        m_OPC_SDDGroupsList_ValueChange
+	    Else
+	        m_OPC_SDDGroupsList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "AddOPCVariables", Err.Description)
+	End Sub
+	
+	'* SubRoutine: ComboBoxDeviceNames_Change
+	'* Purpose: Manage getting the value selected in the combo box
+	'* ******************************************************************************************
+	Private Sub ComboBoxDeviceNames_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDeviceNames_Change", "Begin Subroutine")
+	    
+	'    Dim strPath As String
+	'    Dim OPCVarNamesArray() As String
+	'    Dim strSelectedOPCVarName As String
+	'
+	'    If (ComboBoxDeviceNames.ListIndex > -1) Then
+	'        '* Disable the OK button
+	'        Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = True
+	'
+	'        If (Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value <> "") Then
+	'            '* Retrieve the path of the current opened "SDD List In Operation HILC Ctrl" mimic
+	'            strPath = m_strClusterName & Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value
+	'        End If
+	'
+	'        '* Reset memorized value
+	'        Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value = ""
+	'        Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupID%").Value = -1
+	'        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSTy%") = -1
+	'        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationLogID%") = -1
+	'        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSID%") = -1
+	'
+	'        If (strPath <> "") Then
+	'            '* Close the previously opened "SDD List In Operation HILC Ctrl" mimic
+	'            If (Mimics.IsOpened(c_strSDDListMimicName, strPath) = True) Then
+	'                Mimics.Item(c_strSDDListMimicName, strPath).Close
+	'            End If
+	'        End If
+	'
+	'        '* Extract the list of OPC variable names associated to each SDD group into an array
+	'        OPCVarNamesArray = Split(Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value, c_strSeparator)
+	'        If (UBound(OPCVarNamesArray) > 0) Then
+	'            strSelectedOPCVarName = OPCVarNamesArray(ComboBoxDeviceNames.ListIndex)
+	'            '* Memorize the name of the OPC Variable of the selected SDD group
+	'            Variables.Item(ThisMimic.Branch & ".ConfPhaseSDDGroupOPCVarName%").Value = strSelectedOPCVarName
+	'
+	'            '* Add OPC variables used in the building of the Confirmation message
+	'            '* and decoding of the Confirmation Return Code message
+	'            AddOPCVariables strSelectedOPCVarName
+	'
+	'            '* Open the "SDD List In Operation HILC Ctrl" mimic
+	'            ThisMimic.Activate
+	'            Mimics.Open c_strSDDListMimicName, m_strClusterName & OPCVarNamesArray(ComboBoxDeviceNames.ListIndex), , , "*", , , , 20, 55, True
+	'        End If
+	'    End If
+	    
+	            Dim i As Integer
+	        Dim GamaManager As Iconis_CLS_Gama
+	        Dim BlockID As String
+	        Dim CommandStatusVar As Variable
+	        ReDim m_StrGamaList(0)
+	         Dim strVariableName As String
+	    
+	        
+	        If (ComboBoxDeviceNames.ListIndex = -1) Then Exit Sub
+	        
+	        If (ComboBoxDeviceNames.ListIndex <> m_lCurrentIndex) Then
+	            Dim strClusterName As String
+	            Dim arraySDDGroupOPCVars() As String
+	            Dim strBranch As String
+	            Dim OPCLocal_sBranchPassed As Variable
+	            
+	            Set OPCLocal_sBranchPassed = Variables.Add("@LocalBranchPassed%", fvVariableTypeText)
+	            '* Disable the OK button of the parent mimic
+	            'Variables.Item(ThisMimic.Branch + ".ButtonOKDisabled%").Value = True
+	            
+	            '* Extract the cluster name from the branch of the mimic
+	            strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	            
+	            '* Extract OPC variables of sector name into an array
+	           arraySDDGroupOPCVars = Split(Variables.Item(ThisMimic.Branch & ".ListOfSDDGroupNames%").Value, c_strSeparator, -1, vbTextCompare)
+	            
+	            If (m_lCurrentIndex <> -1) Then
+	                Dim strOldBranch As String
+	    
+	                '* Build the branch of the currenlty opened "SDD List Conf. Phase - HILC Command" mimic
+	                strOldBranch = strClusterName & arraySDDGroupOPCVars(m_lCurrentIndex)
+	                If (Mimics.IsOpened(c_strSDDListMimicName, ThisMimic.Branch) = True) Then
+	                    '* Close the previous opened "SDD List Conf. Phase - HILC Command" mimic
+	                    Mimics.Item(c_strSDDListMimicName, ThisMimic.Branch).Close
+	                End If
+	            End If
+	            
+	            '* Memorize index of the selected sector in the combo box
+	            m_lCurrentIndex = ComboBoxDeviceNames.ListIndex
+	            
+	            '* Memorize the OPC variable name of the seclected sector
+	            Variables.Item(ThisMimic.Branch + ".ConfPhaseSDDGroupOPCVarName%").Value = arraySDDGroupOPCVars(m_lCurrentIndex)
+	         
+	            '* Build the branch of the mimic
+	            strBranch = strClusterName & arraySDDGroupOPCVars(m_lCurrentIndex)
+	            '* Open the "Point List Conf. Phase - HILC Command" mimic
+	            ThisMimic.Activate
+	             'CLOSEMIMIC (c_strSDDListMimicName)
+	            OPCLocal_sBranchPassed = strBranch
+	    
+	            Variables.Add "@SelectedSDDGroupNameVar%", fvVariableTypeText
+	            Variables.Item("@SelectedSDDGroupNameVar%").Value = strBranch
+	    
+	            Mimics.Open c_strSDDListMimicName, ThisMimic.Branch, , , "*", , , , 15, 60, True
+	    
+	        End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDeviceNames_Change", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: FillComboBox
+	'*  Purpose:
+	'*      - Read the string (XML string) containing the list of the SDD groups belonging
+	'*        to the track plan
+	'*      - Fill the combo box
+	'*      - Memorize the list of OPC variable names of each SDD group
+	'* ******************************************************************************************
+	Private Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	    
+	    Dim strXMLString As String
+	    Dim oDoc As DOMDocument
+	    Dim oSDDGroupList As IXMLDOMNodeList
+	    Dim oSDDGroup As IXMLDOMElement
+	    Dim strID As String
+	    Dim strName As String
+	    Dim strZC As String
+	    Dim strTraceMsg As String
+	  
+	    '* Clear the combo box
+	    ComboBoxDeviceNames.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxDeviceNames.Value = ""
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    strXMLString = m_OPC_SDDGroupsList.Value
+	    If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        '* Load the XML document from the specified string
+	        If (oDoc.loadXML(strXMLString) = True) Then
+	            '* Find all nodes "SDDGroup"
+	            Set oSDDGroupList = oDoc.documentElement.selectNodes(c_strSDDGroupNode)
+	            If Not (oSDDGroupList Is Nothing) Then
+	                If (oSDDGroupList.length > 0) Then
+	                    For Each oSDDGroup In oSDDGroupList
+	                        '* ID attribute
+	                        strID = Format(oSDDGroup.getAttribute(c_strIDAttr))
+	                        '* Name attribute
+	                        strName = Format(oSDDGroup.getAttribute(c_strNameAttr))
+	                        '* ZC attribute
+	                        strZC = Format(oSDDGroup.getAttribute(c_strZCAttr))
+	                        
+	                        If ((strName <> "") And (strID <> "") And (strZC <> "")) Then
+	                            '* Check if the SDD group is managed by the same ZC FEP Server as this one of the SDD group of the preparation phase
+	                            'If (StrComp(strZC, Variables.Item(ThisMimic.Branch & ".PrepPhaseSDDGroupZCID%").Value, vbTextCompare) = 0) Then
+	                                '* Add the name of the SDD group in the combo box
+	                                ComboBoxDeviceNames.AddItem (strName)
+	                                '* Memorize the ID of the SDD group in the local variable
+	                                Variables.Item(ThisMimic.Branch & ".ListOfSDDGroupNames%").Value = Variables.Item(ThisMimic.Branch & ".ListOfSDDGroupNames%").Value & _
+	                                                                                                strID & c_strSeparator
+	                            'End If
+	                        End If
+	                    Next
+	                    If (ComboBoxDeviceNames.ListCount > 0) Then
+	                        '* Enable the combo box
+	                        ComboBoxDeviceNames.Enabled = True
+	                    End If
+	                Else
+	                    strTraceMsg = "The list of SDD groups [OPC variable -> " & m_OPC_SDDGroupsList.Name & "] is empty"
+	                    Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "FillComboBox", strTraceMsg)
+	                End If
+	            End If
+	            Set oSDDGroupList = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    Else '* OPC variable empty
+	        strTraceMsg = "The OPC variable [" & m_OPC_SDDGroupsList.Name & "] is empty"
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "FillComboBox", strTraceMsg)
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_SDDGroupsList_ValueChange
+	'* Purpose: Manage the OPC variable containing the list of SDD groups belonging to the
+	'*          track plan
+	'* ******************************************************************************************
+	Private Sub m_OPC_SDDGroupsList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", "Begin Subroutine")
+	    
+	    If (m_OPC_SDDGroupsList.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", "The status of " & m_OPC_SDDGroupsList.Name & " is Waiting")
+	    ElseIf (m_OPC_SDDGroupsList.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", "The status of " & m_OPC_SDDGroupsList.Name & " is Config Error")
+	    ElseIf (m_OPC_SDDGroupsList.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", "The status of " & m_OPC_SDDGroupsList.Name & " is Not Connected")
+	    ElseIf (m_OPC_SDDGroupsList.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", "The Quality of " & m_OPC_SDDGroupsList.Name & " is not good")
+	    Else '* Status and Quality are good
+	        '* Fill the combo box
+	        FillComboBox
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDGroupsList_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,191,191,191,0,0,0
+	COLOR,4,238,238,238,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,255,255,255,0,0,0
+	COLOR,8,216,216,216,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,328,315,-2,0,328,315,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape3"
+	B,305,255,10,15,305,255,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,25,6,122,22,25,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,25,6,0,0,FONT,1,"Preparation",36,FONT,1,"Preparation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmaci¢n",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,T,"btnClose1"
+	B,35,31,107,56,35,56,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,35,31,0,0,FONT,1,"SDD",38,FONT,1,"SDD",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"DDS Grupo",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBoxDeviceNames"
+	B,118,34,300,58,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END

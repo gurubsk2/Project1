@@ -1,0 +1,249 @@
+ASCII32,19,9,2018,17:36,28,1.1
+W,BEGIN,"Platform_Marcha","Platform_Marcha"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,778,416
+	SIZE,272,280,272,280,0,0,0,1280,1024,266,258
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modo de marcha BAN 1"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Modo de marcha BAN 1"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,7,1,500,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_Marcha.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	Private Sub btnOK_Click()
+	    Dim iValue As Integer
+	    
+	    If optNormal Then
+	        iValue = 0
+	    ElseIf optDeriva Then
+	        iValue = 1
+	    ElseIf optEco Then
+	        iValue = 2
+	    ElseIf optBA Then
+	        iValue = 3
+	    End If
+	    
+	    '[<1]"Normal";[<2]"A la deriva";[<3]"Econ¢mica";[<4]"Baja adherencia"
+	    Variables(Me.Branch & ".RegPoint.ModoMarcha%").Value = iValue
+	    Me.Close fvDoNotSaveChanges
+	    
+	End Sub
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : Mimic_Open
+	'Type       : Procedure
+	'Objective  : Manages the initial values of the variables
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub Mimic_Open()
+	    Dim iPlatform As Integer
+	    Dim sPlatformList As String
+	    Dim sOPCCluster As String
+	    
+	    On Error GoTo ErrorHandler
+	    
+	'    If Variables.Item("@MinimumDwellTime%") Is Nothing Then _
+	'        Variables.Add "@MinimumDwellTime%", fvVariableTypeRegister
+	'    If Variables.Item("@MaximumDwellTime%") Is Nothing Then _
+	'        Variables.Add "@MaximumDwellTime%", fvVariableTypeRegister
+	'
+	'    'Update mimic title
+	'    ThisMimic.Caption = "   Plataforma "
+	'
+	'    'Verify the variables
+	'    If Not VerifyVariable(Variables.Item(ThisMimic.Branch & ".Point.Name")) Then Exit Sub
+	'    If Not VerifyVariable(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed")) Then Exit Sub
+	'
+	    ThisMimic.Caption = "Modo de marcha " & Variables(Me.Branch & ".Name%").Value
+	'
+	'    'Update local variables
+	'    If CInt(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed").Value) >= 0 Then
+	'        Variables.Item(ThisMimic.Branch & ".DwellTimeValue%").Value = CInt(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed").Value)
+	'    Else
+	'        Variables.Item(ThisMimic.Branch & ".DwellTimeValue%").Value = 0
+	'    End If
+	'
+	'    Variables.Item(ThisMimic.Branch & ".CommandValue%").Value = 0
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    
+	End Sub
+	
+	Private Sub optAplicar_Click()
+	
+	
+	End Sub
+	
+	Private Sub optRetirar_Click()
+	    
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,172,168,153,0,0,0
+	COLOR,7,96,96,96,0,0,0
+	COLOR,8,0,0,0,0,35,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,256,200,8,48,243,200,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtImposeDwellTimeLabel"
+	B,17,39,76,55,17,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,17,39,0,0,FONT,1,"Type of dwell time",36,FONT,1,"Type of dwell time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Marcha",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Marcha",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"optNormal"
+	B,58,64,146,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDeriva"
+	B,58,96,170,120,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optEco"
+	B,58,128,178,152,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optBA"
+	B,58,160,194,184,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnOK"
+	B,37,216,116,245,37,245,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,37,216,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Ejecutar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"= ((CommandValue% > 0) AND (DwellTimeValue%>=Point.DefaultMinimumDwellTime)  or (DwellTimeValue%==0)) and (@UserAccessCommand%)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,149,216,228,245,149,245,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,149,216,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,32,8,120,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,144,8,232,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

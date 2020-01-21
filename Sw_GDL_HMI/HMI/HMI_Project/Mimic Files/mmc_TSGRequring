@@ -1,0 +1,451 @@
+ASCII32,30,8,2017,2:51,22,1.1
+W,BEGIN,"mmc_TSGRequring","mmc_TSGRequring"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,651,294
+	SIZE,450,450,450,450,0,0,0,1680,1050,446,430
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Solicitude del TSG para asistencia de riesgo de seguridad"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,1,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_TSGRequring.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: mmc_TTRRequring
+	'* *******************************************************************************************
+	'* Purpose:     It manages sending the request to TSG
+	
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vasanth M
+	'* Date:                July '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	'* *******************************************************************************************
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	' OPC tag used for retrieving list of possible Stations
+	Private Const c_strTSGRequestTag As String = "MainGDLL3.HelpRequest_Security-Traffic.Value"
+	Private Const c_strTSGAckTag As String = "MainGDLL3.HelpRequest_Security-Traffic.Value"
+	Private Const c_strCmdSeparator As String = "<|***|>"
+	
+	'*OPC variables
+	Dim WithEvents m_OPC_TSGRequestCmd As Variable
+	Dim m_OPC_TSGAckCmd As Variable
+	
+	
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_Open", Err.Description)
+	
+	    Call Intialize
+	 
+	    Set m_OPC_TSGAckCmd = Variables.Add(c_strClusterLevel1 & c_strTSGAckTag, fvVariableTypeText)
+	    
+	    Set m_OPC_TSGRequestCmd = Variables.Add(c_strClusterLevel1 & c_strTSGRequestTag, fvVariableTypeText)
+	    
+	    If (m_OPC_TSGRequestCmd.EnableEvents = True) Then
+	            m_OPC_TSGRequestCmd_ValueChange
+	        Else
+	            m_OPC_TSGRequestCmd.EnableEvents = True
+	    End If
+	    
+	   
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	Private Sub btn_Ok_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "btn_Ok_Click", Err.Description)
+	  
+	'    If cbx_Station.Text <> "" And cbx_InterStation.Text <> "" And cbx_Occurrence.Text <> "" And cbx_TrainID.Text <> "" _
+	'       And Len(txt_Description.Text) > 0 And Len(txt_Description.Text) <= 3000 And Check_OPC_Variable(m_OPC_TTRRequestCmd) And _
+	'       Variables.Item("@btnTTROKEnabled%").Value Then
+	    
+	       If Check_OPC_Variable(m_OPC_TSGAckCmd) Then
+	            m_OPC_TSGAckCmd.Value = ThisProject.CurrentUser
+	            ThisMimic.Close
+	       End If
+	       'm_OPC_TTRRequestCmd.Value = c_strCmdSeparator & cbx_TrainID.Text & c_strCmdSeparator & cbx_Station.Text & c_strCmdSeparator & cbx_InterStation.Text & c_strCmdSeparator _
+	       & cbx_Occurrence.Text & c_strCmdSeparator & txt_Description.Text & c_strCmdSeparator
+	   
+	      'MsgBox c_strCmdSeparator & cbx_TrainID.Text & c_strCmdSeparator & cbx_Station.Text & c_strCmdSeparator & cbx_InterStation.Text & c_strCmdSeparator _
+	       & cbx_Occurrence.Text & c_strCmdSeparator & txt_Description.Text & c_strCmdSeparator
+	'    End If
+	
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "btn_Ok_Click", Err.Description)
+	End Sub
+	
+	Private Sub Intialize()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, Me.Name, "Intialize", Err.Description)
+	
+	cbx_Station.Clear
+	cbx_RoomID.Clear
+	cbx_InterStation.Clear
+	cbx_Occurrence.Clear
+	cbx_Equipment.Clear
+	txt_Description = ""
+	cbx_Station = ""
+	cbx_RoomID = ""
+	cbx_InterStation = ""
+	cbx_Occurrence = ""
+	cbx_Equipment = ""
+	
+	txt_Description.Enabled = False
+	cbx_Station.Enabled = False
+	cbx_RoomID.Enabled = False
+	cbx_Occurrence.Enabled = False
+	cbx_InterStation.Enabled = False
+	cbx_Equipment.Enabled = False
+	
+	Variables.Item("@btnTTROKEnabled%").Value = False
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Intialize", Err.Description)
+	End Sub
+	
+	
+	'Private Sub txt_Description_Change()
+	'On Error GoTo ErrorHandler
+	'Call CBTrace(CBTRACE_VBA, Me.Name, "txt_Description_Change", Err.Description)
+	'
+	' ManageOkButton
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "txt_Description_Change", Err.Description)
+	'End Sub
+	'
+	'
+	'Private Sub cbx_InterStation_Change()
+	'On Error GoTo ErrorHandler
+	'Call CBTrace(CBTRACE_VBA, Me.Name, "cbx_InterStation_Change", Err.Description)
+	'
+	' ManageOkButton
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_InterStation_Change", Err.Description)
+	'End Sub
+	'
+	'Private Sub cbx_Occurrence_Change()
+	'On Error GoTo ErrorHandler
+	'Call CBTrace(CBTRACE_VBA, Me.Name, "cbx_Occurrence_Change", Err.Description)
+	'
+	' ManageOkButton
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_Occurrence_Change", Err.Description)
+	'End Sub
+	'
+	'Private Sub cbx_Station_Change()
+	'On Error GoTo ErrorHandler
+	'Call CBTrace(CBTRACE_VBA, Me.Name, "cbx_Station_Change", Err.Description)
+	'
+	' ManageOkButton
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_Station_Change", Err.Description)
+	'End Sub
+	'
+	'Private Sub cbx_TrainID_Change()
+	'On Error GoTo ErrorHandler
+	'Call CBTrace(CBTRACE_VBA, Me.Name, "cbx_TrainID_Change", Err.Description)
+	'
+	' ManageOkButton
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_TrainID_Change", Err.Description)
+	'End Sub
+	
+	Private Sub ManageOkButton()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, Me.Name, "ManageOkButton", Err.Description)
+	
+	 Variables.Item("@btnTTROKEnabled%").Value = (Check_OPC_Variable(m_OPC_TSGRequestCmd) And m_OPC_TSGRequestCmd <> "")
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageOkButton", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_TSGRequestCmd_ValueChange()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_TSGRequestCmd_ValueChange", Err.Description)
+	
+	If Check_OPC_Variable(m_OPC_TSGRequestCmd) = False Then Exit Sub
+	
+	Dim strTSG() As String
+	
+	strTSG = Split(m_OPC_TSGRequestCmd.Value, c_strCmdSeparator)
+	
+	    If UBound(strTSG) > 6 Then
+	        cbx_Station.Text = strTSG(1)
+	        cbx_RoomID = strTSG(2)
+	        cbx_InterStation = strTSG(3)
+	        cbx_Equipment = strTSG(4)
+	        cbx_Occurrence = strTSG(5)
+	        txt_Description = strTSG(6)
+	    End If
+	    
+	    ManageOkButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_TSGRequestCmd_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,238,238,238,0,0,0
+	COLOR,3,64,64,64,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,0,255,0,0,0
+	COLOR,6,0,0,0,0,0,1
+	COLOR,7,191,191,191,0,0,0
+	COLOR,8,128,128,128,0,0,0
+	COLOR,9,192,192,192,0,0,0
+	COLOR,10,0,255,0,0,0,0
+	COLOR,11,255,0,255,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,438,385,9,254,438,385,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,R,"Shape1"
+	B,437,237,8,191,437,237,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,R,"Shape5"
+	B,437,172,8,16,437,172,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"Text1"
+	B,14,64,85,88,14,88,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,14,64,0,0,FONT,1,"Tren:",36,FONT,1,"Tren:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sala:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,16,29,96,53,16,53,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,16,29,0,0,FONT,1,"Estacion:",36,FONT,1,"Estacion:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estaci¢n:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,14,98,94,122,14,122,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,14,98,0,0,FONT,1,"Inter-estacion:",36,FONT,1,"Inter-estacion:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inter-estaci¢n:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbx_RoomID"
+	B,144,64,240,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_Station"
+	B,144,29,320,53,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_InterStation"
+	B,144,98,376,122,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_Occurrence"
+	B,14,205,431,229,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"txt_Description"
+	B,15,264,433,379,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"btn_Ok"
+	B,96,397,208,421,96,421,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,7,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,96,397,0,0,FONT,1,"Guardar",37,FONT,1,"Guardar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"@btnTTROKEnabled%"
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,10,COLOR,10
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,11,COLOR,11
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,238,397,350,421,238,421,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,7,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,238,397,0,0,FONT,1,"Cancelar",37,FONT,1,"Cancelar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"mmc_TSGRequring","*"
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text8"
+	B,16,3,87,27,16,27,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,16,3,0,0,FONT,1,"Localidad",36,FONT,1,"Localidad",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Localidad",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text9"
+	B,16,178,87,202,16,202,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,16,178,0,0,FONT,1,"Localidad",36,FONT,1,"Localidad",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocurrencia",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,17,241,88,260,17,260,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,17,241,0,0,FONT,1,"Localidad",36,FONT,1,"Localidad",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,14,136,94,160,14,160,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,14,136,0,0,FONT,1,"Inter-estaci¢n:",36,FONT,1,"Inter-estaci¢n:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Equipo:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbx_Equipment"
+	B,144,136,376,160,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END

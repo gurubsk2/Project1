@@ -1,0 +1,388 @@
+ASCII32,22,8,2018,1:55,35,1.1
+W,BEGIN,"mmc_DataHoraEventsIni_GTE","mmc_DataHoraEventsIni_GTE"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,290,510
+	SIZE,256,159,256,159,0,0,0,2048,768,244,131
+	BACKCOLOR,212,208,200,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora Inicial"
+			ROLE,1,"Data/Hora Inicial"
+		LANG,END
+		LANG,BEGIN,1034
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Data/Hora Inicial"
+			ROLE,2,"Data/Hora Inicial"
+		LANG,END
+		LANG,BEGIN,1036
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Date/Heure D‚but"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Selecione Data/Hora Final"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,1,1,0,1,0,1,0,0,0,0,1,0,1
+	GRID,1,1,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_DataHoraEventsIni_GTE.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Mimic_Run()
+	    Dim strDateTime As String
+	    
+	    'Valores Iniciais para o CampoData/Hora
+	        
+	    dtpData.Value = Now
+	    dtpHora.Value = Now
+	End Sub
+	
+	Private Sub cmdOK_Click()
+	    
+	    Dim sData As String
+	    Dim sHora As String
+	    
+	''    If CInt(dtpData.Day) > 12 Then
+	        sData = dtpData.Day & "/" & dtpData.Month & "/" & dtpData.Year
+	''    Else
+	''        sData = dtpData.Month & "/" & dtpData.Day & "/" & dtpData.Year
+	''    End If
+	    
+	        sHora = dtpHora.Hour & ":" & dtpHora.Minute & ":" & dtpHora.Second
+	    
+	    
+	    Select Case ThisMimic.Branch
+	    
+	        Case "ALARMAS POTENCIALES"
+	        [txtDataIniEventos_GTE_PTL%].Value = Format(sData, "DD/MM/YY")
+	        [txtHoraIniEventos_GTE_PTL%].Value = Format(sHora, "HH:mm:ss")
+	    
+	        Case "HISTORICO DE LAS ALARMAS"
+	        [txtDataIniEventos_GTE_EVT%].Value = Format(sData, "DD/MM/YY")
+	        [txtHoraIniEventos_GTE_EVT%].Value = Format(sHora, "HH:mm:ss")
+	    
+	        Case "ACCIONES DEL OPERADOR"
+	        [txtDataIniEventos_GTE_OP%].Value = Format(sData, "DD/MM/YY")
+	        [txtHoraIniEventos_GTE_OP%].Value = Format(sHora, "HH:mm:ss")
+	
+	        Case "ALARMAS ACTIVADAS"
+	        [txtDataIniAlarmes_GTE_ALM%].Value = Format(sData, "DD/MM/YY")
+	        [txtHoraIniAlarmes_GTE_ALM%].Value = Format(sHora, "HH:mm:ss")
+	        
+	        Case Else
+	            If ThisMimic.Branch Like "*CurvasIV*" Then
+	    
+	                Select Case Split(ThisMimic.Branch, "_")(3)
+	                
+	                Case "SR00"
+	                [txtDataIniCurvasIV_SR00%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR00%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR01"
+	                [txtDataIniCurvasIV_SR01%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR01%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR02"
+	                [txtDataIniCurvasIV_SR02%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR02%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR03"
+	                [txtDataIniCurvasIV_SR03%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR03%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR04"
+	                [txtDataIniCurvasIV_SR04%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR04%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR05"
+	                [txtDataIniCurvasIV_SR05%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR05%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR06"
+	                [txtDataIniCurvasIV_SR06%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR06%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR07"
+	                [txtDataIniCurvasIV_SR07%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR07%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR08"
+	                [txtDataIniCurvasIV_SR08%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR08%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR09"
+	                [txtDataIniCurvasIV_SR09%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR09%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR10"
+	                [txtDataIniCurvasIV_SR10%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR10%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR11"
+	                [txtDataIniCurvasIV_SR11%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR11%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR12"
+	                [txtDataIniCurvasIV_SR12%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR12%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR13"
+	                [txtDataIniCurvasIV_SR13%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR13%].Value = Format(sHora, "HH:mm:ss")
+	                Case "SR14"
+	                [txtDataIniCurvasIV_SR14%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasIV_SR14%].Value = Format(sHora, "HH:mm:ss")
+	                
+	                End Select
+	            
+	            ElseIf ThisMimic.Branch Like "*Monopista*" Then
+	                [txtDataIniCurvasMonopista%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMonopista%].Value = Format(sHora, "HH:mm:ss")
+	            ElseIf ThisMimic.Branch Like "*Multipista*" Then
+	                Select Case Right(ThisMimic.Branch, 1)
+	                
+	                Case "1"
+	                [txtDataIniCurvasMultipista%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMultipista%].Value = Format(sHora, "HH:mm:ss")
+	                
+	                Case "2"
+	                [txtDataIniCurvasMultipista2%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMultipista2%].Value = Format(sHora, "HH:mm:ss")
+	                
+	                Case "3"
+	                [txtDataIniCurvasMultipista3%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMultipista3%].Value = Format(sHora, "HH:mm:ss")
+	                
+	                Case "4"
+	                [txtDataIniCurvasMultipista4%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMultipista4%].Value = Format(sHora, "HH:mm:ss")
+	                
+	                End Select
+	            Else
+	                [txtDataIniCurvasMonopista%].Value = Format(sData, "DD/MM/YYYY")
+	                [txtHoraIniCurvasMonopista%].Value = Format(sHora, "HH:mm:ss")
+	            End If
+	            
+	    End Select
+	    
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub cmdRetira_Click()
+	 
+	
+	    Select Case ThisMimic.Branch
+	    
+	        Case "ALARMAS POTENCIALES"
+	        [txtDataIniEventos_GTE_PTL%].Value = "__/__/__"
+	        [txtHoraIniEventos_GTE_PTL%].Value = "__:__:__"
+	        
+	        Case "HISTORICO DE LAS ALARMAS"
+	        [txtDataIniEventos_GTE_EVT%].Value = "__/__/__"
+	        [txtHoraIniEventos_GTE_EVT%].Value = "__:__:__"
+	    
+	        Case "ACCIONES DEL OPERADOR"
+	        [txtDataIniEventos_GTE_OP%].Value = "__/__/__"
+	        [txtHoraIniEventos_GTE_OP%].Value = "__:__:__"
+	
+	        Case "ALARMAS ACTIVADAS"
+	        [txtDataIniAlarmes_GTE_ALM%].Value = "__/__/__"
+	        [txtHoraIniAlarmes_GTE_ALM%].Value = "__:__:__"
+	        
+	        Case Else
+	            If ThisMimic.Branch Like "*CurvasIV*" Then
+	            
+	            
+	                Select Case Split(ThisMimic.Branch, "_")(3)
+	                
+	                Case "SR00"
+	                [txtDataIniCurvasIV_SR00%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR00%].Value = "__:__:__"
+	                Case "SR01"
+	                [txtDataIniCurvasIV_SR01%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR01%].Value = "__:__:__"
+	                Case "SR02"
+	                [txtDataIniCurvasIV_SR02%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR02%].Value = "__:__:__"
+	                Case "SR03"
+	                [txtDataIniCurvasIV_SR03%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR03%].Value = "__:__:__"
+	                Case "SR04"
+	                [txtDataIniCurvasIV_SR04%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR04%].Value = "__:__:__"
+	                Case "SR05"
+	                [txtDataIniCurvasIV_SR05%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR05%].Value = "__:__:__"
+	                Case "SR06"
+	                [txtDataIniCurvasIV_SR06%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR06%].Value = "__:__:__"
+	                Case "SR07"
+	                [txtDataIniCurvasIV_SR07%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR07%].Value = "__:__:__"
+	                Case "SR08"
+	                [txtDataIniCurvasIV_SR08%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR08%].Value = "__:__:__"
+	                Case "SR09"
+	                [txtDataIniCurvasIV_SR09%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR09%].Value = "__:__:__"
+	                Case "SR10"
+	                [txtDataIniCurvasIV_SR10%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR10%].Value = "__:__:__"
+	                Case "SR11"
+	                [txtDataIniCurvasIV_SR11%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR11%].Value = "__:__:__"
+	                Case "SR12"
+	                [txtDataIniCurvasIV_SR12%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR12%].Value = "__:__:__"
+	                Case "SR13"
+	                [txtDataIniCurvasIV_SR13%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR13%].Value = "__:__:__"
+	                Case "SR14"
+	                [txtDataIniCurvasIV_SR14%].Value = "__/__/__"
+	                [txtHoraIniCurvasIV_SR14%].Value = "__:__:__"
+	            
+	                End Select
+	            ElseIf ThisMimic.Branch Like "*Monopista*" Then
+	                [txtDataIniCurvasMonopista%].Value = "__/__/__"
+	                [txtHoraIniCurvasMonopista%].Value = "__:__:__"
+	            ElseIf ThisMimic.Branch Like "*Multipista*" Then
+	                Select Case Right(ThisMimic.Branch, 1)
+	                
+	                Case "1"
+	                [txtDataIniCurvasMultipista%].Value = "__/__/__"
+	                [txtHoraIniCurvasMultipista%].Value = "__:__:__"
+	                
+	                Case "2"
+	                [txtDataIniCurvasMultipista2%].Value = "__/__/__"
+	                [txtHoraIniCurvasMultipista2%].Value = "__:__:__"
+	                
+	                Case "3"
+	                [txtDataIniCurvasMultipista3%].Value = "__/__/__"
+	                [txtHoraIniCurvasMultipista3%].Value = "__:__:__"
+	                
+	                Case "4"
+	                [txtDataIniCurvasMultipista4%].Value = "__/__/__"
+	                [txtHoraIniCurvasMultipista4%].Value = "__:__:__"
+	                
+	                End Select
+	            
+	            End If
+	    
+	    End Select
+	
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub cmdCancel_Click()
+	    ThisMimic.Close
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-16,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,32,32,32,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,157,157,161,0,0,0
+	COLOR,6,64,64,64,0,0,0
+	COLOR,7,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,T,"cmdRetira"
+	B,159,88,232,112,159,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,159,88,0,0,FONT,1,"Remove",37,FONT,1,"Remove",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remove",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡ao%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,232,81,9,9,232,81,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,6,0,COLOR,6
+O,END
+O,BEGIN,OCX,"dtpData"
+	B,96,15,213,39,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"dtpHora"
+	B,96,48,213,72,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,18,16,81,40,18,40,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,18,16,0,0,FONT,1,"Date",37,FONT,1,"Date",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Date",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,18,45,81,69,18,69,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,18,45,0,0,FONT,1,"Time",37,FONT,1,"Time",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Time",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"cmdOK"
+	B,9,88,82,112,9,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,9,88,0,0,FONT,1,"Ok",37,FONT,1,"Ok",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ok",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡ao%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdCancel"
+	B,84,88,157,112,84,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,84,88,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡ao%",0,0,0,0,0.000000
+	A,END
+O,END

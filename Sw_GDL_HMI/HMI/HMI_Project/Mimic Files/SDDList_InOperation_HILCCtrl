@@ -1,0 +1,679 @@
+ASCII32,19,7,2017,7:6,53,1.1
+W,BEGIN,"/SDDList_InOperation_HILCCtrl","SDDListInOperationHILCCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,15,60
+	SIZE,300,295,300,295,0,0,0,1280,1024,300,295
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SDDList_InOperation_HILCCtrl.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2011. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SDD List In Operation New HILC Ctrl
+	'* *******************************************************************************************
+	'* Purpose:     It manages the array displaying features (Operational status and name and HILC Status)
+	'*              of SDDs belonging to the SDD group for new SDD Group interface
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                January'14
+	'* Change:              CR atvcm xxx : creation of the new SDD list display
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strDeviceSeparator As String = ";"
+	
+	'* Used when the operational status is unknown (default value)
+	Private Const c_iUnknownOperationalStatus As Integer = 2
+	
+	'* Used to display controls
+	Private Const c_lScrollBarLeft As Long = 249
+	Private Const c_lShapeWidth As Long = 250
+	Private Const c_lOperationalStatusLeft As Long = 41
+	Private Const c_lDeviceNameLeft As Long = 92
+	Private Const c_lHILCStatusLeft As Long = 222
+	
+	Private Const c_Tablelength As Integer = 10
+	
+	'* Used to read the string (XML format) containing the list of SDDs belonging to the group
+	Private Const c_strSDDNode As String = "SDD"
+	Private Const c_strIDAttr As String = "ID"
+	Private Const c_strNameAttr As String = "Name"
+	    
+	'* To manage the list of SDDs displayed in the array
+	Private Const c_lLineMaxCount As Long = 10
+	Private Const c_strColumnOperationalStatus As String = "OperationalStatus"
+	Private Const c_strColumnDeviceName As String = "txtDeviceName"
+	Private Const c_strColumnHILCStatus As String = "HILCStatus"
+	Private Const c_strValue As String = ".Value"
+	
+	'* Path of OPC variable containing the list of SDDs existing in the group
+	Private Const c_strSDDListTag As String = ".SDDList.Value"
+	Private Const c_strSDDGroupTag As String = ".SDDGroup.Value"
+	'* Path of OPC variable containing the operational status of a SDD
+	Private Const c_strOperationalStatusTag As String = ".SDOperationalStatus.Value"
+	'* Path of OPC variable containing the HILC status of a SDD
+	Private Const c_strHILCStatusTag As String = ".Value%"
+	
+	'* OPC Variables
+	'* ***********************************************
+	'* Variable containing the list of SDDs existing in the group
+	Dim WithEvents m_OPC_SDDList As Variable
+	
+	'* Variable indicating the reset of the variable
+	Dim WithEvents m_OPC_ResetVar As Variable
+	'* Module Variables
+	'* ***********************************************
+	'* Name of the OPC cluster
+	Dim m_strClusterName As String
+	
+	'* List of the HILC status
+	Dim m_strHILCValues() As String
+	Dim m_StrSDDList() As String
+	Dim m_iStrSDDStatus() As Integer
+	
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	
+	'String to hold the Groupname
+	Dim m_strSDDGroupName As String
+	
+	Dim WithEvents m_OPCSet_SDD_Definitions As Iconis_CLS_OPCSet
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: At the opening of the mimic,
+	'*          - add OPC variable to the list of subscribed variables
+	'*          - create and init the list of SDDs
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    '* Retrieve the OPC Cluster name
+	    m_strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	       
+	    '* Create and initialize the list
+	'    If Not (m_List Is Nothing) Then
+	'        m_List.Destroy
+	'        Set m_List = Nothing
+	'    End If
+	'    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	'    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar
+	'
+	'    '* Create columns
+	'    m_List.NewColumn c_strColumnDeviceName, fvVariableTypeText, c_lDeviceNameLeft, c_strValue
+	'    m_List.NewColumn c_strColumnOperationalStatus, fvVariableTypeRegister, c_lOperationalStatusLeft, c_strValue, c_iUnknownOperationalStatus
+	'    m_List.NewColumn c_strColumnHILCStatus, fvVariableTypeText, c_lHILCStatusLeft, c_strValue
+	       
+	       
+	    '* Get the Group Name
+	'   Dim sGroupID As IXMLDOMNodeList
+	'   Dim s As String
+	'   Dim oDoc As DOMDocument
+	'   Dim m_OPC_SDDGroupID As Variable
+	'    Set oDoc = New DOMDocument
+	   '* Load the XML document from the specified string
+	  '  Set m_OPC_SDDGroupID = Variables.Add(ThisMimic.Branch & c_strSDDGroupTag, fvVariableTypeText)
+	'    If (oDoc.loadXML(m_OPC_SDDGroupID) = True) Then
+	'       Set sGroupID = oDoc.selectNodes("/SDDGroup/@Name")
+	'       m_strSDDGroupName = sGroupID(0).Text
+	'    End If
+	'        Dim sGroupArray() As String
+	'        sGroupArray = Split(ThisMimic.Branch, ":")
+	Dim OPCLocal_sBranchPassed As Variable
+	    Variables.Item("@SDDGroupStatus%").Value = 0
+	        Set OPCLocal_sBranchPassed = Variables.Add("@LocalBranchPassed%", fvVariableTypeText)
+	        m_strSDDGroupName = OPCLocal_sBranchPassed.Value
+	       
+	    If Not m_OPC_SDDList Is Nothing Then
+	       Variables.Remove (m_OPC_SDDList.Name)
+	       Set m_OPC_SDDList = Nothing
+	    End If
+	    
+	     
+	    '* OPC variable containing the list of SDDs belonging to the SDD group
+	    Set m_OPC_SDDList = Variables.Add(m_strSDDGroupName + c_strSDDListTag, fvVariableTypeText)
+	    If ((m_OPC_SDDList.Status = fvVariableStatusGood) And (m_OPC_SDDList.EnableEvents = True)) Then
+	        m_OPC_SDDList_ValueChange
+	    Else
+	        m_OPC_SDDList.EnableEvents = True
+	    End If
+	          
+	    Set m_OPC_ResetVar = Variables.Add(ThisMimic.Branch & ".SetAllFailed%", fvVariableTypeBit)
+	    m_OPC_ResetVar.Value = False
+	    If ((m_OPC_ResetVar.EnableEvents = True) And (m_OPC_ResetVar.Status = fvVariableStatusGood)) Then
+	        m_OPC_ResetVar_ValueChange
+	    Else
+	        m_OPC_ResetVar.EnableEvents = True
+	    End If
+	    
+	    
+	 
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Design
+	'* Purpose: Restore the position of the controls
+	'* ******************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	        
+	    If Not (m_List Is Nothing) Then
+	        m_List.ShowAllControls
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the Mimic,
+	'*          - destroy the list object
+	'*          - remove the OPC variables previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    
+	    If Not (m_OPC_SDDList Is Nothing) Then
+	        Variables.Remove (m_OPC_SDDList.Name)
+	        Set m_OPC_SDDList = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ResetVar Is Nothing) Then
+	        Variables.Remove (m_OPC_ResetVar.Name)
+	        Set m_OPC_ResetVar = Nothing
+	    End If
+	    
+	    If Not (m_OPCSet_SDD_Definitions Is Nothing) Then
+	        m_OPCSet_SDD_Definitions.Destroy
+	        Set m_OPCSet_SDD_Definitions = Nothing
+	    End If
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: FillSDDsArray
+	'* Purpose:
+	'*      - Read the XML format string containing the list of SDDs belonging to the SDD group
+	'*      - Fill columns (Operational status and Name) of the array
+	'* ************************************************************************************************
+	Private Sub FillSDDsArray()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillSDDsArray", "Begin Subroutine")
+	    
+	    Dim strXMLString As String
+	    Dim oDoc As DOMDocument
+	    Dim oSDDList As IXMLDOMNodeList
+	    Dim oSDD As IXMLDOMElement
+	    Dim lCount As Long
+	    Dim strClusterName As String
+	    Dim strName As String
+	    Dim strID As String
+	    Dim strTraceMsg As String
+	    Dim i As Long
+	    Dim sSDDDeviceList As String
+	    
+	    strXMLString = m_OPC_SDDList.Value
+	    If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        '* Load the XML document from the specified string
+	        If (oDoc.loadXML(strXMLString) = True) Then
+	            '* Find all nodes "SDD"
+	            Set oSDDList = oDoc.documentElement.selectNodes(c_strSDDNode)
+	            If Not (oSDDList Is Nothing) Then
+	                If (oSDDList.length > 0) Then
+	                    '* Memorize the number of SDDs in the SDDgroup
+	                    lCount = oSDDList.length
+	                    '* Redim arrays
+	                    ReDim m_strHILCValues(0 To lCount - 1)
+	                    ReDim m_StrSDDList(0 To lCount - 1)
+	                    ReDim m_iStrSDDStatus(0 To lCount - 1)
+	                    
+	                    If Not (m_OPCSet_SDD_Definitions Is Nothing) Then
+	                        m_OPCSet_SDD_Definitions.Destroy
+	                        Set m_OPCSet_SDD_Definitions = Nothing
+	                    End If
+	                    
+	                    Set m_OPCSet_SDD_Definitions = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	                    
+	                    For Each oSDD In oSDDList
+	                        '* ID attribute
+	                        strID = Format(oSDD.getAttribute(c_strIDAttr))
+	                        '* Name attribute
+	                        strName = Format(oSDD.getAttribute(c_strNameAttr))
+	                             
+	                        If ((strName <> "") And (strID <> "")) Then
+	                            '* SDD operational status
+	                            m_OPCSet_SDD_Definitions.AddItem m_strClusterName & strID & c_strOperationalStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	
+	                            '* SDD HILC status
+	                            m_OPCSet_SDD_Definitions.AddItem m_strClusterName & strID & c_strHILCStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	                            
+	                            Variables.Add m_strClusterName & strID & c_strHILCStatusTag, fvVariableTypeRegister
+	                            Variables.Item(m_strClusterName & strID & c_strHILCStatusTag).Value = 0
+	                            sSDDDeviceList = sSDDDeviceList + strID + ";"
+	                            
+	                            '* SDD name
+	                            m_StrSDDList(i) = strName
+	                            '* Increment index of array
+	                            i = i + 1
+	                        End If
+	                    Next
+	                               
+	                    m_OPCSet_SDD_Definitions.DoConnect "CurrentSDD_Definitions"
+	            
+	                Else '* No SDD in the SDD group
+	                    strTraceMsg = "The list of SDDs in the SDD group [OPC variable -> " & m_OPC_SDDList.Name & "] is empty"
+	                    Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "FillSDDsArray", strTraceMsg)
+	                End If
+	            End If
+	            Set oSDDList = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    Else '* OPC variable empty
+	        strTraceMsg = "The OPC variable [" & m_OPC_SDDList.Name & "] is empty"
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "FillSDDsArray", strTraceMsg)
+	    End If
+	    
+	    
+	
+	    'Variables.Add "@ConfPhaseSDDList%", fvVariableTypeText
+	    Variables.Item("@ConfPhaseSDDList%").Value = sSDDDeviceList
+	    
+	    Dim iNumberofSDD As Integer
+	    '* Enable the OK button of the parent mimic
+	    Variables.Item(ThisMimic.Branch + ".ButtonOKDisabled%").Value = False
+	    ScrollBar.Min = 0
+	    ScrollBar.Max = 0
+	    iNumberofSDD = UBound(m_StrSDDList) + 1
+	    If c_Tablelength < iNumberofSDD Then
+	        ScrollBar.Max = iNumberofSDD - c_Tablelength
+	    End If
+	    ScrollBar_Change
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillSDDsArray", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_EGAMA_Definitions_OnRefresh
+	'* update the display of the list of elementary gama
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_SDD_Definitions_OnRefresh(lIndex As Long, Value As Variant, Status As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_SDD_Definitions_OnRefresh", "Begin Subroutine")
+	    
+	    Dim i As Long
+	    Dim iSDDStatus As Integer
+	    Dim iSDDCmdStatus As Integer
+	    
+	    Dim Arr_strSDDName() As Variant
+	    Dim Arr_iSDDStatus() As Variant
+	    Dim Arr_iSDDCmdStatus() As Variant
+	    
+	    If (m_OPCSet_SDD_Definitions.IsAllGood) Then
+	    
+	        ReDim Arr_strSDDName(UBound(m_StrSDDList))
+	        ReDim Arr_iSDDStatus(UBound(m_StrSDDList))
+	        ReDim Arr_iSDDCmdStatus(UBound(m_StrSDDList))
+	        
+	        For i = 0 To UBound(m_StrSDDList)
+	 
+	            iSDDStatus = m_OPCSet_SDD_Definitions.Item(2 * i).Value
+	            iSDDCmdStatus = m_OPCSet_SDD_Definitions.Item((2 * i) + 1).Value
+	
+	            Arr_strSDDName(i) = m_StrSDDList(i)
+	            Arr_iSDDStatus(i) = iSDDStatus
+	            Arr_iSDDCmdStatus(i) = iSDDCmdStatus
+	        Next i
+	              
+	       ' m_List.FillColumn c_strColumnDeviceName, Arr_strSDDName, c_strValue
+	       ' m_List.FillColumn c_strColumnOperationalStatus, Arr_iSDDStatus, c_strValue
+	        'm_List.FillColumn c_strColumnHILCStatus, Arr_iSDDCmdStatus, c_strValue
+	        'm_List.Display
+	        
+	        If (UBound(m_StrSDDList) <= c_lLineMaxCount) Then '* Number of SDDs <= max number of displayed lines
+	            '* Hide the scrollbar
+	            ScrollBar.Left = 10000
+	            '* Modify the width of the shape
+	            shpArray.Width = HorLine1.Width
+	        Else '* Number of SDDs > max number of displayed lines
+	            '* Show the scroll bar
+	            ScrollBar.Left = c_lScrollBarLeft
+	            '* Modify the width of the shape
+	            shpArray.Width = c_lShapeWidth
+	        End If
+	        
+	'        If ((lIndex \ 2) < c_lLineMaxCount) Then
+	'                ScrollBar.Value = 0
+	'        Else
+	'                ScrollBar.Value = ((lIndex \ 2) - c_lLineMaxCount) + 1
+	'        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_SDD_Definitions_OnRefresh", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_SDD_Definitions_OnConnection
+	'* update the display of the list of elementary gama for connection
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_SDD_Definitions_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_SDD_Definitions_OnConnection", "Begin Subroutine")
+	    
+	    m_OPCSet_SDD_Definitions_OnRefresh 0, arrValue(0), arrStatus(0)
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_SDD_Definitions_OnConnection", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: m_OPC_SDDList_ValueChange
+	'* Purpose: Manage the OPC variable containing the list of SDDs belonging to the SDD group
+	'* ************************************************************************************************
+	Private Sub m_OPC_SDDList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SDDList_ValueChange", "Begin Subroutine")
+	    
+	    If Check_OPC_Variable(m_OPC_SDDList) Then
+	        '* Fill the array containing features of each SDD belonging to the SDD group
+	        FillSDDsArray
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDList_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ResetVar_ValueChange
+	'* Purpose: Manage the OPC variable containing status reset
+	'* ************************************************************************************************
+	Private Sub m_OPC_ResetVar_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SDDList_ValueChange", "Begin Subroutine")
+	    Dim i As Integer
+	        
+	    If (m_OPC_ResetVar.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ResetVar_ValueChange", "The status of " & m_OPC_ResetVar.Name & " is Waiting")
+	    ElseIf (m_OPC_ResetVar.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ResetVar_ValueChange", "The status of " & m_OPC_ResetVar.Name & " is Config Error")
+	    ElseIf (m_OPC_ResetVar.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ResetVar_ValueChange", "The status of " & m_OPC_ResetVar.Name & " is Not Connected")
+	    ElseIf (m_OPC_ResetVar.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ResetVar_ValueChange", "The Quality of " & m_OPC_ResetVar.Name & " is not good")
+	    Else
+	        If (m_OPC_ResetVar.Value = True) Then
+	            'error in confirmation status should be set to fail
+	            For i = 0 To UBound(m_StrSDDList)
+	                Variables.Item(m_OPCSet_SDD_Definitions.Item((2 * i) + 1).strPath).Value = 3
+	            Next i
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDList_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub ScrollBar_Change()
+	On Error GoTo ErrorHandler
+	Dim oSymbol As Symbol
+	Dim m_iCounterSymbols As Integer
+	Dim BlockID As String
+	
+	For m_iCounterSymbols = 1 To 10
+	    Set oSymbol = Me.Graphics.Item("SDDDeviceSymbol_" & m_iCounterSymbols)
+	    If m_iCounterSymbols <= UBound(m_StrSDDList) Then
+	    
+	    oSymbol.LocalBranch = MOD_Deployment.CBTCLevel1Cluster & "@" & m_StrSDDList(ScrollBar.Value + m_iCounterSymbols - 1)
+	    Else
+	    oSymbol.LocalBranch = MOD_Deployment.CBTCLevel1Cluster
+	    End If
+	Next
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ScrollBar_Change", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,136,141,155,0,0,0
+	COLOR,4,179,179,179,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"shpArray"
+	B,264,291,15,42,264,291,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"txtListOfSDDs"
+	B,16,0,146,13,16,13,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,16,0,0,0,FONT,1,"List of SDDs of group:",37,FONT,1,"List of SDDs of group:",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"List of SDDs of group:",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,249,43,268,291,10,60,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,1,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,27
+		Size,"450;6509"
+		MousePointer,0
+		Min,0
+		Max,32767
+		Position,0
+		PrevEnabled,1
+		NextEnabled,1
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END
+O,BEGIN,L,"HorLine1"
+	B,17,67,234,67,17,67,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,67,234,67
+O,END
+O,BEGIN,L,"HorLine2"
+	B,17,92,234,92,17,92,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,92,234,92
+O,END
+O,BEGIN,L,"HorLine3"
+	B,17,117,234,117,17,117,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,117,234,117
+O,END
+O,BEGIN,L,"HorLine4"
+	B,17,142,234,142,17,142,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,142,234,142
+O,END
+O,BEGIN,L,"HorLine5"
+	B,17,167,234,167,17,167,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,167,234,167
+O,END
+O,BEGIN,L,"HorLine6"
+	B,17,192,234,192,17,192,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,192,234,192
+O,END
+O,BEGIN,L,"HorLine7"
+	B,17,217,234,217,17,217,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,217,234,217
+O,END
+O,BEGIN,L,"HorLine8"
+	B,17,242,234,242,17,242,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,242,234,242
+O,END
+O,BEGIN,L,"HorLine9"
+	B,17,267,234,267,17,267,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,17,267,234,267
+O,END
+O,BEGIN,T,"txtOperationalStatus"
+	B,15,18,107,41,15,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,15,18,0,0,FONT,1,"Status",37,FONT,1,"Status",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtName"
+	B,107,18,236,41,107,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,107,18,0,0,FONT,1,"Name",37,FONT,1,"Name",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Name",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"HeaderVerLine1"
+	B,16,41,16,17,16,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,16,41,16,17
+O,END
+O,BEGIN,L,"HeaderVerLine2"
+	B,105,41,105,17,105,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,105,41,105,17
+O,END
+O,BEGIN,L,"HeaderVerLine3"
+	B,267,41,267,17,267,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,267,41,267,17
+O,END
+O,BEGIN,L,"VerLine1"
+	B,105,290,105,42,105,290,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,105,290,105,42
+O,END
+O,BEGIN,L,"HeaderHorLine1"
+	B,16,18,271,18,977,18,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,271,18,16,18
+O,END
+O,BEGIN,L,"VerLine5"
+	B,268,290,268,42,268,290,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,268,290,268,42
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_1"
+	B,50,44,230,63,50,63,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_13T_PAT",50,44,230,63,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_2"
+	B,50,69,230,88,50,88,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_02T_PAT",50,69,230,88,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_3"
+	B,50,94,230,113,50,113,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_04T_PAT",50,94,230,113,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_4"
+	B,50,119,230,138,50,138,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_06T_PAT",50,119,230,138,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_5"
+	B,50,143,230,162,50,162,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_08T_PAT",50,143,230,162,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_6"
+	B,51,169,231,188,51,188,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_10T_PAT",51,169,231,188,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_7"
+	B,50,194,230,213,50,213,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_12T_PAT",50,194,230,213,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_8"
+	B,50,218,230,237,50,237,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_14T_PAT",50,218,230,237,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_9"
+	B,50,243,230,262,50,262,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_14T_PAT",50,243,230,262,1,0, 0, 1
+O,END
+O,BEGIN,S,"SDDDeviceSymbol_10"
+	B,50,267,230,286,50,286,1,0,6400,0,1,0,0
+	PP,"SDDGroupCmdStatus","OPCCluster:@SD_14T_PAT",50,267,230,286,1,0, 0, 1
+O,END

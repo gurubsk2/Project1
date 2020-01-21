@@ -1,0 +1,278 @@
+ASCII32,14,10,2019,11:31,43,1.1
+W,BEGIN,"PF_ImmediateDeparture_ValidationMsgBox","PF_ImmediateDeparture_ValidationMsgBox"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,809,533
+	SIZE,300,130,300,130,0,0,0,1280,1024,294,106
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Salida inmediata STA_PF_TZA_UP"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Salida inmediata PF_SAN_UP"
+			ROLE,0,"Salida inmediata STA_PF_TZA_UP"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,700,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"PF_ImmediateDeparture_ValidationMsgBox.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Platform Immediate Departure message box
+	'* *******************************************************************************************
+	'* Purpose:     Manages the display of the Platform Immediate Departure message in the message box
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov 16
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* OPC variables
+	'* ******************************************************
+	Private Const c_strOPCPlatformCmdImmDep As String = ".ATR.RegPoint.ImmediateDeparture"
+	Private Const c_PlatformList As String = "IconisHMI.PlatformsList.Information.Value"
+	
+	Dim WithEvents m_OPC_PlatformList As Variable
+	Dim m_strPlatformName As String
+	Dim m_OPC_PlatformImmediateDep As Variable
+	
+	Private Sub btn_Si_Click()
+	On Error GoTo ErrorHandler
+	Dim LocalBranch As String
+	
+	If (Check_Variable(m_OPC_PlatformImmediateDep)) Then
+	     m_OPC_PlatformImmediateDep.Value = 0
+	End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btn_Si_Click()", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'* On Opening the Mimic, Add the OPC variable containing the name to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	      Set m_OPC_PlatformList = Variables.Add(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    If ((m_OPC_PlatformList.Status = fvVariableStatusGood) And (m_OPC_PlatformList.EnableEvents = True)) Then
+	        m_OPC_PlatformList_ValueChange
+	    Else
+	        m_OPC_PlatformList.EnableEvents = True
+	    End If
+	    Set m_OPC_PlatformImmediateDep = Variables.Add(ThisMimic.Branch & c_strOPCPlatformCmdImmDep, fvVariableTypeRegister)
+	        'ThisMimic.Caption = "Salida inmediata " & Variables.Item(ThisMimic.Branch & ".Shortname%").Value
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Before closing the Mimic, remove the OPC variable previously subscribed
+	'* ***************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    '* Remove the previously subscribed variable
+	    If Not (m_OPC_PlatformImmediateDep Is Nothing) Then
+	        Variables.Remove (m_OPC_PlatformImmediateDep.Value)
+	        Set m_OPC_PlatformImmediateDep = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	Private Sub m_OPC_PlatformList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_PlatformList) = False Then Exit Sub
+	
+	    Call ReadXMLPlatformList(m_OPC_PlatformList.Value)
+	   ThisMimic.Caption = "Salida inmediata " & m_strPlatformName
+	    'lblMenuTitle.Text = "And‚n "
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	Private Sub ReadXMLPlatformList(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLPlatformList", "Begin Subroutine")
+	   
+	   'Dim strXMLString As String
+	   Dim oDoc As DOMDocument
+	   Dim oPlatformList As IXMLDOMNodeList
+	   Dim oPlatform As IXMLDOMElement
+	   Dim strName As String
+	   Dim strBranch() As String
+	   Dim strID As String
+	   Dim strStationName As String
+	   Dim strStationID As String
+	   Dim dKM As Double
+	   Dim PlatformManager As Iconis_CLS_Platform
+	   
+	   strXMLString = m_OPC_PlatformList.Value
+	   If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "Platform"
+	                    Set oPlatformList = oDoc.documentElement.selectNodes("Platform")
+	                    If Not (oPlatformList Is Nothing) Then
+	                        If (oPlatformList.length > 0) Then
+	                            For Each oPlatform In oPlatformList
+	                                ' Name attribute
+	                                
+	                                ' ID attribute
+	                                strID = Format(oPlatform.getAttribute("ID"))
+	                                ' StationName attribute
+	'                                strStationName = Format(oPlatform.getAttribute(c_strStationNameAttr))
+	'                                ' StationID attribute
+	'                                strStationID = Format(oPlatform.getAttribute(c_strStationIDAttr))
+	'                                ' KM attribute
+	'                                dKM = oPlatform.getAttribute(c_strKMAttr)
+	                                strBranch = Split(ThisMimic.Branch, ":")
+	                                If ((strID <> "")) Then
+	                                    ' Create an instance of Iconis_CLS_Platform class module
+	                                    If strID = "Stop_" & strBranch(1) Then
+	                                        strName = Format(oPlatform.getAttribute("Name"))
+	                                   End If
+	                                End If
+	                                m_strPlatformName = strName
+	                            Next oPlatform
+	                         End If
+	                        Set oPlatformList = Nothing
+	                    End If
+	                End If
+	            
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", _
+	                     "The OPC variable [" & m_OPC_PlatformList.Name & "] is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", Err.Description)
+	End Sub
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,172,168,153,0,0,0
+COLORS,END
+O,BEGIN,T,"btn_Si"
+	B,44,64,118,88,44,88,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,44,64,0,0,FONT,1,"Yes",37,FONT,1,"Yes",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Si",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Si",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"btn_No"
+	B,185,64,259,88,185,88,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,3,0,COLOR,3
+	PP,1,185,64,0,0,FONT,1,"No",37,FONT,1,"No",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"No",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,21,15,265,54,21,54,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,21,15,0,0,FONT,1,"Do you  really want to set the cycle ?",85,FONT,1,"Do you  really want to set the cycle ?",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"¨Confirma la salida inmediata del  tren en este and‚n?",FONT,1,85
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"¨Confirma la salida inmediata del  tren en este and‚n?",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END

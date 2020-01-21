@@ -1,0 +1,819 @@
+ASCII32,8,10,2019,10:22,49,1.1
+W,BEGIN,"Signal_InspectorPanel","Signal_InspectorPanel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,716,428
+	SIZE,485,340,485,340,0,0,0,1920,1080,477,314
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al: SI_01RS_TZA"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al: SI_03RS_PAT"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,1,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Signal_InspectorPanel.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	Private Const c_strDestinationsTag As String = ".Destinations.Value"
+	Private Const c_strBlockingTagStatus As String = ".Blocking.Status.Value"
+	
+	
+	Dim WithEvents TIMER_UpdateDestinations As S2KActiveXTimerCtl.Timer  '* Initiate the Timer Class
+	
+	
+	Private Sub grpComandos_Click()
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	End Sub
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	    On Error Resume Next
+	    Variables(ThisMimic.Branch & ".ButtonActivated%").Value = False
+	    Variables.Item(ThisMimic.Branch & ".blinking%").Value = False
+	End Function
+	
+	Private Sub Mimic_Open()
+	
+	    Dim iMonitor As Integer
+	    Dim sQNRENorte As String, sQNRESul As String
+	    Dim objMimic As Mimic
+	   
+	    On Error GoTo ErrorHandler
+	    
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If (objMimic.FileName Like ThisMimic.FileName) Then
+	            If Not (objMimic.Branch = ThisMimic.Branch) Then
+	                objMimic.Close
+	            End If
+	        End If
+	    Next
+	 
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	
+	    'Me.Caption = "   Se¤al " & Variables(ThisMimic.Branch & ".Name%").Value'
+	  
+	     Dim BranchName() As String
+	    BranchName = Split(ThisMimic.Branch, ":")
+	    Me.Caption = "Se¤al: " & BranchName(1)
+	    Set TIMER_UpdateDestinations = New S2KActiveXTimerCtl.Timer
+	    TIMER_UpdateDestinations.Interval = 1000
+	    TIMER_UpdateDestinations.Enabled = False
+	    If VerifyVariable(Variables.Add(ThisMimic.Branch & c_strDestinationsTag, fvVariableTypeText)) Then
+	        Call ReadDestinations(Variables.Item(ThisMimic.Branch & c_strDestinationsTag).Value)
+	 
+	    ShowDestinations
+	    End If
+	   Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	Private Sub ShowDestinations()
+	    Dim iRoute As Integer 'index
+	    Dim sRouteDestName      As String
+	    
+	    On Error GoTo ErrorHandler
+	       
+	    '* Clear the list of destination and disable the button "OK"
+	    ClearDestinations
+	        
+	    'Find RouteID
+	    For iRoute = 0 To UBound(m_Routes(c_iNormalRoute).SignalList)
+	        sRouteDestName = Split(m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID, "_")(3) & "_" & Split(m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID, "_")(4)
+	        ThisMimic.Graphics("sybRouteBlock" & iRoute + 1).LocalBranch = "@" & m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID
+	        ThisMimic.Graphics("sybRouteBlock" & iRoute + 1).Left = 296
+	        ThisMimic.Graphics("lblSignal" & iRoute + 1).Text = sRouteDestName
+	        ThisMimic.Graphics("lblSignal" & iRoute + 1).Left = 334
+	    Next
+	    
+	    TIMER_UpdateDestinations.Enabled = True
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "ClearDestinations", Err.Description)
+	        
+	End Sub
+	
+	
+	Private Sub ClearDestinations()
+	    Dim I As Integer 'index
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    TIMER_UpdateDestinations.Enabled = False
+	    
+	    '* Clear the list of destination
+	    For I = 1 To 11
+	        ThisMimic.Graphics("sybRouteBlock" & I).Left = 590
+	        ThisMimic.Graphics("sybRouteBlock" & I).LocalBranch = ""
+	        ThisMimic.Graphics("lblSignal" & I).Left = 630
+	        ThisMimic.Graphics("lblSignal" & I).Text = "?"
+	    Next I
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "ClearDestinations", Err.Description)
+	
+	End Sub
+	
+	Private Sub TIMER_UpdateDestinations_Timer()
+	    Dim iRoute As Integer 'index
+	    Dim sRouteDestName      As String
+	    
+	    On Error GoTo ErrorHandler
+	       
+	    'Find RouteID
+	    For iRoute = 0 To UBound(m_Routes(c_iNormalRoute).SignalList)
+	        sRouteDestName = Split(m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID, "_")(3) & "_" & Split(m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID, "_")(4)
+	    
+	        If Variables.Item("OPCCluster:" & m_Routes(c_iNormalRoute).SignalList(iRoute).sRouteID & c_strBlockingTagStatus).Value Then
+	            ThisMimic.Graphics("lblSignal" & iRoute + 1).ForeColorPrimary = 0
+	        Else
+	            ThisMimic.Graphics("lblSignal" & iRoute + 1).ForeColorPrimary = 194
+	        End If
+	
+	    Next
+	        
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "TIMER_UpdateDestinations_Timer", Err.Description)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,0,0,0,0,32,0
+	COLOR,6,105,105,105,0,0,0
+	COLOR,7,0,0,0,0,35,0
+	COLOR,8,0,0,0,0,44,0
+	COLOR,9,0,0,0,0,46,0
+	COLOR,10,113,111,100,0,0,0
+	COLOR,11,191,191,191,0,0,0
+	COLOR,12,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,P,"Poly1"
+	B,10,9,467,297,19,14,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,22,9,107,9,115,18,114,42,467,42
+	PP,467,297,10,297,10,21
+O,END
+O,BEGIN,R,"Shape1"
+	B,459,289,268,56,459,289,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape2"
+	B,457,285,271,90,457,285,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,1,0,COLOR,3,0,COLOR,3,0,COLOR,6,0,COLOR,6
+O,END
+O,BEGIN,T,"Text5"
+	B,18,18,103,34,18,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,18,18,0,0,FONT,1,"Informaci¢n",37,FONT,1,"Informaci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informaci¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Informaci¢n",FONT,1,37
+			ROLE,0,"Informaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"grpComandos"
+	B,114,11,218,42,114,42,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,114,11,218,42,122,11,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,122,11,210,11,218,19,218,42,114,42
+		PP,114,19
+	O,END
+	O,BEGIN,T,"Text1"
+		B,122,19,207,35,122,35,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,122,19,0,0,FONT,1,"Control",37,FONT,1,"Control",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Control",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Control",FONT,1,37
+				ROLE,0,"Control",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,259,292,17,77,259,292,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text9"
+	B,25,108,79,124,25,124,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,25,108,0,0,FONT,1,"Estado",36,FONT,1,"Estado",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Estado",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text24"
+	B,28,68,76,84,28,84,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,28,68,0,0,FONT,2,"Se¤al",37,FONT,2,"Se¤al",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Se¤al",FONT,2,37
+			ROLE,0,"Se¤al",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,196,152,249,176,196,176,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,7,COLOR,9,0,COLOR,3,0,COLOR,3,0,COLOR,10,0,COLOR,10
+	PP,1,196,152,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"HMIBlocking.Template.iEqpState",""
+		ADVFORMAT,2,"[>=2]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[>=2]\'S¡\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[>=2]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,22,156,87,172,22,172,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,22,156,0,0,FONT,1,"Bloqueo",36,FONT,1,"Bloqueo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Block",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Bloqueo",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,196,199,249,223,196,223,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,7,COLOR,9,0,COLOR,3,0,COLOR,3,0,COLOR,10,0,COLOR,10
+	PP,1,196,199,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"HMIFilament.Template.iEqpState",""
+		ADVFORMAT,2,"[=0]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'S¡\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=0]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,24,203,92,219,24,219,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,24,203,0,0,FONT,1,"Falla led",36,FONT,1,"Falla led",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Falla led",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Falla led",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,276,48,423,64,276,64,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,276,48,0,0,FONT,2,"Bloqueo de itinerario",37,FONT,2,"Bloqueo de itinerario",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Route Blocking",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Bloqueo de itinerario",FONT,1,37
+			ROLE,0,"Bloqueo de itinerario",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text7"
+	B,275,71,329,87,275,87,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,275,71,0,0,FONT,1,"Estado",37,FONT,1,"Estado",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Estado",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,334,71,445,87,334,87,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,334,71,0,0,FONT,1,"Se¤al de salida",37,FONT,1,"Se¤al de salida",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al de salida",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Se¤al de salida",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"lblSignal1"
+	B,334,95,445,111,334,111,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,334,95,0,0,FONT,1,"Se¤al de salida",37,FONT,1,"Se¤al de salida",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"02RS_TZA",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"07RS_TZA",FONT,1,37
+			ROLE,0,"02RS_TZA",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock1"
+	B,296,96,308,108,296,108,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","@R_03RS_PAT_07RS_TZA",296,96,308,108,1,0, 0, 1
+O,END
+O,BEGIN,S,"sybRouteBlock2"
+	B,296,113,308,125,296,125,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","@R_03RS_PAT_01RS_TZA",296,113,308,125,1,0, 0, 1
+O,END
+O,BEGIN,T,"Text10"
+	B,23,251,155,267,23,267,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,23,251,0,0,FONT,1,"En maintenimiento",36,FONT,1,"En maintenimiento",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"En maintenimiento",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"En maintenimiento",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text11"
+	B,196,247,249,271,196,271,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,7,COLOR,9,0,COLOR,3,0,COLOR,3,0,COLOR,10,0,COLOR,10
+	PP,1,196,247,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"INHIBIT.Status.Value",""
+		ADVFORMAT,2,"[=0]\'No\';\'S¡\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'No\';\'S¡\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=0]\'No\';\'S¡\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"lblSignal3"
+	B,630,135,741,151,630,151,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,135,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock3"
+	B,590,135,602,147,590,147,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,135,602,147,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal4"
+	B,630,152,741,168,630,168,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,152,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock4"
+	B,590,152,602,164,590,164,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,152,602,164,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal5"
+	B,630,169,741,185,630,185,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,169,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock5"
+	B,590,169,602,181,590,181,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,169,602,181,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal6"
+	B,630,186,741,202,630,202,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,186,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock6"
+	B,590,186,602,198,590,198,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,186,602,198,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal7"
+	B,630,203,741,219,630,219,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,203,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock7"
+	B,590,203,602,215,590,215,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,203,602,215,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal8"
+	B,630,220,741,236,630,236,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,220,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock8"
+	B,590,220,602,232,590,232,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,220,602,232,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal9"
+	B,630,237,741,253,630,253,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,237,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock9"
+	B,590,237,602,249,590,249,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,237,602,249,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal10"
+	B,630,254,741,270,630,270,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,254,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock10"
+	B,590,254,602,266,590,266,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,254,602,266,1,0, 0, 1
+O,END
+O,BEGIN,T,"lblSignal11"
+	B,630,271,741,287,630,287,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,630,271,0,0,FONT,1,"06RS_PAT",37,FONT,1,"06RS_PAT",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sovrascritto",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"sybRouteBlock11"
+	B,590,271,602,283,590,283,65535,0,6400,0,1,0,0
+	PP,"GUA_Signal_RouteBlocking_IP","",590,271,602,283,1,0, 0, 1
+O,END
+O,BEGIN,R,"Shape3"
+	B,107,39,17,18,107,39,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text12"
+	B,131,104,249,128,131,128,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,7,COLOR,9,0,COLOR,3,0,COLOR,3,0,COLOR,10,0,COLOR,10
+	PP,1,131,104,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"HMIRouteSignal.Template.iEqpstate",""
+		ADVFORMAT,2,"[=0]\'Restrictivo\';[>=1]\'Permissive\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'Restrictivo\';[>=1]\'Permissive\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=0]\'Restrictivo\';[>=1]\'Permissive\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,R,"Shape4"
+	B,256,224,19,195,256,224,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim1",0,0,"",""
+		PP,"HMIFilament.Template.iEqpState"
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,1000.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,11,COLOR,11,0.000000
+		COL,1,COLOR,12,COLOR,12,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,12,COLOR,12,0.000000
+		COL,1,COLOR,12,COLOR,12,0.000000
+	A,END
+O,END
+O,BEGIN,T,"lblSignal2"
+	B,334,113,445,129,334,129,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,334,113,0,0,FONT,1,"02RS_TCC",37,FONT,1,"02RS_TCC",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"02RS_TZA",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"01RS_TZA",FONT,1,37
+			ROLE,0,"02RS_TZA",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

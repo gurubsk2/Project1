@@ -1,0 +1,1728 @@
+ASCII32,11,8,2017,15:5,7,1.1
+W,BEGIN,"LineOperatingModeAutoWithoutTT_RegulationMode","LineOperatingModeAutoWithoutTTRegulationMode"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,8,30
+	SIZE,610,355,610,355,0,0,0,1424,1034,610,355
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,8,30
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithoutTT_RegulationMode.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto Without TT Regulation Type
+	'* *******************************************************************************************
+	'* Purpose:     Manages the selection of the loop associated to the selected service
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Wagner Queiroz
+	'* Date:                Feb '16
+	'* Change:              All
+	
+	'* Author:              VALVERDE Artur
+	'* Date:                Mar '17
+	'* Change:              All changes for Guadalajara Line 3
+	
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	Option Explicit
+	
+	'* Declarations
+	'* ******************************************************
+	
+	'* Constants
+	'* ******************************************************
+	'* Separator between the OPC cluster and the OPC tag
+	'* Path of variables
+	'* ******************************************************
+	Private Const c_strAutoWithoutTTParamServiceLocalTag        As String = ".AutoWithoutTTParamServiceSelected%"
+	Private Const c_strAutoWithoutTTParamRegulationLocalTag     As String = ".AutoWithoutTTParamRegulationSelected%"
+	Private Const c_strAutoWithoutTTRegLoopNbrSel               As String = ".AutoWithoutTTLoopNbrSel%"
+	Private Const c_strAutoWithoutTTRegLoopName1                As String = ".AutoWithoutTTRegLoopName1%"
+	Private Const c_strAutoWithoutTTRegLoopName2                As String = ".AutoWithoutTTRegLoopName2%"
+	Private Const c_strAutoWithoutTTRegLoopName3                As String = ".AutoWithoutTTRegLoopName3%"
+	
+	'* Local Variables
+	Dim m_Local_AutoWithoutTTParamService                       As Variable
+	Dim m_Local_AutoWithoutRegLoopNbrSel                        As Variable
+	Dim m_Local_AutoWithoutTTParamRegulation                    As Variable
+	Dim m_Local_AutoWithoutTTRegLoopName1                       As Variable
+	Dim m_Local_AutoWithoutTTRegLoopName2                       As Variable
+	Dim m_Local_AutoWithoutTTRegLoopName3                       As Variable
+	
+	Dim HDWEvents                                               As HDW.IHeadwayConfigurationCtrl
+	
+	    
+	'* Module variables
+	'* ******************************************************
+	Private Type RegLoop
+	    Name            As String
+	    Id              As String
+	    TrainMin        As Integer
+	    TrainMax        As Integer
+	    TrainSel        As String
+	End Type
+	
+	Dim m_intAutoWithoutTTRegLoopNbrDispo                   As Integer
+	Dim m_intAutoWithoutTTRegLoop1IdLocalTag                As Integer
+	Dim m_arrAutoWithoutTTRegLoops()                        As RegLoop
+	
+	
+	Private Sub btnCancel_Click()
+	
+	End Sub
+	
+	Private Sub btnOK_Click()
+	    On Error GoTo ErrorHandler
+	
+	    If Not [@ButtonOKEnabled%] Then Exit Sub
+	
+	    SendCommand 3, m_Local_AutoWithoutTTParamService.Value, 1, m_Local_AutoWithoutTTParamRegulation.Value
+	    Mimics("View_LineOperatingModes", Me.Branch).Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnOK_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub cboCarousel1_Change()
+	On Error GoTo ErrorHandler
+	    If cboCarousel1.ListCount = 0 Then Exit Sub
+	    m_arrAutoWithoutTTRegLoops(0).TrainSel = cboCarousel1.Value
+	    Call CreateStringCommand
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "cboCarousel1_Change", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub cboCarousel2_Change()
+	On Error GoTo ErrorHandler
+	    
+	    If cboCarousel2.ListCount = 0 Then Exit Sub
+	    m_arrAutoWithoutTTRegLoops(1).TrainSel = cboCarousel2.Value
+	    Call CreateStringCommand
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "cboCarousel2_Change", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub cboCarousel3_Change()
+	On Error GoTo ErrorHandler
+	    
+	    If cboCarousel3.ListCount = 0 Then Exit Sub
+	    m_arrAutoWithoutTTRegLoops(2).TrainSel = cboCarousel3.Value
+	    Call CreateStringCommand
+	
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "cboCarousel3_Change", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub CreateStringCommand()
+	On Error GoTo ErrorHandler
+	Dim intCountLoops       As Integer
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "CreateStringCommand", "Begin Subroutine")
+	    m_Local_AutoWithoutTTParamRegulation.Value = ""
+	    m_Local_AutoWithoutRegLoopNbrSel = 0
+	    
+	    For intCountLoops = LBound(m_arrAutoWithoutTTRegLoops) To UBound(m_arrAutoWithoutTTRegLoops)
+	        
+	        If m_arrAutoWithoutTTRegLoops(intCountLoops).TrainSel <> "" Then
+	        
+	            m_Local_AutoWithoutTTParamRegulation.Value = m_Local_AutoWithoutTTParamRegulation.Value & m_arrAutoWithoutTTRegLoops(intCountLoops).Id & ";" & m_arrAutoWithoutTTRegLoops(intCountLoops).TrainSel & "|"
+	            
+	            'Calculate the number of Loops selected
+	            m_Local_AutoWithoutRegLoopNbrSel = m_Local_AutoWithoutRegLoopNbrSel + 1
+	            
+	        End If
+	        
+	    Next intCountLoops
+	    
+	    m_Local_AutoWithoutTTParamRegulation.Value = Left(m_Local_AutoWithoutTTParamRegulation.Value, Len(m_Local_AutoWithoutTTParamRegulation.Value) - 1)
+	    
+	    Call EnableCommand
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CreateStringCommand", "EXCEPTION: " & Err.Description)
+	    
+	End Sub
+	
+	Private Sub EnableCommand()
+	On Error GoTo ErrorHandler
+	        
+	    Variables.Item("@ButtonOKEnabled%").Value = (CInt(m_Local_AutoWithoutRegLoopNbrSel) = m_intAutoWithoutTTRegLoopNbrDispo) 'And _
+	                '(optDwellTime.Value = True Or optHeadway.Value = True)
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "EnableCommand", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    
+	'    '* Enable the "Previous" button
+	'    Variables.Item(ThisMimic.Branch & ".PrevButtonEnabled%").Value = 1
+	'
+	'    '* Disable the "Next" button
+	'    Variables.Item(ThisMimic.Branch & ".btnNextEnabled%").Value = 0
+	'
+	'    '* Enable the "Cancel" button
+	'    Variables.Item(ThisMimic.Branch & ".CancelButtonEnabled%").Value = 1
+	    
+	    Set m_Local_AutoWithoutTTParamService = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTParamServiceLocalTag, fvVariableTypeRegister)
+	    Set m_Local_AutoWithoutTTParamRegulation = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTParamRegulationLocalTag, fvVariableTypeText)
+	    Set m_Local_AutoWithoutRegLoopNbrSel = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTRegLoopNbrSel, fvVariableTypeRegister)
+	    Set m_Local_AutoWithoutTTRegLoopName1 = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTRegLoopName1, fvVariableTypeText)
+	    Set m_Local_AutoWithoutTTRegLoopName2 = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTRegLoopName2, fvVariableTypeText)
+	    Set m_Local_AutoWithoutTTRegLoopName3 = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTRegLoopName3, fvVariableTypeText)
+	    
+	    Set HDWEvents = New HDW.IHeadwayConfigurationCtrl
+	
+	'    optDwellTime.Value = False
+	'    optHeadway.Value = False
+	    
+	    Call ClearHeadwaysControls
+	    Call CalculateTrainLoop
+	    Call FillCombobox
+	'    Call AvailabilityOptionButton(True)
+	'    Call AvailabilityCombobox(False)
+	    Call AvailabilityCombobox(True)
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub ClearHeadwaysControls()
+	On Error GoTo ErrorHandler
+	    m_Local_AutoWithoutTTRegLoopName1.Value = ""
+	    m_Local_AutoWithoutTTRegLoopName2.Value = ""
+	    m_Local_AutoWithoutTTRegLoopName3.Value = ""
+	    
+	    cboCarousel1.Value = ""
+	    cboCarousel2.Value = ""
+	    cboCarousel3.Value = ""
+	    
+	    cboCarousel1.Clear
+	    cboCarousel2.Clear
+	    cboCarousel3.Clear
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ClearHeadwaysControls", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'*  SubRoutine: AvailabilityCombobox
+	'*  Purpose: Disable all combobox
+	'*
+	'* ******************************************************************************************
+	Private Sub AvailabilityCombobox(ByVal p_Enable As Boolean)
+	On Error GoTo ErrorHandler
+	    
+	    cboCarousel1.Enabled = p_Enable
+	    cboCarousel2.Enabled = p_Enable
+	    cboCarousel3.Enabled = p_Enable
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "AvailabilityCombobox", "EXCEPTION: " & Err.Description)
+	End Sub
+	'*  SubRoutine: AvailabilityOptionButton
+	'*  Purpose: Disable all option button
+	'*
+	'* ******************************************************************************************
+	Private Sub AvailabilityOptionButton(ByVal p_Enable As Boolean)
+	On Error GoTo ErrorHandler
+	    
+	    optDwellTime.Enabled = p_Enable
+	    optHeadway.Enabled = p_Enable
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "AvailabilityOptionButton", "EXCEPTION: " & Err.Description)
+	End Sub
+	Private Sub optDwellTime_Click()
+	On Error GoTo ErrorHandler
+	Dim intCountLoops       As Integer
+	On Error GoTo ErrorHandler
+	    
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "optDwellTime_Click", "Begin Subroutine")
+	    Call AvailabilityCombobox(False)
+	    
+	    For intCountLoops = LBound(m_arrAutoWithoutTTRegLoops) To UBound(m_arrAutoWithoutTTRegLoops)
+	        
+	        m_arrAutoWithoutTTRegLoops(intCountLoops).TrainSel = "0"
+	        
+	    Next intCountLoops
+	    
+	    m_Local_AutoWithoutRegLoopNbrSel = m_intAutoWithoutTTRegLoopNbrDispo
+	    
+	    Call CreateStringCommand
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "optDwellTime_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub optHeadway_Click()
+	On Error GoTo ErrorHandler
+	    
+	    Call AvailabilityCombobox(True)
+	    cboCarousel1_Change
+	    cboCarousel2_Change
+	    cboCarousel3_Change
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "optHeadway_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	'*  SubRoutine: CalculateTrainLoop
+	'*  Purpose: Calculate the number of trains of each loop associated to the selected service
+	'*
+	'* ******************************************************************************************
+	Private Sub CalculateTrainLoop()
+	On Error GoTo ErrorHandler
+	Dim strLoopList         As String
+	Dim intCountLoop        As Integer
+	Dim intCountLoopInfo    As Integer
+	Dim arrLoops()          As String
+	Dim arrLoopInfo()       As String
+	
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "CalculateTrainLoop", "Begin Subroutine")
+	
+	    GetParamService
+	    
+	    strLoopList = CStr(HDWEvents.GetLoopConfiguration(m_Local_AutoWithoutTTParamService.Value))
+	    
+	    ReDim m_arrAutoWithoutTTRegLoops(UBound(Split(strLoopList, "|"))) As RegLoop
+	    
+	    m_intAutoWithoutTTRegLoopNbrDispo = UBound(m_arrAutoWithoutTTRegLoops) + 1
+	    
+	    For intCountLoop = LBound(m_arrAutoWithoutTTRegLoops) To UBound(m_arrAutoWithoutTTRegLoops)
+	        
+	        arrLoops = Split(strLoopList, "|")
+	        
+	        For intCountLoopInfo = LBound(arrLoops) To UBound(arrLoops)
+	        
+	            arrLoopInfo = Split(arrLoops(intCountLoop), ";")
+	    
+	            m_arrAutoWithoutTTRegLoops(intCountLoop).Id = arrLoopInfo(0)
+	            m_arrAutoWithoutTTRegLoops(intCountLoop).Name = arrLoopInfo(1)
+	            m_arrAutoWithoutTTRegLoops(intCountLoop).TrainMin = arrLoopInfo(2)
+	            m_arrAutoWithoutTTRegLoops(intCountLoop).TrainMax = arrLoopInfo(3)
+	
+	        Next intCountLoopInfo
+	        
+	    Next intCountLoop
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    MsgBox Err.Description
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CalculateTrainLoop", "EXCEPTION: " & Err.Description)
+	    
+	End Sub
+	
+	'*  SubRoutine: FillCombobox
+	'*  Purpose: Fill combobox with the number of trains of each combobox
+	'*           with its name
+	'* ******************************************************************************************
+	Public Sub FillCombobox()
+	On Error GoTo ErrorHandler
+	Dim intCountLoops       As Integer
+	Dim intCountTrain       As Integer
+	Dim intCountCombobobox  As Integer
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillCombobox", "Begin Subroutine")
+	    
+	    intCountCombobobox = 1
+	    For intCountLoops = LBound(m_arrAutoWithoutTTRegLoops) To UBound(m_arrAutoWithoutTTRegLoops)
+	        
+	        For intCountTrain = m_arrAutoWithoutTTRegLoops(intCountLoops).TrainMin To m_arrAutoWithoutTTRegLoops(intCountLoops).TrainMax
+	                
+	            Select Case intCountCombobobox
+	                Case 1
+	                    cboCarousel1.AddItem intCountTrain
+	                    m_Local_AutoWithoutTTRegLoopName1.Value = m_arrAutoWithoutTTRegLoops(intCountLoops).Name
+	                    
+	                Case 2
+	                    cboCarousel2.AddItem intCountTrain
+	                    m_Local_AutoWithoutTTRegLoopName2.Value = m_arrAutoWithoutTTRegLoops(intCountLoops).Name
+	                    
+	                Case 3
+	                    cboCarousel3.AddItem intCountTrain
+	                    m_Local_AutoWithoutTTRegLoopName3.Value = m_arrAutoWithoutTTRegLoops(intCountLoops).Name
+	                    
+	            End Select
+	 
+	        Next intCountTrain
+	        
+	        intCountCombobobox = intCountCombobobox + 1
+	        
+	    Next intCountLoops
+	    
+	    cboCarousel1.ListIndex = 0
+	    cboCarousel2.ListIndex = 0
+	    cboCarousel3.ListIndex = 0
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "FillCombobox", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	Private Function GetParamService() As String
+	    Dim vServicesList As Variant, sList As String
+	    Dim sServiceName As String
+	    Dim sServiceNameInvert As String
+	    Dim xmlDoc As DOMDocument
+	    Dim pNode As IXMLDOMNode
+	    Dim sQuery As String
+	    Dim pElement        As IXMLDOMElement
+	    Dim i As Integer
+	    Dim vLoops As Variant
+	    Dim sType As Integer
+	    
+	    On Error GoTo ErrorHandler
+	
+	    sList = FindSelectedServiceName
+	    m_Local_AutoWithoutTTParamService.Value = 0
+	    
+	'''    sServiceName = Replace(sList, ";", "_")
+	'''
+	'''    If InStr(sList, ";") > 0 Then
+	'''        vServicesList = Split(sList, ";")
+	'''        For i = 0 To UBound(vServicesList)
+	'''            If sServiceNameInvert <> "" Then sServiceNameInvert = sServiceNameInvert & "_"
+	'''            sServiceNameInvert = sServiceNameInvert & vServicesList(UBound(vServicesList) - i)
+	'''
+	'''            If sQuery = "" Then
+	'''                sQuery = "//SERVICE[contains(@HMI_VARLIST, ""*" & vServicesList(i) & "*"")"
+	'''            Else
+	'''                sQuery = sQuery & " and contains(@HMI_VARLIST, ""*" & vServicesList(i) & "*"")"
+	'''            End If
+	'''
+	'''        Next i
+	'''        sQuery = sQuery & "]"
+	'''    End If
+	
+	    Set xmlDoc = New DOMDocument
+	'    xmlDoc.async = False
+	    xmlDoc.setProperty "SelectionLanguage", "XPath"
+	'    xmlDoc.loadXML Variables(c_strClusterLevel2 & c_strCarouselConfOperatingModeList).Value
+	    xmlDoc.Load ThisProject.Path & "\Working Files\ServicesHDWxHMI.xml"
+	    
+	'    If sServiceNameInvert <> "" Then
+	'        sQuery = "//NextMode[contains(@Name, """ & sServiceName & """) or contains(@Name, """ & sServiceNameInvert & """)]"
+	'    Else
+	'        sQuery = "//NextMode[contains(@Name, """ & sServiceName & """)]"
+	'    End If
+	    
+	    sQuery = "//SERVICE[@HMI_VARLIST=""" & sList & """]"
+	    
+	    Set pNode = xmlDoc.selectSingleNode(sQuery)
+	    
+	    If Not pNode Is Nothing Then _
+	        m_Local_AutoWithoutTTParamService.Value = pNode.Attributes.getNamedItem("ID").nodeValue
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "GetParamService", "EXCEPTION: " & Err.Description)
+	    
+	End Function
+	
+	
+	Private Function FindSelectedServiceName() As String
+	    On Error GoTo ErrorHandler
+	
+	    'TZA_TCC - @Service0%
+	    If [@Service0%] Then FindSelectedServiceName = "Service0%"
+	
+	    'TZA_PAT - @Service1%
+	    If [@Service1%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service1%"
+	    End If
+	    
+	    'TZA_FED - @Service2%
+	    If [@Service2%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service2%"
+	    End If
+	    
+	    'TZA_QCI - @Service3%
+	    If [@Service3%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service3%"
+	    End If
+	
+	    'TZA_N1L - @Service4%
+	    If [@Service4%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service4%"
+	    End If
+	
+	    'PAT_TCC - @Service5%
+	    If [@Service5%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service5%"
+	    End If
+	
+	    'FED_TCC - @Service6%
+	    If [@Service6%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service6%"
+	    End If
+	
+	    'QCI_TCC - @Service7%
+	    If [@Service7%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service7%"
+	    End If
+	
+	    'N1L_TCC - @Service8%
+	    If [@Service8%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service8%" 'Delete this line
+	    End If
+	
+	    'FED_QCI - @Service9%
+	    If [@Service9%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service9%"
+	    End If
+	
+	    'PAT_N1L - @Service10%
+	    If [@Service10%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service10%"
+	    End If
+	
+	    'TZA_CTD - Service11%
+	    If [@Service11%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service11%"
+	    End If
+	    
+	    'CTD_TCC - Service12%
+	    If [@Service12%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service12%"
+	    End If
+	    
+	    'PAT_CTD - Service13%
+	    If [@Service13%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service13%"
+	    End If
+	    
+	    'CTD_N1L - Service14%
+	    If [@Service14%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "Service14%"
+	    End If
+	
+	    'TZA via 1 - ServiceTZAv1%
+	    If [@ServiceTZAv1%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTZAv1%"
+	    End If
+	
+	    'TZA via 2 - ServiceTZAv2%
+	    If [@ServiceTZAv2%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTZAv2%"
+	    End If
+	
+	    'TZA via anden - ServiceTZAanden
+	    If [@ServiceTZAanden%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTZAanden%"
+	    End If
+	
+	    'TCC via 1 - ServiceTCCv1%
+	    If [@ServiceTCCv1%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTCCv1%"
+	    End If
+	
+	    'TCC via 2 - ServiceTCCv2%
+	    If [@ServiceTCCv2%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTCCv2%"
+	    End If
+	
+	    'TCC via anden - ServiceTCCanden
+	    If [@ServiceTCCanden%] Then
+	        If FindSelectedServiceName <> "" Then FindSelectedServiceName = FindSelectedServiceName & ";"
+	        FindSelectedServiceName = FindSelectedServiceName & "ServiceTCCanden%"
+	    End If
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "FindSelectedServiceName", Err.Description)
+	
+	End Function
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"HDW", 1, 0, "{16C4B4DD-E660-48A4-8D94-B813A49B6243}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,215,215,215,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,0,255,0,0,0,0
+	COLOR,9,255,0,255,0,0,0
+	COLOR,10,179,179,179,0,0,0
+	COLOR,11,105,105,105,0,0,0
+	COLOR,12,0,0,0,0,34,0
+	COLOR,13,0,0,0,0,63,0
+	COLOR,14,255,0,0,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,609,304,3,9,609,304,65535,0,6400,1,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"shpLoops"
+	B,592,276,20,124,592,276,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtRegulationModeSelection"
+	B,31,116,202,132,31,132,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,31,116,0,0,FONT,1,"Regulation mode selection",36,FONT,1,"Regulation mode selection",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Selecci¢n de par metros",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtHeadwayNbOfTrains"
+	B,418,144,519,173,418,173,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,418,144,0,0,FONT,1,"Headway (Sec) | Nb of trains",84,FONT,1,"Headway (Sec) | Nb of trains",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Intervalo (Sec) | N£m. de trenes",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,138,319,217,348,138,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,138,319,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"@ButtonOKEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,394,319,473,348,394,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,394,319,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonCancelEnabled%"
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,9,COLOR,9
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"View_LineOperatingModes","*"
+		AUTH,"ButtonCancelEnabled%",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"txtServiceName1"
+	B,46,175,350,199,46,199,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,10,0,COLOR,1,0,COLOR,1,0,COLOR,11,0,COLOR,11
+	PP,1,46,175,0,0,FONT,2,"  ",37,FONT,2,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<Porci¢n de L¡nea>",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"AutoWithoutTTRegLoopName1%"
+	A,END
+O,END
+O,BEGIN,T,"txtServiceName2"
+	B,46,206,350,230,46,230,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,10,0,COLOR,1,0,COLOR,1,0,COLOR,11,0,COLOR,11
+	PP,1,46,206,0,0,FONT,2,"<Porci¢n de L¡nea>",37,FONT,2,"<Porci¢n de L¡nea>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<Porci¢n de L¡nea>",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"AutoWithoutTTRegLoopName2%"
+	A,END
+O,END
+O,BEGIN,OCX,"cboCarousel1"
+	B,384,175,552,199,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"cboCarousel2"
+	B,384,206,552,230,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtServiceName3"
+	B,46,238,350,262,46,262,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,10,0,COLOR,1,0,COLOR,1,0,COLOR,11,0,COLOR,11
+	PP,1,46,238,0,0,FONT,2,"<Porci¢n de L¡nea>",37,FONT,2,"<Porci¢n de L¡nea>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<Porci¢n de L¡nea>",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"AutoWithoutTTRegLoopName3%"
+	A,END
+O,END
+O,BEGIN,OCX,"cboCarousel3"
+	B,384,238,552,262,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtHeadwayNbOfTrains1"
+	B,46,158,246,173,46,173,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,46,158,0,0,FONT,1,"Intervalo (Sec) | N£m. de trenes",84,FONT,1,"Intervalo (Sec) | N£m. de trenes",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Servicio",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"Group15"
+	B,56,24,556,96,56,96,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape1"
+		B,556,96,56,24,556,96,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,2,0,COLOR,2
+		AST,5,2,COLOR,1,COLOR,12,0,COLOR,1,0,COLOR,1,0,COLOR,11,0,COLOR,11
+	O,END
+	O,BEGIN,RR,"Shape6"
+		B,160,40,160,40,160,40,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,16,16
+	O,END
+	O,BEGIN,R,"Shape8"
+		B,99,40,90,36,99,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape9"
+		B,99,83,90,79,99,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape12"
+		B,131,40,122,36,131,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape13"
+		B,131,83,122,79,131,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape14"
+		B,147,40,138,36,147,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape15"
+		B,147,83,138,79,147,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape16"
+		B,163,40,154,36,163,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape17"
+		B,163,83,154,79,163,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape18"
+		B,194,40,185,36,194,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape19"
+		B,194,83,185,79,194,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape24"
+		B,210,40,201,36,210,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape25"
+		B,210,83,201,79,210,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape26"
+		B,242,40,233,36,242,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape27"
+		B,242,83,233,79,242,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape28"
+		B,256,40,247,36,256,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape29"
+		B,256,83,247,79,256,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape30"
+		B,270,40,261,36,270,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape31"
+		B,270,83,261,79,270,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape32"
+		B,292,40,283,36,292,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape33"
+		B,292,83,283,79,292,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape34"
+		B,306,40,297,36,306,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape35"
+		B,306,83,297,79,306,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape36"
+		B,339,40,330,36,339,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape37"
+		B,339,83,330,79,339,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape38"
+		B,404,40,395,36,404,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape39"
+		B,404,83,395,79,404,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape40"
+		B,420,40,411,36,420,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape41"
+		B,420,83,411,79,420,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape42"
+		B,453,40,444,36,453,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape43"
+		B,453,83,444,79,453,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape44"
+		B,469,40,460,36,469,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape45"
+		B,469,83,460,79,469,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape46"
+		B,485,40,476,36,485,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape47"
+		B,485,83,476,79,485,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape48"
+		B,519,40,510,36,519,40,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape49"
+		B,519,83,510,79,519,83,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,I,"Poly26"
+		B,61,48,551,48,61,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,61,48,551,48
+	O,END
+	O,BEGIN,I,"Poly27"
+		B,61,72,551,72,61,72,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,61,72,551,72
+	O,END
+	O,BEGIN,I,"Poly28"
+		B,69,48,85,72,69,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,69,48,85,72
+	O,END
+	O,BEGIN,I,"Poly29"
+		B,85,48,69,72,85,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,85,48,69,72
+	O,END
+	O,BEGIN,I,"Poly30"
+		B,119,48,103,72,119,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,119,48,103,72
+	O,END
+	O,BEGIN,I,"Poly31"
+		B,166,48,182,72,166,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,166,48,182,72
+	O,END
+	O,BEGIN,I,"Poly32"
+		B,215,48,231,72,215,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,215,48,231,72
+	O,END
+	O,BEGIN,I,"Poly33"
+		B,375,48,391,72,375,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,375,48,391,72
+	O,END
+	O,BEGIN,I,"Poly34"
+		B,327,48,311,72,327,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,327,48,311,72
+	O,END
+	O,BEGIN,I,"Poly35"
+		B,365,40,341,48,333,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,341,48,349,40,357,40,365,48
+	O,END
+	O,BEGIN,I,"Poly36"
+		B,425,48,441,72,425,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,425,48,441,72
+	O,END
+	O,BEGIN,I,"Poly37"
+		B,506,48,490,72,506,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,506,48,490,72
+	O,END
+	O,BEGIN,I,"Poly38"
+		B,543,48,527,72,543,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,543,48,527,72
+	O,END
+	O,BEGIN,I,"Poly39"
+		B,527,48,543,72,527,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,527,48,543,72
+	O,END
+	O,BEGIN,I,"Poly1"
+		B,264,48,280,72,264,48,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,264,48,280,72
+	O,END
+	O,BEGIN,I,"Poly2"
+		B,352,36,345,39,325,44,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,345,36,349,36,352,39
+	O,END
+	O,BEGIN,I,"Poly3"
+		B,354,36,361,39,381,44,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,361,36,357,36,354,39
+	O,END
+O,END
+O,BEGIN,GRP,"Group16"
+	B,59,42,553,78,59,78,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,GRP,"Group29"
+		B,201,42,408,78,201,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,403,72,203,48,257,58,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,203,48,215,48,231,72,403,72,391,72
+			PP,375,48,215,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,209,54,201,42,209,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,209,48,201,54,201,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,307,78,299,66,307,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,307,72,299,78,299,66
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,408,78,400,66,408,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,408,72,400,78,400,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,299,54,307,42,299,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,299,48,307,54,307,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service9%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group31"
+		B,154,42,456,78,154,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,450,72,158,48,257,58,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,158,48,166,48,182,72,450,72,441,72
+			PP,425,48,165,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,162,54,154,42,162,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,162,48,154,54,154,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,308,78,300,66,308,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,308,72,300,78,300,66
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,456,78,448,66,456,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,456,72,448,78,448,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,300,54,308,42,300,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,300,48,308,54,308,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service10%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group39"
+		B,93,48,132,78,93,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,93,66,101,78,93,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,93,72,101,66,101,78
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,97,72,132,48,132,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,132,72,97,72,103,72,119,48,132,48
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAanden%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group40"
+		B,516,72,477,42,516,42,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,516,54,508,42,516,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,516,48,508,54,508,42
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,512,48,477,72,477,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,477,48,512,48,506,48,490,72,477,72
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCanden%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group42"
+		B,59,48,132,78,59,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,59,66,67,78,59,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,59,72,67,66,67,78
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,63,72,132,48,132,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,132,72,63,72,69,72,85,48,132,48
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAv2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group44"
+		B,59,42,132,72,59,72,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,59,54,67,42,59,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,59,48,67,54,67,42
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,63,48,132,72,132,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,132,48,63,48,69,48,85,72,132,72
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAv1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group45"
+		B,553,48,480,78,553,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,553,66,545,78,553,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,553,72,545,66,545,78
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,549,72,480,48,480,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,480,72,549,72,543,72,527,48,480,48
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCv2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group46"
+		B,553,42,480,72,553,72,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,553,54,545,42,553,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,553,48,545,54,545,42
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,549,48,480,72,480,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,480,48,549,48,543,48,527,72,480,72
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCv1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group47"
+		B,129,42,489,78,129,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly2"
+			B,129,48,489,48,129,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,129,48,489,48
+		O,END
+		O,BEGIN,I,"Poly3"
+			B,129,72,489,72,129,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,129,72,489,72
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,309,78,301,66,309,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,309,72,301,78,301,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,301,54,309,42,301,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,301,48,309,54,309,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service0%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group54"
+		B,121,42,244,78,121,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,240,72,121,48,177,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,122,72,240,72,231,72,215,48,121,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,236,66,244,78,236,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,236,72,244,66,244,78
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,148,42,156,54,148,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,148,48,156,42,156,54
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,156,66,148,78,156,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,156,72,148,66,148,78
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group56"
+		B,119,42,406,78,119,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly41"
+			B,398,66,406,78,398,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,398,72,406,66,406,78
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,403,72,119,48,335,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,119,72,403,72,391,72,375,48,119,48
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,228,42,236,54,228,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,228,48,236,42,236,54
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,236,66,228,78,236,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,236,72,228,66,228,78
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service3%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group58"
+		B,121,42,454,78,121,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,450,72,121,48,387,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,121,72,450,72,441,72,425,48,121,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,446,66,454,78,446,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,446,72,454,66,454,78
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,253,42,261,54,253,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,253,48,261,42,261,54
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,261,66,253,78,261,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,261,72,253,66,253,78
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service4%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group61"
+		B,119,42,196,78,119,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,194,72,119,48,119,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,119,72,194,72,182,72,166,48,119,48
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,125,42,133,54,125,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,125,48,133,42,133,54
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,133,66,125,78,133,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,133,72,125,66,125,78
+		O,END
+		O,BEGIN,P,"Poly5"
+			B,188,66,196,78,188,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,188,72,196,66,196,78
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group62"
+		B,411,42,488,78,411,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,414,48,488,72,488,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,488,48,414,48,425,48,441,72,488,72
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,419,54,411,42,419,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,419,48,411,54,411,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,486,78,478,66,486,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,486,72,478,78,478,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,478,54,486,42,478,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,478,48,486,54,486,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service8%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group64"
+		B,366,42,488,78,366,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,369,48,488,72,488,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,488,48,369,48,375,48,391,72,488,72
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,374,54,366,42,374,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,374,48,366,54,366,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,464,78,456,66,464,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,464,72,456,78,456,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,456,54,464,42,456,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,456,48,464,54,464,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service7%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group66"
+		B,154,42,489,78,154,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,158,48,489,72,264,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,489,48,158,48,166,48,182,72,489,72
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,162,54,154,42,162,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,162,48,154,54,154,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,359,78,351,66,359,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,359,72,351,78,351,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,351,54,359,42,351,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,351,48,359,54,359,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service5%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group68"
+		B,201,42,488,78,201,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,204,48,488,72,313,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,488,48,204,48,215,48,231,72,488,72
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,209,54,201,42,209,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,209,48,201,54,201,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,381,78,373,66,381,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,381,72,373,78,373,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,373,54,381,42,373,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,373,48,381,54,381,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service6%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group4"
+		B,121,42,293,78,121,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,289,72,121,48,226,72,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,122,72,289,72,280,72,264,48,121,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,285,66,293,78,285,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,285,72,293,66,293,78
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,197,42,205,54,197,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,197,48,205,42,205,54
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,205,66,197,78,205,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,205,72,197,66,197,78
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service11%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group7"
+		B,255,42,480,78,255,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,258,48,480,72,480,48,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,480,48,258,48,264,48,280,72,480,72
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,263,54,255,42,263,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,263,48,255,54,255,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,373,78,365,66,373,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,373,72,365,78,365,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,365,54,373,42,365,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,365,48,373,54,373,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service12%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group11"
+		B,154,42,293,78,154,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,290,72,158,48,257,58,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,158,48,166,48,182,72,290,72,280,72
+			PP,264,48,165,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,162,54,154,42,162,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,162,48,154,54,154,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,228,78,220,66,228,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,228,72,220,78,220,66
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,293,78,285,66,293,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,293,72,285,78,285,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,220,54,228,42,220,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,220,48,228,54,228,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service13%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group14"
+		B,255,42,456,78,255,78,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,450,72,258,48,257,58,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,14,COLOR,14,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,264,48,280,72,450,72,441,72,425,48
+			PP,258,48
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,263,54,255,42,263,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,263,48,255,54,255,42
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,358,78,350,66,358,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,358,72,350,78,350,66
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,456,78,448,66,456,72,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,456,72,448,78,448,66
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,350,54,358,42,350,48,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,14,COLOR,14,0,0,COLOR,14,0,COLOR,14,0,COLOR,2,0,COLOR,2
+			PP,350,48,358,54,358,42
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service14%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,14,COLOR,14
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+O,END

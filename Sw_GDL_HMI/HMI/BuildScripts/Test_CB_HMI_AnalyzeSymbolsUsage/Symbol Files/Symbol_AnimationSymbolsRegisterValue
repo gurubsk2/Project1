@@ -1,0 +1,17 @@
+ASCII32,9,4,2015,8:12,21,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,""
+	B,272,264,328,307,272,307,1,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,S,"Symbol7"
+		B,272,264,328,307,272,307,65535,0,6400,0,2,1,0
+		PP,"Subsymbol_NoChildren","",272,264,328,307,1,0, 1, 1
+		SUB
+		A,BEGIN,ORL,"Anim1",0,0,"",""
+			PP,"","",264,292,320,335,1,"Subsymbol_AnimationSymbolsRegisterValue_SubZero",-5.000000,1,"Subsymbol_AnimationSymbolsRegisterValue_MinusOne",0.000000,0,"",1.000000,1,"Subsymbol_AnimationSymbolsRegisterValue_One",2.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"Subsymbol_AnimationSymbolsRegisterValue_Last",0.000000,1,"Subsymbol_AnimationSymbolsRegisterValue_Unavailable",0.000000,1,"Subsymbol_AnimationSymbolsRegisterValue_OutOfLevel",0.000000
+		A,END
+	O,END
+O,END

@@ -1,0 +1,329 @@
+ASCII32,3,4,2017,11:10,18,1.1
+FONTS,BEGIN
+	FONT,1,-11,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Lucida Console",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,0,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,192,0,0,0,0
+	COLOR,6,0,0,0,0,40,0
+	COLOR,7,0,0,0,0,32,0
+	COLOR,8,0,0,0,0,35,0
+	COLOR,9,0,0,0,0,33,0
+	COLOR,10,194,0,0,0,0,0
+	COLOR,11,255,64,64,0,0,0
+	COLOR,12,0,0,255,0,0,0
+	COLOR,13,0,255,255,0,0,0
+	COLOR,14,255,214,0,0,0,0
+	COLOR,15,0,149,37,0,0,0
+	COLOR,16,4,5,197,0,0,0
+	COLOR,17,0,255,0,0,0,0
+	COLOR,18,128,0,0,0,0,0
+	COLOR,19,0,0,0,0,53,0
+	COLOR,20,0,0,0,0,37,0
+	COLOR,21,0,0,0,0,41,0
+	COLOR,22,0,0,0,0,56,0
+	COLOR,23,0,0,0,0,43,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	Private Const c_strInspectorPanelMimic As String = "Train_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Train_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	Private Sub Text9_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "btnCommand_DblClickEx", "Begin subroutine")
+	      Dim sOPCTrainName As String
+	
+	    temp = Split(GetSymbolBranch(Me), ".")
+	If (UBound(temp) > 0) Then
+	sOPCTrainName = Replace(temp(1), ":@", ":")
+	
+	Else
+	
+	Exit Sub
+	 End If
+	  If sOPCTrainName = "" Then Exit Sub
+	            
+	''    sOPCTrainName = GetHMITrainOPCNameFromBerth(ThisSymbol.Parent.Parent.Parent.LocalBranch)
+	''    If sOPCTrainName = "" Then Exit Sub
+	''
+	''    AddTrainVariables sOPCTrainName
+	''
+	        
+	    '* Open the Inspector Panel mimic
+	    'Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	     Call OpenMimicInCenter(c_strInspectorPanelMimic, sOPCTrainName, Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "btnCommand_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub Text9_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "btnCommand_MouseUp", "Begin subroutine")
+	      Dim temp() As String
+	     'sOPCTrainName = GetHMITrainOPCNameFromBerth(ThisSymbol.Parent.Parent.Parent.LocalBranch)
+	   
+	
+	temp = Split(GetSymbolBranch(Me), ".")
+	If (UBound(temp) > 0) Then
+	sOPCTrainName = Replace(temp(1), ":@", ":")
+	
+	Else
+	
+	Exit Sub
+	 End If
+	  If sOPCTrainName = "" Then Exit Sub
+	  'AddTrainVariables sOPCTrainName
+	       
+	    GetCursorpos Hold
+	'    xpos = hold.x_Pos
+	'    ypos = hold.y_Pos
+	    '* If mouse is right clicked
+	    If (Button = 2) Then
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, sOPCTrainName)
+	        'OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "btnCommand_MouseUp", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"TF1"
+	B,143,31,206,75,143,75,1,0,6400,0,1,1,0
+	O,BEGIN,T,"Text1"
+		B,183,62,195,75,183,75,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,1,183,62,0,0,FONT,1,"V",37,FONT,1,"V",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"V",FONT,1,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.boolPlug_1"
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,4,COLOR,4
+		A,END
+	O,END
+	O,BEGIN,P,"Poly1"
+		B,164,31,184,41,174,31,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		PP,174,31,164,41,184,41
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.longPlug_7"
+			COL,1,COLOR,3,COLOR,3,1.000000
+			COL,1,COLOR,6,COLOR,6,2.000000
+			COL,1,COLOR,3,COLOR,3,3.000000
+			COL,1,COLOR,3,COLOR,3,4.000000
+			COL,1,COLOR,3,COLOR,3,5.000000
+			COL,0,COLOR,3,COLOR,3,6.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,7,COLOR,7,0.000000
+			COL,1,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+	O,BEGIN,P,"Poly2"
+		B,164,73,184,63,174,73,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		PP,174,73,164,63,184,63
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.longPlug_7"
+			COL,1,COLOR,3,COLOR,3,1.000000
+			COL,1,COLOR,6,COLOR,6,2.000000
+			COL,1,COLOR,3,COLOR,3,3.000000
+			COL,1,COLOR,3,COLOR,3,4.000000
+			COL,1,COLOR,3,COLOR,3,5.000000
+			COL,0,COLOR,3,COLOR,3,6.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,7,COLOR,7,0.000000
+			COL,1,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+	O,BEGIN,P,"Poly3"
+		B,193,43,197,61,193,54,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,197,61,197,43,193,43,193,61
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(((TrainIndicator.HMITETrain.longPlug_2 == 2) OR (TrainIndicator.HMITETrain.longPlug_2 == 3))  AND (GDL3TrainIndicator.HMITETrain.longPlug_2 == 0))"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,7,COLOR,7
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,9,COLOR,9
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,P,"Poly4"
+		B,152,43,156,61,152,54,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,156,61,156,43,152,43,152,61
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(((TrainIndicator.HMITETrain.longPlug_2 == 1) OR (TrainIndicator.HMITETrain.longPlug_2 == 3))  AND (GDL3TrainIndicator.HMITETrain.longPlug_2 == 0))"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,7,COLOR,7
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,9,COLOR,9
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,P,"Poly5"
+		B,150,45,143,59,150,54,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,143,52,150,45,150,59
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(GDLL3Attributes.HMITETrain.long_Plug_1>0)"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,7,COLOR,7
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,P,"Poly6"
+		B,199,45,206,59,199,58,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,206,52,199,45,199,59
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(GDLL3Attributes.HMITETrain.long_Plug_1>0)"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,7,COLOR,7
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,R,"Shape2"
+		B,194,74,183,63,194,74,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.boolPlug_1"
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,4,COLOR,4
+		A,END
+	O,END
+	O,BEGIN,R,"Shape3"
+		B,193,61,157,42,193,61,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.longPlug_3"
+			COL,1,COLOR,4,COLOR,3,1.000000
+			COL,1,COLOR,11,COLOR,10,2.000000
+			COL,1,COLOR,13,COLOR,12,3.000000
+			COL,1,COLOR,1,COLOR,14,4.000000
+			COL,1,COLOR,15,COLOR,15,5.000000
+			COL,0,COLOR,16,COLOR,13,6.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,4,COLOR,3,0.000000
+			COL,1,COLOR,4,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,4,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,17,COLOR,17,0.000000
+			COL,0,COLOR,10,COLOR,18,0.000000
+			COL,0,COLOR,1,COLOR,19,0.000000
+			COL,0,COLOR,13,COLOR,12,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,4,0.000000
+			COL,1,COLOR,3,COLOR,4,0.000000
+		A,END
+	O,END
+	O,BEGIN,T,"Text9"
+		B,159,44,191,59,159,59,65535,0,6400,0,2,1,1
+		ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+		PP,1,159,44,0,0,FONT,2,"X00",37,FONT,2,"X00",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"X00",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,DT,"Anim3",0,0,"",""
+			PP,"Attributes.HMITETrain.bstrPlug_6"
+		A,END
+	O,END
+	O,BEGIN,R,"Shape5"
+		B,191,59,159,44,191,59,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"GDLL3Attributes.HMITETrain.longPlug_3"
+			COL,0,COLOR,20,COLOR,20,1.000000
+			COL,0,COLOR,3,COLOR,3,2.000000
+			COL,0,COLOR,21,COLOR,21,3.000000
+			COL,0,COLOR,22,COLOR,22,4.000000
+			COL,0,COLOR,6,COLOR,6,5.000000
+			COL,0,COLOR,23,COLOR,23,6.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,20,COLOR,20,0.000000
+			COL,0,COLOR,20,COLOR,20,0.000000
+			COL,0,COLOR,23,COLOR,23,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,17,COLOR,17,0.000000
+			COL,0,COLOR,10,COLOR,18,0.000000
+			COL,0,COLOR,1,COLOR,19,0.000000
+			COL,0,COLOR,13,COLOR,12,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+O,END

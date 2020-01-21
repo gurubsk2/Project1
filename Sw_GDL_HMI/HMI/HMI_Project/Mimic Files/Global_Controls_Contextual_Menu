@@ -1,0 +1,291 @@
+ASCII32,4,10,2019,13:5,18,1.1
+W,BEGIN,"Global_Controls_Contextual_Menu","Mimic1"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1527,283
+	SIZE,190,100,190,100,0,0,0,1280,800,190,100
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA Global activar"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA Global activar"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	GRID,1,1,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Global_Controls_Contextual_Menu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	
+	End Function
+	
+	Private Sub Mimic_Open()
+	
+	End Sub
+	
+	Private Sub Text6_Click()
+	On Error GoTo ErrorHandler
+	Call Variables.Add("OPCCluster:ZCS_7681.Status.Value", fvVariableTypeBit)
+	If Variables.Item("OPCCluster:ZCS_7681.Status.Value").Value = True Then
+	Call OpenMimicInCenter("Global_GAMAremoval", "OPCCluster:ZCS_7681", Getmousepointerpossition)
+	End If
+	ThisMimic.Close
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "Text6_Click", Err.Description)
+	   
+	End Sub
+	
+	Private Sub Text10_Click()
+	On Error GoTo ErrorHandler
+	Call Variables.Add("OPCCluster:ZCS_7681.Status.Value", fvVariableTypeBit)
+	If Variables.Item("OPCCluster:ZCS_7681.Status.Value").Value = False Then
+	Call OpenMimicInCenter("Global_GAMAAuthorizationHILCCtrl", "OPCCluster:ZCS_7681", Getmousepointerpossition)
+	End If
+	ThisMimic.Close
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "Text10_Click", Err.Description)
+	End Sub
+	
+	''Private Sub txtATSPresence_Active1_Click()
+	''On Error GoTo ErrorHandler
+	''If Variables.Item("OPCCluster:CBIS_15361.Monitor.Template.iEqpstate").Value = False Then
+	''Call OpenMimicInCenter("ATS_Presence_Monitoring_Confirmation", "OPCCluster:CBIS_15361", Getmousepointerpossition)
+	''End If
+	''ThisMimic.Close
+	''Exit Sub
+	''ErrorHandler:
+	''        Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "txtATSPresence_Active1_Click", Err.Description)
+	''End Sub
+	''
+	''Private Sub txtATSPresence_Inhibit2_Click()
+	''On Error GoTo ErrorHandler
+	''If Variables.Item("OPCCluster:CBIS_15361.Monitor.Template.iEqpstate").Value = True Then
+	''Call OpenMimicInCenter("ATS_Presence_Monitoring_Confirmation", "OPCCluster:CBIS_15361", Getmousepointerpossition)
+	''End If
+	''ThisMimic.Close
+	''Exit Sub
+	''ErrorHandler:
+	''        Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "txtATSPresence_Inhibit2_Click", Err.Description)
+	''End Sub
+	
+	
+	
+	
+	Private Sub txtATSPresence_InhibitActive_Click()
+	On Error GoTo ErrorHandler
+	    Call OpenMimicInCenter("ATS_Presence_Monitoring_Confirmation", "opccluster:CBIS_15361", Getmousepointerpossition)
+	
+	ThisMimic.Close
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "txtATSPresence_InhibitActive_Click", Err.Description)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,0,0,0,0
+	COLOR,4,122,122,122,0,0,0
+	COLOR,5,174,174,174,0,0,0
+	COLOR,6,204,204,204,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,191,191,191,0,0,0
+	COLOR,9,255,128,0,0,0,0
+COLORS,END
+O,BEGIN,T,"Text6"
+	B,21,31,173,47,21,47,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,21,31,0,0,FONT,1,"GAMA global inhibir...",37,FONT,1,"GAMA global inhibir...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA global inhibit...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"GAMA global inhibir...",FONT,1,37
+			ROLE,0,"GAMA global inhibir...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(opccluster:@ZCS_7681.Status.Value==1)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,T,"Text10"
+	B,20,52,174,68,20,68,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20,52,0,0,FONT,1,"GAMA global activar...",37,FONT,1,"GAMA global activar...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA global activate...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"GAMA global activar...",FONT,1,37
+			ROLE,0,"GAMA global activar...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(opccluster:@ZCS_7681.Status.Value==0)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,13,14,224,15,13,14,65535,0,6400,0,1,0,0
+	ST,0,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,13,14,224,15
+O,END
+O,BEGIN,T,"Text17"
+	B,21,6,140,22,21,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,21,6,0,0,FONT,1,"Mandos globales",37,FONT,1,"Mandos globales",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Global Control...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Mandos globales",FONT,1,37
+			ROLE,0,"Mandos globales",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtATSPresence_Active1"
+	B,421,29,585,45,421,45,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,421,29,0,0,FONT,1,"Presencia ATS activar...",37,FONT,1,"Presencia ATS activar...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ATS Present Activate",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Presencia ATS activar...",FONT,1,37
+			ROLE,0,"Presencia ATS activar...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(OPCCluster:CBIS_15361.Monitor.Template.iEqpstate ==0)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"txtATSPresence_Inhibit2"
+	B,447,78,609,94,447,94,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,447,78,0,0,FONT,1,"Presencia ATS inhibir...",37,FONT,1,"Presencia ATS inhibir...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ATS Present Inhibit",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Presencia ATS inhibir...",FONT,1,37
+			ROLE,0,"Presencia ATS inhibir...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(OPCCluster:CBIS_15361.Monitor.Template.iEqpstate ==1)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"txtATSPresence_InhibitActive"
+	B,20,75,182,91,20,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20,75,0,0,FONT,1,"Presencia ATS inhibir...",37,FONT,1,"Presencia ATS inhibir...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ATS Present Inhibit",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Presencia ATS inhibir...",FONT,1,37
+			ROLE,0,"Presencia ATS inhibir...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"opccluster:@CBIS_15361.Monitor.Template.iEqpState",""
+		ADVFORMAT,2,"[=0]\'Presencia ATS activar...\';\'Presencia ATS inhibir...\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'Presencia ATS activar...\';\'Presencia ATS inhibir...\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+O,END

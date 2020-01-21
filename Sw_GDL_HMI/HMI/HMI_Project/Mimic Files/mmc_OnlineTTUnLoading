@@ -1,0 +1,491 @@
+ASCII32,19,9,2018,21:59,36,1.1
+W,BEGIN,"mmc_OnlineTTUnLoading","TimetableUnloadCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,784,508
+	SIZE,350,180,350,180,0,0,0,1280,1024,344,158
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Timetable Unloading"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descarga del PCD"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,700,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTTUnLoading.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2010. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Timetable Unload Ctrl
+	'* *******************************************************************************************
+	'* Purpose:     Manages the unloading of a timetable
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              All - CR ALPHA 183404
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '10
+	'* Change:              CR ALPHA 188820 (Replace the "Status" field by a progress bar)
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                October '10
+	'* Change:              CR ALPHA 200768
+	
+	'* Author:              Omar HAFADI
+	'* Date:                November '14
+	'* Change:              CR atvcm 00575733
+	
+	'* Author:              Vasanth M
+	'* Date:                September 17
+	'* Change:              CR atvcm 00734378 & 734386
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strFileExtensionSeparator As String = "."
+	Private Const c_strTimetableUnloadTag As String = ".DBLoader.TimeTableName"
+	Private Const c_strScheduleFileLoadedTag As String = ".DBLoader.ProcessingState"
+	Private Const c_strScheduleFileFailureTag As String = ".DBLoader.ProcessingFailure"
+	Private Const c_strScheduleFileLoadingProgressTag As String = ".DBLoader.ProcessingProgress"
+	    
+	'Buttons Animations
+	Private Const c_btnAnimationText = ".Text%"
+	Private Const c_btnAnimationActive = ".Active%"
+	Private Const c_btnOK = ".btnOK"
+	Private Const c_btnClose = ".btnClose"
+	
+	'Local Variables
+	Private Const c_strLocalVarLoadingProgressValue     As String = ".LoadingProgressValue%"
+	Private Const c_strLocalVartxtLoadingStatus         As String = ".txtLoadingStatus%"
+	Private Const c_strLocalVarTimetableName            As String = ".TimetableName%"
+	
+	'* Empty string used to unloading the timetable
+	Private Const c_strNoTimetable As String = ""
+	
+	'* OPC variables
+	'* ******************************************************
+	Dim WithEvents m_OPC_TimetableUnload As Variable
+	Dim WithEvents m_OPC_ScheduleFileLoaded As Variable
+	Dim WithEvents m_OPC_ScheduleFileFailure As Variable
+	Dim WithEvents m_OPC_ScheduleFileLoadingProgress As Variable
+	
+	'* Module variables
+	'* ******************************************************
+	'* Flag indicating that the timetable unloading is in progress
+	Dim m_bUnloadInProgress As Boolean
+	
+	Private Sub PreparateButtons()
+	On Error GoTo ErrorHandler
+	    
+	    'To use in case of differents user language
+	    'ThisProject.Security.PresentationLanguage
+	
+	    Variables.Item(ThisMimic.Branch & c_btnOK & c_btnAnimationText).Value = "Aceptar"
+	    Variables.Item(ThisMimic.Branch & c_btnOK & c_btnAnimationActive).Value = False
+	
+	    Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationText).Value = "Cancelar"
+	    Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationActive).Value = True
+	    
+	    Variables.Item(ThisMimic.Branch & c_strLocalVartxtLoadingStatus).Value = ""
+	    
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "PreparateButtons", "EXCEPTION: " & Err.Description)
+	    
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	
+	
+	    If Not (m_OPC_ScheduleFileLoaded Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoaded.Name)
+	        Set m_OPC_ScheduleFileLoaded = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileFailure Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileFailure.Name)
+	        Set m_OPC_ScheduleFileFailure = Nothing
+	    End If
+	    
+	    
+	    If Not (m_OPC_ScheduleFileLoadingProgress Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoadingProgress.Name)
+	        Set m_OPC_ScheduleFileLoadingProgress = Nothing
+	    End If
+	
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: Mimic_Open
+	'*      On opening the mimic,
+	'*          - Init flag
+	'*          - Add the OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    CloseMimic ("mmc_OnlineTT")
+	    '* Init flag
+	    m_bUnloadInProgress = False
+	    
+	    'Prepare buttons text
+	    Call PreparateButtons
+	    
+	     '* Add and init a variable containing the value (in %) of unloading progress
+	    Variables.Add ThisMimic.Branch & ".LoadingProgressValue%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".LoadingProgressValue%").Value = 0
+	    
+	    '* Variable in which the timetable unloading command is sent
+	    Set m_OPC_TimetableUnload = Variables.Add(ThisMimic.Branch & c_strTimetableUnloadTag, fvVariableTypeText)
+	    If ((m_OPC_TimetableUnload.Status = fvVariableStatusGood) And (m_OPC_TimetableUnload.EnableEvents = True)) Then
+	        m_OPC_TimetableUnload_ValueChange
+	    Else
+	        m_OPC_TimetableUnload.EnableEvents = True
+	    End If
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	'*  SubRoutine: btnOK_Click
+	'*      Manage the "OK" button
+	'* ******************************************************************************************
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOK_Click", "Begin Subroutine")
+	    
+	    '* Check if the OK button is enabled
+	    If (CBool(Variables.Item(ThisMimic.Branch & c_btnOK & c_btnAnimationActive).Value) = False) Then Exit Sub
+	   Call DestroyVariables
+	    '* Disable the "OK" button
+	    Variables.Item(ThisMimic.Branch & c_btnOK & c_btnAnimationActive).Value = False
+	        
+	    If ((m_OPC_TimetableUnload.Status = fvVariableStatusGood) And (m_OPC_TimetableUnload.Quality = 192)) Then
+	        '* Disable the "Cancel" button
+	        Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationActive).Value = False
+	       
+	        
+	        '* No value change after unloading the timetable. So force it.
+	        'm_OPC_ScheduleFileLoaded_ValueChange
+	        
+	            '* Variable containing the value (in %) of unloading progress
+	        Set m_OPC_ScheduleFileLoadingProgress = Variables.Add(ThisMimic.Branch & c_strScheduleFileLoadingProgressTag, fvVariableTypeRegister)
+	        If ((m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoadingProgress.EnableEvents = True)) Then
+	           m_OPC_ScheduleFileLoadingProgress_ValueChange
+	        Else
+	            m_OPC_ScheduleFileLoadingProgress.EnableEvents = True
+	        End If
+	        
+	        '* Variable containing the "schedule file loaded" status
+	        Set m_OPC_ScheduleFileLoaded = Variables.Add(ThisMimic.Branch & c_strScheduleFileLoadedTag, fvVariableTypeBit)
+	        If ((m_OPC_ScheduleFileLoaded.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoaded.EnableEvents = True)) Then
+	            m_OPC_ScheduleFileLoaded_ValueChange
+	        Else
+	            m_OPC_ScheduleFileLoaded.EnableEvents = True
+	        End If
+	        
+	        '* Variable containing the "schedule file failure" status
+	        Set m_OPC_ScheduleFileFailure = Variables.Add(ThisMimic.Branch & c_strScheduleFileFailureTag, fvVariableTypeBit)
+	        If ((m_OPC_ScheduleFileFailure.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileFailure.EnableEvents = True)) Then
+	            m_OPC_ScheduleFileFailure_ValueChange
+	        Else
+	            m_OPC_ScheduleFileFailure.EnableEvents = True
+	        End If
+	        
+	        '* Unload the timetable
+	        m_OPC_TimetableUnload.Value = c_strNoTimetable
+	        
+	        '* Set the flag indicating that the unloading of the timetable is in progress
+	        m_bUnloadInProgress = True
+	        
+	        
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", "The command of timetable unloading has been sent")
+	    Else
+	        '* Command of unloading of the timetable has not been sent
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", "The command of timetable unloading has not been sent")
+	                     
+	    End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnOK_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_TimetableUnload_ValueChange
+	'*  Manages the FileToLoad variable (loaded timetable)
+	'* ***************************************************************
+	Private Sub m_OPC_TimetableUnload_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_TimetableUnload_ValueChange", "Begin Subroutine")
+	  
+	    '* Check the status and the quality of the variable
+	    If mod_UO_General.VerifyOPCVariableStatus(m_OPC_TimetableUnload) = False Then Exit Sub
+	    
+	        If ((m_bUnloadInProgress = False) And (m_OPC_TimetableUnload.Value <> "")) Then
+	            Dim lPos As Long
+	        
+	            '* Display the file name of the loaded timetable (without extension)
+	            lPos = InStr(1, m_OPC_TimetableUnload.Value, c_strFileExtensionSeparator)
+	            
+	            If (lPos > 0) Then
+	                
+	                Variables.Item(ThisMimic.Branch & c_strLocalVarTimetableName).Value = Left(m_OPC_TimetableUnload.Value, lPos - 1)
+	                
+	            Else
+	                
+	                Variables.Item(ThisMimic.Branch & c_strLocalVarTimetableName).Value = m_OPC_TimetableUnload.Value
+	                
+	            End If
+	            
+	            '* Enable the "OK" button
+	            Variables.Item(ThisMimic.Branch & c_btnOK & c_btnAnimationActive).Value = True
+	            
+	        End If
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_TimetableUnload_ValueChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileLoadingProgress_ValueChange
+	'*      Manage the OPC variable Schedule File Loading Progress
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileLoadingProgress_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If mod_UO_General.VerifyOPCVariableStatus(m_OPC_ScheduleFileLoadingProgress) = False Then Exit Sub
+	       
+	        If (m_bUnloadInProgress = True) Then
+	           Variables.Item(ThisMimic.Branch & ".LoadingProgressValue%").Value = m_OPC_ScheduleFileLoadingProgress.Value
+	        End If
+	    m_OPC_ScheduleFileLoaded_ValueChange
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileLoaded_ValueChange
+	'*      Manage the OPC variable Schedule File Loaded
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileLoaded_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If mod_UO_General.VerifyOPCVariableStatus(m_OPC_ScheduleFileLoaded) = False Then Exit Sub
+	    
+	        If ((m_bUnloadInProgress = True) And (m_OPC_ScheduleFileLoaded.Value = False) And m_OPC_TimetableUnload.Value = "") Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "The timetable has been unloaded with success")
+	            
+	            Variables.Item(ThisMimic.Branch & c_strLocalVartxtLoadingStatus).Value = "Descarga terminada"
+	            
+	            '* Reset the flag
+	            m_bUnloadInProgress = False
+	            
+	            Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationActive).Value = True
+	            Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationText).Value = "Cerrar"
+	            
+	            Variables.Item(ThisMimic.Branch & ".LoadingProgressValue%").Value = 100
+	        End If
+	
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_ScheduleFileLoaded_ValueChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileFailure_ValueChange
+	'*      Manage the OPC variable Schedule File Loaded
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileFailure_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If mod_UO_General.VerifyOPCVariableStatus(m_OPC_ScheduleFileFailure) = False Then Exit Sub
+	
+	        If ((m_bUnloadInProgress = True) And (m_OPC_ScheduleFileFailure.Value = True)) Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "Unloading of the timetable has failed")
+	            
+	            Variables.Item(ThisMimic.Branch & c_strLocalVartxtLoadingStatus).Value = "Unloading failed"
+	            
+	            '* Reset the flag
+	            m_bUnloadInProgress = False
+	            '* Enable the "Cancel" button
+	            Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationActive).Value = True
+	            Variables.Item(ThisMimic.Branch & c_btnClose & c_btnAnimationText).Value = "Cancelar"
+	            
+	        End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_ScheduleFileFailure_ValueChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	Private Sub DestroyVariables()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	    
+	
+	    If Not (m_OPC_ScheduleFileLoaded Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoaded.Name)
+	        Set m_OPC_ScheduleFileLoaded = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileFailure Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileFailure.Name)
+	        Set m_OPC_ScheduleFileFailure = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileLoadingProgress Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoadingProgress.Name)
+	        Set m_OPC_ScheduleFileLoadingProgress = Nothing
+	    End If
+	
+	
+	
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,255,255,255,0,0,0
+	COLOR,3,0,0,0,0,0,1
+COLORS,END
+O,BEGIN,T,"TimetableNameTxt"
+	B,18,28,267,52,18,52,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,3,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,18,28,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"  ",FONT,1,37
+			ROLE,0,"  ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"TimetableName%"
+	A,END
+O,END
+O,BEGIN,T,"Name1"
+	B,16,8,78,24,16,24,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	PP,0,16,8,0,0,FONT,1,"Name",36,FONT,1,"Name",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Name",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Nombre",FONT,2,36
+			ROLE,0,"Nombre",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"btnOK"
+	B,140,122,225,147,140,147,65535,0,6400,0,1,1,1
+	PP,"syb_btnBase","btnOK",140,122,225,147,1,0, 1, 1
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,S,"Symbol6"
+	B,236,122,321,147,236,147,65535,0,6400,0,1,1,0
+	PP,"syb_btnBase","btnClose",236,122,321,147,1,0, 1, 1
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+		AUTH,"btnClose.Active%",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,19,55,185,79,19,79,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	PP,1,19,55,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,2,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtLoadingStatus%"
+	A,END
+O,END
+O,BEGIN,S,"Symbol4"
+	B,19,82,266,105,-230,82,65535,0,6400,0,1,1,1
+	PP,"syb_OnlineTTLoadingProgressStatus","",19,82,266,105,1,0, 1, 1
+O,END

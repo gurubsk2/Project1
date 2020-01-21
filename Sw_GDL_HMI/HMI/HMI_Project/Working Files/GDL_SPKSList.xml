@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--ProjectVersion 0.7146.1-->
+<SPKSs>
+  <SPKS ID="4" Name="SPKS_BAN_1">
+    <Point_List>
+      <Point>PT_01_V1_BAN</Point>
+      <Point>PT_02_V2_BAN</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="5" Name="SPKS_BAN_2">
+    <Point_List>
+      <Point>PT_03_V1_BAN</Point>
+	  <Point>PT_DH_01_V3_BAN</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="6" Name="SPKS_BAN_3">
+    <Point_List>
+      <Point>PT_05_V1_BAN</Point>
+	  <Point>PT_DH_03_V3_BAN</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="7" Name="SPKS_BAN_4">
+    <Point_List>
+      <Point>PT_04_V2_BAN</Point>
+      <Point>PT_07_V1_BAN</Point>
+     
+    </Point_List>
+  </SPKS>
+  <SPKS ID="13" Name="SPKS_DEP_1">
+    <Point_List>
+      <Point>PT_04_DEP</Point>
+      <Point>PT_01_DEP</Point>
+      <Point>PT_03_DEP</Point>
+      <Point>PT_02_DEP</Point>
+     
+     </Point_List>
+  </SPKS>
+  <SPKS ID="22" Name="SPKS_DEP_10">
+    <Point_List>
+      <Point>PT_15_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="23" Name="SPKS_DEP_11">
+    <Point_List>
+      <Point>PT_19_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="24" Name="SPKS_DEP_12">
+    <Point_List>
+      <Point>PT_21_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="25" Name="SPKS_DEP_13">
+    <Point_List>
+      <Point>PT_25_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="26" Name="SPKS_DEP_14">
+    <Point_List>
+      <Point>PT_27_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="27" Name="SPKS_DEP_15">
+    <Point_List>
+      <Point>PT_31_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="28" Name="SPKS_DEP_16">
+    <Point_List>
+      <Point>PT_37_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="29" Name="SPKS_DEP_17">
+    <Point_List>
+      <Point>PT_05_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="30" Name="SPKS_DEP_18">
+    <Point_List>
+      <Point>PT_06_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="31" Name="SPKS_DEP_19">
+    <Point_List>
+      <Point>PT_14_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="14" Name="SPKS_DEP_2">
+    <Point_List>
+      <Point>PT_16_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="32" Name="SPKS_DEP_20">
+    <Point_List>
+      <Point>PT_13_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="33" Name="SPKS_DEP_21">
+    <Point_List>
+      <Point>PT_23_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="34" Name="SPKS_DEP_22">
+    <Point_List>
+      <Point>PT_29_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="35" Name="SPKS_DEP_23">
+    <Point_List>
+      <Point>PT_33_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="36" Name="SPKS_DEP_24">
+    <Point_List>
+      <Point>PT_35_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="37" Name="SPKS_DEP_25">
+    <Point_List>
+      <Point>PT_17_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="40" Name="SPKS_DEP_26">
+    <Point_List />
+  </SPKS>
+  <SPKS ID="15" Name="SPKS_DEP_3">
+    <Point_List>
+      <Point>PT_18_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="16" Name="SPKS_DEP_4">
+    <Point_List>
+      <Point>PT_08_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="17" Name="SPKS_DEP_5">
+    <Point_List>
+      <Point>PT_10_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="18" Name="SPKS_DEP_6">
+    <Point_List>
+      <Point>PT_12_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="19" Name="SPKS_DEP_7">
+    <Point_List>
+      <Point>PT_07_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="20" Name="SPKS_DEP_8">
+    <Point_List>
+      <Point>PT_09_DEP</Point>
+
+    </Point_List>
+  </SPKS>
+  <SPKS ID="21" Name="SPKS_DEP_9">
+    <Point_List>
+      <Point>PT_11_DEP</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="3" Name="SPKS_N1L_1">
+    <Point_List>
+      <Point>PT_01_V1_N1L</Point>
+      <Point>PT_02_V2_N1L</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="8" Name="SPKS_NOR_1">
+    <Point_List>
+      <Point>PT_01_V1_NOR</Point>
+      <Point>PT_02_V2_NOR</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="9" Name="SPKS_NOR_2">
+    <Point_List>
+      <Point>PT_03_V1_NOR</Point>
+      <Point>PT_04_V2_NOR</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="10" Name="SPKS_PAT_1">
+    <Point_List>
+      <Point>PT_01_V1_PAT</Point>
+      <Point>PT_02_V2_PAT</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="1" Name="SPKS_TCC_1">
+    <Point_List>
+      <Point>PT_04_V2_TCC</Point>
+      <Point>PT_01_V1_TCC</Point>
+      <Point>PT_03_V1_TCC</Point>
+      <Point>PT_02_V2_TCC</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="2" Name="SPKS_TCC_2">
+    <Point_List>
+      <Point>PT_06_V2_TCC</Point>
+      <Point>PT_05_V1_TCC</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="38" Name="SPKS_TCC_3">
+    <Point_List />
+  </SPKS>
+  <SPKS ID="39" Name="SPKS_TCC_4">
+    <Point_List />
+  </SPKS>
+  <SPKS ID="11" Name="SPKS_TZA_1">
+    <Point_List>
+      <Point>PT_02_V2_TZA</Point>
+      <Point>PT_01_V1_TZA</Point>
+    </Point_List>
+  </SPKS>
+  <SPKS ID="12" Name="SPKS_TZA_2">
+    <Point_List>
+      <Point>PT_06_V2_TZA</Point>
+      <Point>PT_03_V1_TZA</Point>
+      <Point>PT_05_V1_TZA</Point>
+      <Point>PT_04_V2_TZA</Point>
+    </Point_List>
+  </SPKS>
+</SPKSs>

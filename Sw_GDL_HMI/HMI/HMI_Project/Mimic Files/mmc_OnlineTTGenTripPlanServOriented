@@ -1,0 +1,312 @@
+ASCII32,19,9,2018,23:25,41,1.1
+W,BEGIN,"mmc_OnlineTTGenTripPlanServOriented","mmc_OnlineTTGenTripPlanServOriented"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,379,180
+	SIZE,1160,836,1160,836,0,0,0,1366,768,1154,814
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"General Timetable View for Service Oriented"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"PCD"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTTGenTripPlanServOriented.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View_GeneraltripPlan_NonServiceOriented
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of general trip plan for non service oriented
+	'* *******************************************************************************************
+	'* Author:              Wagner Queiroz
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	
+	'Var tags
+	Private Const c_strTABcTripNumberSel        As String = "TabCTripNumberSel%"
+	Private Const c_strTabCSelTripNumber        As String = "TabCSelTripNumber%"
+	Private Const c_strTabCSelServiceId         As String = "TabCSelServiceId%"
+	Private Const c_strTabCSelTripID            As String = "TabCSelTripID%"
+	Private Const c_strTabCSelTripState         As String = "TabCTripStateSel%"
+	
+	
+	
+	Private Sub ocxGeneralTripPlanSO_OnSelectedTripChange(ByVal TripNumber As Long, ByVal ServiceId As String, ByVal TripId As String, ByVal state As Long)
+	On Error GoTo ErrorHandler
+	
+	    Variables.Item(c_strTabCSelTripNumber) = CStr(TripNumber)
+	    Variables.Item(c_strTabCSelServiceId) = CStr(ServiceId)
+	    Variables.Item(c_strTabCSelTripID) = CStr(TripId)
+	    Variables.Item(c_strTabCSelTripState) = CStr(state)
+	
+	    Variables.Item(ThisMimic.Branch & c_strTABcTripNumberSel).Value = IIf(CStr(TripNumber) <> "", True, False)
+	    
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ocxGeneralTripPlanSO_OnSelectedTripChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	
+	Private Sub CancelButton6_Click()
+	On Error GoTo ErrorHandler
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CancelButton6_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Author:              Swati Das
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	
+	'* ************************************************************************************************
+	'* Subroutine: Mimic_Open
+	'* '* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTABcTripNumberSel) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTABcTripNumberSel, fvVariableTypeBit
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelTripNumber) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelTripNumber, fvVariableTypeText
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelServiceId) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelServiceId, fvVariableTypeText
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelTripID) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelTripID, fvVariableTypeText
+	    
+	    End If
+	
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelTripState) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelTripState, fvVariableTypeText
+	    
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"TabC", 0, 3, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,96,96,96,0,0,0
+	COLOR,7,215,215,215,0,0,0
+	COLOR,8,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,1148,764,4,680,1148,764,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnCreateservice"
+	B,27,708,152,733,27,733,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,27,708,0,0,FONT,1,"Add Trip...",37,FONT,1,"Add Trip...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Create service...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Crear servicio...",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanServOrientedServiceCreation","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,25,666,178,690,25,690,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,1,25,666,0,0,FONT,1,"Timetable adjustments",37,FONT,1,"Timetable adjustments",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Timetable adjustments",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ajustes de la Tabla",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnCancelservice"
+	B,328,708,460,733,328,733,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,328,708,0,0,FONT,1,"Delete trip...",37,FONT,1,"Delete trip...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel service...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar servicio...",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanServOrientedServiceCancellation","",1,0,1,0,"","",0
+		AUTH,"TabCTripNumberSel%",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"TabCTripNumberSel%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"btnReduceservice"
+	B,474,708,599,733,474,733,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,474,708,0,0,FONT,1,"Reset time...",37,FONT,1,"Reset time...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reduce service...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reducir servicio...",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanServOrientedServiceReduction","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"btnRestoreservice"
+	B,173,708,308,733,173,733,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,173,708,0,0,FONT,1,"Create service...",37,FONT,1,"Create service...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Restore service...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Restaurar servicio...",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanServOrientedServiceRestoration","",1,0,1,0,"","",0
+		AUTH,"TabCTripNumberSel%",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"TabCTripNumberSel%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,OCX,"ocxGeneralTripPlanSO"
+	B,1,9,1145,653,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END

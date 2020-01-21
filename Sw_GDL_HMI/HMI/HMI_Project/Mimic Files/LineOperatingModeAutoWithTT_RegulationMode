@@ -1,0 +1,480 @@
+ASCII32,14,5,2012,10:57,30,1.1
+W,BEGIN,"LineOperatingModeAutoWithTT_RegulationMode","LineOperatingModeAutoWithTTRegulationMode"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,8,100
+	SIZE,460,150,460,150,0,0,0,1424,1034,460,150
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Line regulation mode"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,600,400
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithTT_RegulationMode.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2010. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto With TT - Regulation mode
+	'* *******************************************************************************************
+	'* Purpose:     Manage the "Regulation mode" view
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              All - CR ALPHA 183404
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                December '11
+	'* Change:              CRs ALPHA 256609, 256610, 256613, 256614, 256615, 256617,
+	'*                      258286
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '12
+	'* Change:              CR ALPHA 270260
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strStrategySeparator As String = ";"
+	Private Const c_strStrategyDataSeparator As String = ","
+	Private Const c_strListSeparator As String = ";"
+	
+	'* Interval between "Line Operating Mode Auto With TT One Regulation Mode" child mimics
+	Private Const c_iStep As Integer = 30
+	
+	'* File name of the "Line Operating Mode Auto With TT One Regulation Mode" mimic
+	Private Const c_strOneRegulationModeMimicName As String = "LineOperatingModeAutoWithTT_OneRegulationMode"
+	'* File name of the "Line Operating Mode" mimic
+	Private Const c_strLineOperatingMode As String = "View_LineOperatingModes"
+	'* File name of the "Platforms Regulation Control" mimic
+	Private Const c_strPlatformsRegulationControlMimicName As String = "View_PlatformsRegulationControl"
+	
+	'* Value of command associated to Regulation mode
+	Private Const c_iUnknownRegulationMode As Integer = 0   '* Unknown
+	Private Const c_iNotRegulatedMode As Integer = 10       '* Not regulated (= Monitoring)
+	Private Const c_iScheduleMode As Integer = 20           '* Schedule
+	Private Const c_iScheduleAndHeadwayMode As Integer = 21 '* Schedule and headway
+	
+	'* Path of OPC variable in which the regulation mode for all line will be sent
+	Private Const c_strRegModeTag As String = ".ATRMode"
+	'* Path of OPC variable in which the extended strategy for all line will be sent
+	Private Const c_strRegExtendedStrategyTag As String = ".ATRExtendedStrategy"
+	
+	'* Path  of OPC variable in which the regulation mode for several platforms will be sent
+	Private Const c_strMultiPlatformsRegModeCmdTag As String = "IconisHMI.PlatformsRegulationMode.BstrCmd"
+	'* Path  of OPC variable in which the extended strategy for several platforms will be sent
+	Private Const c_strMultiPlatformsExtendedStrategyCmdTag As String = "IconisHMI.PlatformsExtendedStrategy.BstrCmd"
+	'* Path of local variable containing the list of selected platforms in the "Track plan of platforms" view
+	Private Const c_strListOfPlatformVarNamesTag As String = ".ListOfPlatformVarNames%"
+	
+	'* OPC variables
+	'* ******************************************************
+	'* For the two commands applied on all the line
+	Private m_OPC_AtrRegulationMode As Variable
+	Private m_OPC_AtrExtendedStrategy As Variable
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose: On opening the mimic:
+	'*          for each strategy, open a "Line Operating Mode Auto With TT - One Regulation Mode" mimic
+	'*          and set data (command value and name)
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim strOPCClusterName As String
+	    Dim objMimic As Mimic
+	    Dim iMimicType As Integer
+	    Dim RegulationModesManager As Iconis_CLS_RegulationModes
+	    Dim strListOfRegulationModes As String
+	    Dim arrayStrategies() As String
+	    Dim arrayStrategyData() As String
+	    Dim strIndex As String
+	    Dim strName As String
+	    Dim lTopPos As Long
+	    Dim lLeftPos As Long
+	    Dim i As Integer
+	    
+	    '* Retrieve the OPC cluster name from the branch of this mimic
+	    strOPCClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    
+	    '* Retrieve mimic (line controls-contextual menu, line operating mode or
+	    '* platforms regulation control) from which the current mimic has been opened
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If (StrComp(c_strLineOperatingMode, objMimic.FileName) = 0) Then
+	            '* Line operating mode
+	            iMimicType = 1
+	            Exit For
+	        ElseIf (StrComp(c_strPlatformsRegulationControlMimicName, objMimic.FileName) = 0) Then
+	            '* Platforms regulation control
+	            iMimicType = 2
+	            Exit For
+	        End If
+	    Next
+	    
+	    '* Modify the display of the mimic
+	    If (iMimicType <> 1) Then
+	        shpRegulationMode.Width = shpRegulationMode.Width - 180
+	        ThisMimic.Windows(1).Width = shpRegulationMode.Width + 12
+	        ThisMimic.Windows(1).Height = shpRegulationMode.Height + 80
+	        If (iMimicType = 0) Then
+	            ThisMimic.Windows(1).TitleBar = True
+	            ThisMimic.Windows(1).ControlBox = True
+	            ThisMimic.Windows(1).CloseButton = True
+	            ThisMimic.ShowCaption = True
+	        End If
+	    End If
+	    
+	    If (iMimicType <> 2) Then '* Command applied on all line
+	        '* Set the type of command
+	        Variables.Item("@RegulationModeCommandType%").Value = 2
+	        If (iMimicType = 0) Then
+	            '* Init variable used in the animations of option buttons
+	            Variables.Item("@RegulationCommandValue%").Value = Variables.Item("@CurrentRegulationMode%").Value
+	            '* Add the two OPC variables associated to the two commands
+	            Set m_OPC_AtrRegulationMode = Variables.Add(ThisMimic.Branch & c_strRegModeTag, fvVariableTypeRegister)
+	            Set m_OPC_AtrExtendedStrategy = Variables.Add(ThisMimic.Branch & c_strRegExtendedStrategyTag, fvVariableTypeBit)
+	        End If
+	    Else '* Command applied on several platforms
+	        '* Set the type of command
+	        Variables.Item("@RegulationModeCommandType%").Value = 1
+	        '* Init variable used in the animations of option buttons
+	        Variables.Item("@RegulationCommandValue%").Value = c_iUnknownRegulationMode
+	        '* Add the two OPC variables associated to the two commands
+	        Set m_OPC_AtrRegulationMode = Variables.Add(strOPCClusterName & c_strMultiPlatformsRegModeCmdTag, fvVariableTypeText)
+	        Set m_OPC_AtrExtendedStrategy = Variables.Add(strOPCClusterName & c_strMultiPlatformsExtendedStrategyCmdTag, fvVariableTypeText)
+	    End If
+	  
+	    '* Set the top position and the left position of the 1st regulation mode child mimic
+	    lTopPos = 20
+	    lLeftPos = 15
+	    '* Obtain the list of regulation modes from the RegulationModes Manager
+	    Set RegulationModesManager = Iconis_MOD_General.GetRegulationModesManager
+	    If (RegulationModesManager Is Nothing) Then Exit Sub
+	    
+	    '* Get the list of available regulation strategies
+	    strListOfRegulationModes = RegulationModesManager.GetRegulationModes
+	    If (strListOfRegulationModes <> "") Then
+	        '* Split the content of the variable containing the list of regulation strategies into an array
+	        arrayStrategies = Split(strListOfRegulationModes, c_strStrategySeparator)
+	        
+	        '* Set the top position and the left position of the 1st regulation mode child mimic
+	        lTopPos = 20
+	        lLeftPos = 15
+	        For i = 0 To UBound(arrayStrategies) - 1
+	            '* Retrieve index and name of the regulation strategy
+	            arrayStrategyData = Split(arrayStrategies(i), c_strStrategyDataSeparator)
+	            strIndex = arrayStrategyData(0)
+	            strName = arrayStrategyData(1)
+	                
+	            '* Open the "One Regulation Mode" mimic
+	            ThisMimic.Activate
+	            Mimics.Open c_strOneRegulationModeMimicName, strIndex, ThisMimic.ReferenceSet, ThisMimic.Region, "*", _
+	                        , , , lLeftPos, lTopPos, True
+	            '* Display the name of the regulation mode
+	            Variables.Item(strIndex & ".RegMode%").Value = strName
+	                    
+	            '* Set the value of the command associated to the given regulation mode
+	            If (strIndex = 0) Then '* Not regulated
+	                Variables.Item(strIndex & ".CommandValue%").Value = c_iNotRegulatedMode
+	            ElseIf (strIndex = 1) Then '* Schedule
+	                Variables.Item(strIndex & ".CommandValue%").Value = c_iScheduleMode
+	            ElseIf (strIndex = 2) Then '* Schedule and headway
+	                Variables.Item(strIndex & ".CommandValue%").Value = c_iScheduleAndHeadwayMode
+	            End If
+	                    
+	            '* Increment the Top position
+	            lTopPos = lTopPos + c_iStep
+	        Next i
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, remove the OPC variables previously subscribed
+	'* ************************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_OPC_AtrRegulationMode Is Nothing) Then
+	        Variables.Remove (m_OPC_AtrRegulationMode.Name)
+	        Set m_OPC_AtrRegulationMode = Nothing
+	    End If
+	    
+	    If Not (m_OPC_AtrExtendedStrategy Is Nothing) Then
+	        Variables.Remove (m_OPC_AtrExtendedStrategy.Name)
+	        Set m_OPC_AtrExtendedStrategy = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* SubRoutine: SendRegulationMode
+	'* Purpose: Send the two commands allowing to change the regulation mode of the line ->
+	' *         AtrMode command and AtrExtendedStrategy command
+	'* ******************************************************************************************
+	Private Sub SendRegulationMode(ByVal iMode As Integer, ByVal bExtendedStrategy As Boolean)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendRegulationMode", "Begin Subroutine")
+	        
+	    '* Check if the status and quality of OPC variables used to change the regulation mode are valid
+	    If (((m_OPC_AtrRegulationMode.Status = fvVariableStatusGood) And (m_OPC_AtrRegulationMode.Quality = 192)) And _
+	        ((m_OPC_AtrExtendedStrategy.Status = fvVariableStatusGood) And (m_OPC_AtrExtendedStrategy.Quality = 192))) Then
+	        '* AtrMode command
+	        m_OPC_AtrRegulationMode.Value = iMode
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has been sent - OPC variable : " & m_OPC_AtrRegulationMode.Name & _
+	                     " - Value : " & Format(iMode))
+	        '* AtrExtended strategy command
+	        m_OPC_AtrExtendedStrategy.Value = bExtendedStrategy
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has been sent - OPC variable : " & m_OPC_AtrExtendedStrategy.Name & _
+	                     " - Value : " & Format(bExtendedStrategy))
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has not been sent - OPC variable : " & m_OPC_AtrRegulationMode.Name & _
+	                     " - Value : " & Format(iMode))
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has not been sent - OPC variable : " & m_OPC_AtrExtendedStrategy.Name & _
+	                     " - Value : " & Format(bExtendedStrategy))
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", Err.Description)
+	End Sub
+	
+	'* Subroutine: btnOK_Click
+	'* Purpose: Manage the OK button
+	'* ************************************************************************************************
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOK_Click", "Begin Subroutine")
+	    
+	    Dim strInitialPlatformVarName As String
+	    Dim strPlatformsArray() As String
+	    Dim i As Integer
+	    Dim strRegModeCmd As String
+	    Dim strExtendedStrategyCmd As String
+	    Dim iRegMode As Integer
+	    Dim iExtendedStrategy As Integer
+	    Dim objMimic As Mimic
+	    
+	    If ((Variables.Item("@RegulationModeCommandType%").Value = 2) And _
+	        (Variables.Item("@RegulationCommandValue%").Value <> Variables.Item("@CurrentRegulationMode%").Value)) Then
+	        '* Command is applied on all line and selected regulation mode <> current regulation mode of the line
+	        If (Variables.Item("@RegulationCommandValue%").Value = c_iNotRegulatedMode) Then '* Not regulated
+	            SendRegulationMode 1, False
+	        ElseIf (Variables.Item("@RegulationCommandValue%").Value = c_iScheduleMode) Then '* Schedule
+	            SendRegulationMode 2, False
+	        ElseIf (Variables.Item("@RegulationCommandValue%").Value = c_iScheduleAndHeadwayMode) Then '* Schedule and headway
+	            SendRegulationMode 2, True
+	        End If
+	    ElseIf ((Variables.Item("@RegulationModeCommandType%").Value = 1) And _
+	            (Variables.Item(ThisMimic.Branch & ".PlatformsSelectionValid%").Value = True) And _
+	            (Variables.Item("@RegulationCommandValue%").Value > 0) And _
+	            (Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = False)) Then
+	        '* Command is applied on several platforms
+	        
+	        '* Disable buttons of the mimic
+	        Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = True
+	        Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = True
+	        For Each objMimic In Application.ActiveProject.Mimics
+	            If (StrComp(c_strOneRegulationModeMimicName, objMimic.FileName) = 0) Then
+	                Variables.Item(objMimic.Branch & ".RegulationModeButtonDisabled%").Value = True
+	            End If
+	        Next
+	    
+	        '* Retrieve the selected regulation mode and extended strategy
+	        iExtendedStrategy = 0
+	        If (Variables.Item("@RegulationCommandValue%").Value = c_iNotRegulatedMode) Then '* Not regulated
+	            iRegMode = 1
+	        Else
+	            iRegMode = 2
+	            If (Variables.Item("@RegulationCommandValue%").Value = c_iScheduleAndHeadwayMode) Then '* Schedule and headway
+	                iExtendedStrategy = 1
+	            End If
+	        End If
+	        
+	        '* Build the two strings to be sent ->
+	        '* Retrieve the OPC variable name of the initial platform
+	        strInitialPlatformVarName = Mid(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare) + 1)
+	        '* Extract the list of platforms selected by the operator into an array
+	        strPlatformsArray = Split(Variables.Item(ThisMimic.Branch & c_strListOfPlatformVarNamesTag).Value, c_strListSeparator)
+	        '* Add couple <Initial Platform OPC Var Name>;<Command Value>;
+	        strRegModeCmd = strInitialPlatformVarName & c_strListSeparator & _
+	                        Format(iRegMode) & c_strListSeparator
+	        strExtendedStrategyCmd = strInitialPlatformVarName & c_strListSeparator & _
+	                                 Format(iExtendedStrategy) & c_strListSeparator
+	        For i = 0 To UBound(strPlatformsArray)
+	            '* For each selected platform, add couple <Selected Platform OPC Var Name>;<Command Value>;
+	            strRegModeCmd = strRegModeCmd & _
+	                            strPlatformsArray(i) & c_strListSeparator & _
+	                            Format(iRegMode) & c_strListSeparator
+	            strExtendedStrategyCmd = strExtendedStrategyCmd & _
+	                                     strPlatformsArray(i) & c_strListSeparator & _
+	                                     Format(iExtendedStrategy) & c_strListSeparator
+	        Next i
+	        
+	        '* Check if the status and quality of OPC variables used to change the regulation mode are valid
+	        If (((m_OPC_AtrRegulationMode.Status = fvVariableStatusGood) And (m_OPC_AtrRegulationMode.Quality = 192)) And _
+	            ((m_OPC_AtrExtendedStrategy.Status = fvVariableStatusGood) And (m_OPC_AtrExtendedStrategy.Quality = 192))) Then
+	            '* Regulation Mode command
+	            m_OPC_AtrRegulationMode.Value = strRegModeCmd
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	                         "The Regulation Mode command on several platorms has been sent - OPC variable : " & _
+	                         m_OPC_AtrRegulationMode.Name & " - Value = " & strRegModeCmd)
+	            '* Extended Strategy command
+	            m_OPC_AtrExtendedStrategy.Value = strExtendedStrategyCmd
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	                         "The Extended Strategy command on several platorms has been sent - OPC variable : " & _
+	                         m_OPC_AtrExtendedStrategy.Name & " - Value = " & strExtendedStrategyCmd)
+	 
+	        Else
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	                         "The Regulation Mode command and Extended Strategy commands on several platorms has not been sent - OPC variables : " & _
+	                         m_OPC_AtrRegulationMode.Name & " and " & m_OPC_AtrExtendedStrategy.Name)
+	        End If
+	        
+	        '* Set the local variable indicating that the multi-platforms command has been sent
+	        Variables.Item(ThisMimic.Branch & ".MultiPlatformsCommandSent%").Value = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,0,0,0,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,172,168,153,0,0,0
+	COLOR,8,215,215,215,0,0,0
+	COLOR,9,215,215,215,0,0,0
+COLORS,END
+O,BEGIN,R,"shpRegulationMode"
+	B,456,146,3,8,456,146,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtRegulationMode"
+	B,15,0,136,16,15,16,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,15,0,0,0,FONT,1,"Timetable",36,FONT,1,"Timetable",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Regulation mode",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,40,155,119,184,40,184,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,5,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,40,155,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=  (((@RegulationModeCommandType% == 1)  AND (PlatformsSelectionValid%) AND (@RegulationCommandValue% > 0)  AND (NOT ButtonOKDisabled%)) OR ((@RegulationModeCommandType% == 2) AND (@CurrentRegulationMode% != @RegulationCommandValue%)))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+		AUTH,"=  ((@RegulationModeCommandType% == 2)  AND (@CurrentRegulationMode% != @RegulationCommandValue%))",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,160,155,239,184,160,184,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,5,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,160,155,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"ButtonCancelDisabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,9,COLOR,9
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"View_PlatformsRegulationControl","*"
+		AUTH,"=  (@RegulationModeCommandType% == 1) AND (NOT ButtonCancelDisabled%)",1,0,0
+	A,END
+	A,BEGIN,LC,"Anim3",0,0,"",""
+		PP,"*","*"
+		AUTH,"=  (@RegulationModeCommandType% == 2) AND (NOT ButtonCancelDisabled%)",1,0,0
+	A,END
+O,END

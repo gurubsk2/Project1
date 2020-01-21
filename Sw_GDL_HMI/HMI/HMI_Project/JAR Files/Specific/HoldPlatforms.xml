@@ -1,0 +1,6 @@
+<HoldPlatform>
+	<IniPlat>Plataforma Inicial</IniPlat>
+	<FinPlat>Plataforma Final</FinPlat> <!--Opcional-->
+	<!--Não existe necessidade de colocar as plataformas em ordem topologica-->
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove e '1' aplica-->
+</HoldPlatform>

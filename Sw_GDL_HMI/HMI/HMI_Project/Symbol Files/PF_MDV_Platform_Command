@@ -1,0 +1,113 @@
+ASCII32,13,10,2016,6:53,52,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Platform Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                June '08
+	'* Change:              All
+	    
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172265
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Vasanth
+	'* Date:                Nov ' 15
+	'* Change:              CR#667323
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov ' 16
+	'* Change:              
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	Private Const c_strInspectorPanelMimic As String = "Platform_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Platform_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	Private Sub btnPlatformCmd_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "PlatformCmd_DblClickEx", "Begin subroutine")
+	        
+	    '* Open the Inspector Panel mimic
+	    'Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	    Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "PlatformCmd_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub btnPlatformCmd_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "PlatformCmd_MouseUp", "Begin subroutine")
+	       
+	    GetCursorpos Hold
+	   '* If mouse is right clicked
+	    If (Button = 2) Then
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	        'OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "PlatformCmd_MouseUp", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol2102"
+	B,663,84,736,102,663,102,65535,0,6400,0,1,0,0
+	O,BEGIN,RR,"btnPlatformCmd"
+		B,736,84,663,102,736,84,65535,0,6400,0,2,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		PP,9,13
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"NotUsed%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

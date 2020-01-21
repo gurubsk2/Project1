@@ -1,0 +1,451 @@
+ASCII32,18,10,2019,12:1,21,1.1
+W,BEGIN,"LineControl_ContextualMenu","LineControl_ContextualMenu"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1599,285
+	SIZE,219,80,219,80,0,0,0,1280,1024,217,78
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineControl_ContextualMenu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Module:      CATS_Mode_MGmt
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*                  - Send value to plug on Tomar click
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              chaitra
+	'* Date:                Aug '18
+	'* Change:              A11
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	
+	Option Explicit
+	
+	'* Declarations
+	'* ******************************************************
+	
+	'* Constants
+	'* ------------------------------------------------------
+	
+	' Path to the OPC server variables
+	Private Const strLineCtrlWithAck As String = ".MMGATSArea.NegociatedMode"
+	Private Const strLineCtrlWithoutAck As String = ".MMGATSArea.ForcedMode"
+	Private Const strLineCtrlConfirmation As String = ".MMGATSArea.Confirmation"
+	Private Const strLineCtrlSecurity As String = ".MMGATSArea.Security"
+	Private Const strLineCtrlMode As String = ".MMGATSArea.Mode"
+	Private Const strAskLineCtrl As String = "AskLineControl.HMIRequest.Value.bstrValue"
+	
+	Private Const c_strCATSModeMgmt As String = "KB.ModeMgmt.Mode"
+	
+	'CATS mode managment plug
+	'Private Const c_strCatsModeMgmt As String = ".CATS.KB.ModeMgmt.Mode"
+	
+	
+	'* OPC server's variables
+	'* ------------------------------------------------------
+	Public m_OPC_LCtrlWithAck As Variable
+	Public m_OPC_LCtrlWithoutAck As Variable
+	Public m_OPC_LCtrlConf As Variable
+	Public m_OPC_LCtrlMode As Variable
+	Public m_OPC_Security As Variable
+	Public strATSArea As String
+	Public sMachine_Name As String
+	
+	'Private Sub m_OPC_LCtrlWithAck_ValueChange()
+	'Call CBTrace(CBTRACE_VBA, ThisMimic.Name & ":" & ThisMimic.Branch, "m_OPC_LCtrlWithAck_ValueChange", "Begin Subroutine")
+	'On Error GoTo ErrorHandler
+	'
+	'    If (Check_Variable(m_OPC_LCtrlWithAck) And m_OPC_Security < 63) Then
+	'    MOD_General.GetWorkStationName
+	'
+	'        If (thisproject.WKSName) Like "*CATS*" Then
+	'
+	'         If (m_OPC_LCtrlWithAck.Value <> 0 And m_OPC_Mode.Value = 1) Then
+	'
+	'               'Mimics.Open("LineControl_Handover_Request",,,,,*,,
+	'               'Mimics.OpenInCenter("LineControl_Handover_Request","*",,,,"*",,
+	'
+	'
+	'    End If
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_LCtrlWithAck_ValueChange", Err.Description)
+	'End Sub
+	
+	Private Sub Mimic_Open()
+	    Dim iMonitor As Integer
+	    
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    On Error GoTo ErrorHandler
+	
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then _
+	       Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then _
+	       Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	
+	    [@UserAccessCommand%] = True
+	    
+	    strATSArea = Me.Branch
+	    strATSArea = Replace(strATSArea, "M1.", "")
+	    strATSArea = Replace(strATSArea, "M2.", "")
+	    
+	    Set m_OPC_LCtrlWithAck = Variables.Add(strATSArea & strLineCtrlWithAck, fvVariableTypeRegister)
+	    Set m_OPC_LCtrlWithoutAck = Variables.Add(strATSArea & strLineCtrlWithoutAck, fvVariableTypeRegister)
+	    Set m_OPC_LCtrlConf = Variables.Add(strATSArea & strLineCtrlConfirmation, fvVariableTypeRegister)
+	    Set m_OPC_LCtrlMode = Variables.Add(strATSArea & strLineCtrlMode, fvVariableTypeBit)
+	    If Variables.Item("bAdmin%").Value Or Variables.Item("bSupervisor%").Value Or Variables.Item("bMaintenance%").Value Then
+	        Variables.Item("@bProfile%").Value = True
+	    End If
+	        
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	'* Menu Item 1
+	'* ---------------------------------------------------
+	'Private Sub btnMenuItem1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	'    On Error GoTo ErrorHandler
+	'
+	'    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = True
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseEnter", Err.Description)
+	'End Sub
+	'
+	'Private Sub btnMenuItem1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	'    On Error GoTo ErrorHandler
+	'
+	'    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = False
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseLeave", Err.Description)
+	'End Sub
+	'actvcm0986756 as per comments
+	
+	'Private Sub btnMenuItem1_Click()
+	'    On Error GoTo ErrorHandler
+	'    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem1_Click", "Begin Subroutine")
+	'
+	'    If Not [@UserAccessCommand%] Then Exit Sub
+	'
+	'    If (Check_Variable(m_OPC_LCtrlWithAck)) Then
+	'            m_OPC_LCtrlWithAck.Value = 1
+	'    End If
+	'    Me.Close fvDoNotSaveChanges
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_Click", Err.Description)
+	'End Sub
+	'* Menu Item 2
+	'* ---------------------------------------------------
+	'Private Sub btnMenuItem2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	'    On Error GoTo ErrorHandler
+	'
+	'    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = True
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseEnter", Err.Description)
+	'End Sub
+	'Private Sub btnMenuItem2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	'    On Error GoTo ErrorHandler
+	'
+	'    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = False
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseLeave", Err.Description)
+	'End Sub
+	
+	
+	
+	'*** CATS mode managment value write(actvcm0986756 as per comments)
+	
+	
+	Private Sub btnMenuItem2_Click()
+	    Dim sControl As String
+	    Dim varCommand As Variable
+	
+	    On Error GoTo ErrorHandler
+	    
+	    If [bLATSMachine%] Then
+	        sControl = "LATS."
+	    Else
+	        sControl = "CATS."
+	    End If
+	
+	    Set varCommand = Variables.Item("OPCCluster:" & sControl & c_strCATSModeMgmt)
+	    
+	    If Check_OPC_Variable(varCommand) Then
+	        If varCommand.Value = 0 Then
+	           varCommand.Value = 2
+	    
+	        ElseIf varCommand.Value = 2 Then
+	           varCommand.Value = 0
+	        End If
+	    End If
+	
+	   Me.Close fvDoNotSaveChanges
+	   
+	   Exit Sub
+	ErrorHandler:
+	   Call CBTrace(CBTRACEF_ALWAYS, "btnMenuItem2_Click", "btnMenuItem2_Click", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,238,238,238,0,0,0
+	COLOR,4,0,0,255,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,T,"btnMenuItem2"
+	B,3,46,224,70,3,70,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,46,5,0,FONT,1,"Tempo de Parada...",36,FONT,1,"Tempo de Parada...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tomar",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Tomar",FONT,1,36
+			ROLE,0,"Tomar",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem1"
+	B,4,21,225,45,4,45,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,4,21,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Pedir",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Pedir",FONT,1,36
+			ROLE,0,"Pedir",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim1",0,0,"",""
+		PP,"=(@Plug%==0)","Item1Visible%","","","","","",""
+		COL,0,COLOR,2,COLOR,2,1.000000
+		COL,0,COLOR,2,COLOR,2,2.000000
+		COL,0,COLOR,2,COLOR,2,3.000000
+		COL,0,COLOR,4,COLOR,4,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,0,13,280,14,0,14,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,14,280,14,0,14,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,14,280,14
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,13,280,13,0,13,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,13,280,13
+	O,END
+O,END
+O,BEGIN,T,"lblMenuTitle"
+	B,18,5,132,21,18,21,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,18,5,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control de estaci¢n",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Control de linea",FONT,1,36
+			ROLE,0,"Control de estaci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END

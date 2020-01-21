@@ -1,0 +1,601 @@
+ASCII32,22,10,2019,11:12,12,1.1
+W,BEGIN,"Display_FilterControls","Display_FilterControls"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1618,138
+	SIZE,209,250,209,250,0,0,0,1280,1024,203,226
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detalles del sinoptico"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detalles del sinoptico"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,0,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Display_FilterControls.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	''* Declarations
+	''* ------------------------------------------------------
+	Option Explicit
+	'
+	''* Constants
+	''* ------------------------------------------------------
+	
+	Const c_lSignalLayer As Long = 2 ^ 5
+	Const c_lPointLayer As Integer = 2 ^ 6
+	Const c_lSDDLayer As Integer = 2 ^ 7
+	Const c_lCatenariaLayer As Integer = 2 ^ 8
+	Const c_lCycleLayer As Integer = 2 ^ 9
+	Const c_lEvacLayer As Integer = 2 ^ 10
+	
+	Dim currentPos As Long
+	Dim CurrentMimic As String
+	Dim strMimicBranch As String
+	''* Variables
+	''* ------------------------------------------------------
+	Dim m_OPClocal_Layers As Variable
+	
+	Const c_sDetailedView As String = "GDL_Detailed_View"
+	Const c_sDetailedView_2 As String = "GDL_Detailed_View_2"
+	Const c_sDetailedView_3 As String = "GDL_Detailed_View_3"
+	Const c_sOperDetailedView As String = "GDL_Operational_View"
+	Const c_sInitialView As String = "GDL_Initial_View"
+	Const c_sIOperational As String = "GDL_Operational_General_View"
+	'Const c_sIOperational As String = "GDL_Operational_General_View"
+	
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Mimic_Open
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Gets the layer information of the current active mimic
+	''-------------------------------------------------------------------------------
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	      
+	    ' Connect to the local OPC variables
+	    Set m_OPClocal_Layers = Variables.Add(Iconis_MOD_Navigation.c_strLayersLocalTag, fvVariableTypeRegister)
+	    '* Get the Current Mimic and get the layers of it
+	    currentPos = ThisMimic.Parent.ActiveMimic.Windows(1).Left
+	    If currentPos < 1919 Then
+	    currentPos = 0
+	    strMimicBranch = "M1"
+	    ElseIf currentPos > 1919 And currentPos < 3839 Then
+	    currentPos = 1920
+	    strMimicBranch = "M2"
+	    ElseIf currentPos > 3839 Then
+	    currentPos = 3840
+	    strMimicBranch = "M3"
+	    End If
+	    
+	       
+	   ' CurrentMimic = GetActiveMimic(currentPos)
+	    
+	''    If CurrentMimic = "GDL_Initial_view" Then
+	''        m_OPClocal_Layers.Value = Mimics.Item(CurrentMimic, strMimicBranch).Windows(1).Layers
+	''    Else
+	        m_OPClocal_Layers.Value = m_layervalue 'Mimics.Item(CurrentMimic).Windows(1).Layers
+	'   End If
+	    If ((m_OPClocal_Layers.Value And c_lSignalLayer) = 0) Then
+	    Chk_Signal_names.Value = False
+	    Else
+	    Chk_Signal_names.Value = True
+	    End If
+	
+	    If ((m_OPClocal_Layers.Value And c_lPointLayer) = 0) Then
+	    Chk_Point_names.Value = False
+	    Else
+	    Chk_Point_names.Value = True
+	    End If
+	
+	    If ((m_OPClocal_Layers.Value And c_lSDDLayer) = 0) Then
+	    Chk_SDD_names.Value = False
+	    Else
+	    Chk_SDD_names.Value = True
+	    End If
+	
+	    If ((m_OPClocal_Layers.Value And c_lCatenariaLayer) = 0) Then
+	    Chk_Cataneria_names.Value = False
+	    Else
+	    Chk_Cataneria_names.Value = True
+	    End If
+	
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	Private Sub Manage_Details_CheckBoxes_Ability(View As Integer)
+	
+	    
+	    If (View >= VIEW_DETAILEDTRAFFIC_1) Then
+	        'On detailed views all details can be shown or hiden
+	        Chk_Cataneria_names.Enabled = True
+	        Chk_SDD_names.Enabled = True
+	        Chk_Point_names.Enabled = True
+	        Chk_Signal_names.Enabled = True
+	        Chk_Cycle_names.Enabled = True
+	        Chk_Evac_names.Enabled = True
+	        Chk_GAMA_names.Enabled = True
+	    Else
+	        'Check boxes shall be disable if the view is neither Global nor Detailed view
+	        
+	        Thisproject.G_GAMA_Chk_Box.Enabled = False
+	        Thisproject.G_SDD_Chk_Box.Enabled = False
+	        Thisproject.G_Signal_Chk_Box.Enabled = False
+	        Thisproject.G_Points_Chk_Box.Enabled = False
+	        Thisproject.G_Cycle_Chk_Box.Enabled = False
+	        Thisproject.G_Evac_Chk_Box.Enabled = False
+	        Thisproject.G_GAMA_Chk_Box.Enabled = False
+	    End If
+	        
+	      'Initialize variables
+	    'ReadLayers
+	      
+	    Variables.Add ("(Is_GAMA_Zone_Displayed%"), fvVariableTypeBit
+	    Variables.Item("Is_GAMA_Zone_Displayed%").Value = Chk_Work_zones_names.Value
+	        
+	End Sub
+	
+	''---------------------------------------------------------------------------------------
+	'' Name:         Mimic_BeforeClose
+	'' Input:        none
+	'' Output:       [Boolean]   False   if OK to close
+	''                           True    if the mimic is not allowed to close
+	'' Description:  Before closing the mimic, unsuscribe the OPC variables previously subscribed
+	''---------------------------------------------------------------------------------------
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    '* Unsubscribe all the variables previously subscribed
+	    If Not (m_OPClocal_Layers Is Nothing) Then
+	        Variables.Remove (m_OPClocal_Layers.Name)
+	        Set m_OPClocal_Layers = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         ReadLayers
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Read the layers
+	''-------------------------------------------------------------------------------
+	Private Sub ReadLayers(lLayers As Long)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadLayers", "Begin Subroutine")
+	
+	    Variables("SignalCommandValue%").Value = lLayers And c_lSignalLayer
+	    Variables("PointCommandValue%").Value = lLayers And c_lPointLayer
+	    Variables("BlockCommandValue%").Value = lLayers And c_lBlockLayer
+	    Variables("CycleCommandValue%").Value = lLayers And c_lCycleLayer
+	    Variables("EvacCommandValue%").Value = lLayers And c_lEvacLayer
+	    Variables("CatenariaCommandValue%").Value = lLayers And c_lCatenariaLayer
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadLayers", Err.Description)
+	End Sub
+	
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_Signal_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Signal Identifier
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_Signal_names_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_Signal_names_Click", "Begin Subroutine")
+	
+	   'Call UpdateLayers(c_lSignalLayer, currentPos, c_sOperDetailedView)
+	     Call UpdateLayers(c_lSignalLayer, 0, c_sInitialView)
+	    Call UpdateLayers(c_lSignalLayer, 1920, c_sInitialView)
+	    Call UpdateLayers(c_lSignalLayer, 3840, c_sInitialView)
+	    
+	     Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_2)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_2)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_2)
+	   
+	   Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_3)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_3)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_3)
+	    
+	    Call UpdateLayers(c_lSignalLayer, 0, c_sOperDetailedView)
+	    Call UpdateLayers(c_lSignalLayer, 1920, c_sOperDetailedView)
+	   Call UpdateLayers(c_lSignalLayer, 3840, c_sOperDetailedView)
+	   
+	     Call UpdateLayers(c_lSignalLayer, 0, c_sIOperational)
+	    Call UpdateLayers(c_lSignalLayer, 1920, c_sIOperational)
+	    Call UpdateLayers(c_lSignalLayer, 3840, c_sIOperational)
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_Signal_names_Click", Err.Description)
+	End Sub
+	
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_Point_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Point Identifier
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_Point_names_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_Point_names_Click", "Begin Subroutine")
+	
+	   'Call UpdateLayers(c_lPointLayer, currentPos, c_sOperDetailedView)
+	    Call UpdateLayers(c_lPointLayer, 0, c_sInitialView)
+	    Call UpdateLayers(c_lPointLayer, 1920, c_sInitialView)
+	    Call UpdateLayers(c_lPointLayer, 3840, c_sInitialView)
+	    
+	     Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_2)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_2)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_2)
+	   
+	   Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_3)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_3)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_3)
+	   
+	    Call UpdateLayers(c_lPointLayer, 0, c_sOperDetailedView)
+	    Call UpdateLayers(c_lPointLayer, 1920, c_sOperDetailedView)
+	   Call UpdateLayers(c_lPointLayer, 3840, c_sOperDetailedView)
+	   
+	     Call UpdateLayers(c_lPointLayer, 0, c_sIOperational)
+	    Call UpdateLayers(c_lPointLayer, 1920, c_sIOperational)
+	    Call UpdateLayers(c_lPointLayer, 3840, c_sIOperational)
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_Point_names_Click", Err.Description)
+	End Sub
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_SDD_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Block Identifier
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_SDD_names_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_SDD_names_Click", "Begin Subroutine")
+	
+	    'Call UpdateLayers(c_lSDDLayer, currentPos, c_sOperDetailedView)
+	    Call UpdateLayers(c_lSDDLayer, 0, c_sInitialView)
+	    Call UpdateLayers(c_lSDDLayer, 1920, c_sInitialView)
+	    Call UpdateLayers(c_lSDDLayer, 3840, c_sInitialView)
+	    
+	     Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_2)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_2)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_2)
+	   
+	   Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_3)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_3)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_3)
+	    
+	    Call UpdateLayers(c_lSDDLayer, 0, c_sOperDetailedView)
+	    Call UpdateLayers(c_lSDDLayer, 1920, c_sOperDetailedView)
+	   Call UpdateLayers(c_lSDDLayer, 3840, c_sOperDetailedView)
+	   
+	     Call UpdateLayers(c_lSDDLayer, 0, c_sIOperational)
+	    Call UpdateLayers(c_lSDDLayer, 1920, c_sIOperational)
+	    Call UpdateLayers(c_lSDDLayer, 3840, c_sIOperational)
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_SDD_names_Click", Err.Description)
+	End Sub
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_Cataneria_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Catenaria
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_Cataneria_names_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_GAMA_zone_names_Click", "Begin Subroutine")
+	   
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sInitialView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sInitialView)
+	    Call UpdateLayers(c_lCatenariaLayer, 3840, c_sInitialView)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_2)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_2)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_2)
+	   
+	   Call UpdateLayers(c_lCatenariaLayer, 0, c_sDetailedView_3)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sDetailedView_3)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sDetailedView_3)
+	    
+	    Call UpdateLayers(c_lCatenariaLayer, 0, c_sOperDetailedView)
+	    Call UpdateLayers(c_lCatenariaLayer, 1920, c_sOperDetailedView)
+	   Call UpdateLayers(c_lCatenariaLayer, 3840, c_sOperDetailedView)
+	   
+	     Call UpdateLayers(c_lCatenariaLayer, 0, c_sIOperational)
+	    Call UpdateLayers(c_lCatenariaLayer, 1919, c_sIOperational)
+	    Call UpdateLayers(c_lCatenariaLayer, 3839, c_sIOperational)
+	    
+	       
+	 Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_Work_zones_names_Click", Err.Description)
+	End Sub
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_Cycle_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Point Identifier
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_Cycle_names_Click()
+	
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_Cycle_names_Click", "Begin Subroutine")
+	
+	    UpdateLayers (c_lCycleLayer)
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_Cycle_names_Click", Err.Description)
+	End Sub
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         Chk_Evac_names_Click
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer assignated to Point Identifier
+	''-------------------------------------------------------------------------------
+	Private Sub Chk_Evac_names_Click()
+	
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Chk_Evac_names_Click", "Begin Subroutine")
+	
+	    UpdateLayers (c_lEvacLayer)
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Chk_Evac_names_Click", Err.Description)
+	End Sub
+	
+	
+	
+	''-------------------------------------------------------------------------------
+	'' Name:         UpdateLayers
+	'' Input:        none
+	'' Output:       none
+	'' Description:  Alternately select/deselect the layer given in parameter
+	''-------------------------------------------------------------------------------
+	Private Sub UpdateLayers(iLayer As Integer, position As Long, oMimicNme As String)
+	
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "UpdateLayers", "Begin Subroutine")
+	    Dim temp
+	    Dim objMimic As Mimic
+	
+	    '* Update for Project Specific
+	
+	 For Each objMimic In Application.ActiveProject.Mimics
+	  
+	          If (objMimic.FileName Like "GDL_Operational_View") And objMimic.Windows(1).Left = position Then
+	              If Mimics.IsOpened(c_sDetailedView) Then
+	                 Call ApplyLayer(Mimics(c_sDetailedView))
+	              End If
+	          ElseIf (objMimic.FileName Like oMimicNme) And objMimic.Windows(1).Left = position Then
+	                    Call ApplyLayer(objMimic)
+	                    
+	'          ElseIf (objMimic.FileName Like "GDL_Operational_General_View") And objMimic.Windows(1).Left = position Then
+	'                 Call ApplyLayer(Mimics(c_sIOperational))
+	                    
+	              
+	          End If
+	        
+	    Next
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "UpdateLayers", Err.Description)
+	End Sub
+	
+	
+	''* *************************************************************
+	''*  Function: GetActiveMimic
+	''*  Get the active mimic name of the selected monitor.
+	''* *************************************************************
+	Public Function GetActiveMimic(ByVal Pos As Integer) As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "GetActiveMimic", "Begin Function")
+	    Dim objMimic As Mimic
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If Not (objMimic.FileName Like "GDL_Initial_View") Then
+	            If Not (objMimic.FileName Like "GDL_Operational_View") Then
+	                If (objMimic.FileName Like "GDL_Detailed_View") Then 'And objMimic.Windows(1).Left = Pos
+	                    GetActiveMimic = objMimic.FileName
+	                    Exit For
+	                End If
+	            End If
+	        End If
+	    Next
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "GetActiveMimic", Err.Description)
+	End Function
+	Public Function ApplyLayer(oMimic As Mimic)
+	
+	 If (oMimic.FileName <> "") Then
+	        If (Chk_Signal_names.Value) Then
+	        oMimic.Windows(1).Layers = (oMimic.Windows(1).Layers Or c_lSignalLayer)
+	          ';  oMimic.Windows(1).Layers = oMimic.Windows(1).Layers Or (c_lSignalLayer)
+	        Else
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers And Not ((c_lSignalLayer))
+	        End If
+	
+	        If (Chk_Point_names.Value) Then
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers Or (c_lPointLayer)
+	        Else
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers And Not ((c_lPointLayer))
+	        End If
+	
+	        If (Chk_SDD_names.Value) Then
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers Or (c_lSDDLayer)
+	        Else
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers And Not ((c_lSDDLayer))
+	        End If
+	
+	        If (Chk_Cataneria_names.Value) Then
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers Or (c_lCatenariaLayer)
+	        Else
+	            oMimic.Windows(1).Layers = oMimic.Windows(1).Layers And Not ((c_lCatenariaLayer))
+	        End If
+	
+	
+	    m_layervalue = oMimic.Windows(1).Layers
+	    End If
+	
+	
+	End Function
+	
+	
+	
+	Private Sub Shape181_Click()
+	x = 960
+	y = 400
+	  
+	    Mimics.Open "About", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "*", , , , x, y, True
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,128,128,128,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,191,190,7,148,191,190,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape1"
+	B,192,136,8,8,192,136,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"Chk_SDD_names"
+	B,13,101,189,125,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"Chk_Point_names"
+	B,13,64,189,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"Chk_Signal_names"
+	B,13,29,189,53,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text1"
+	B,16,0,128,24,16,24,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,16,0,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Identificadores",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Identificadores",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,56,196,150,224,56,224,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,56,196,0,0,FONT,2,"Cerrar",37,FONT,2,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"Display_FilterControls","*"
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,16,139,128,163,16,163,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,16,139,0,0,FONT,2,"Identificadores",37,FONT,2,"Identificadores",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Indicaciones",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Indicaciones",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"Chk_Cataneria_names"
+	B,16,162,192,186,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

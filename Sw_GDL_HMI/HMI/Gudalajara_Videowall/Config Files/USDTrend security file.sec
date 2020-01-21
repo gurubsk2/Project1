@@ -1,0 +1,41 @@
+[Categories]
+TC_DESIGNCONF=1
+TC_RUNCONF=1
+TC_PRINT=1
+TC_PANZOOM=1
+TC_ADDPEN=1
+TC_ONOFF=1
+TC_PENDEF=1
+TC_DUR_RANGE=1
+TC_QUALSETS=1
+TC_SERVERPARAMS=1
+
+[Category\TC_DESIGNCONF]
+0000=Trend: Design-time Configuration of Viewer
+
+[Category\TC_RUNCONF]
+0000=Trend: Run-time Configuration of Viewer
+
+[Category\TC_PRINT]
+0000=Trend: Print
+
+[Category\TC_PANZOOM]
+0000=Trend: Pan/Zoom
+
+[Category\TC_ADDPEN]
+0000=Trend: Add a Pen
+
+[Category\TC_ONOFF]
+0000=Trend: Online / Offline
+
+[Category\TC_PENDEF]
+0000=Trend: Configure Pen Definitions
+
+[Category\TC_DUR_RANGE]
+0000=Trend: Configure Durations and Ranges
+
+[Category\TC_QUALSETS]
+0000=Trend: Configure Quality Sets
+
+[Category\TC_SERVERPARAMS]
+0000=Trend: Configure Server Parameters

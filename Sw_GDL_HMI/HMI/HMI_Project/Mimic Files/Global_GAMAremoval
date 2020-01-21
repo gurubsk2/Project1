@@ -1,0 +1,374 @@
+ASCII32,25,8,2016,13:30,27,1.1
+W,BEGIN,"Global_GAMAremoval","Global_GAMAremoval"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,380,425
+	SIZE,326,241,326,241,0,0,0,1280,1024,320,216
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA Global Inhibir"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Global_GAMAremoval.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Project: Riyad
+	'* *******************************************************************************************
+	'* Purpose: global gama removal
+	'* *******************************************************************************************
+	'* Modification History:
+	'*
+	'* Author:              Eric Foissey
+	'* Description:         Update from Mockup Riyadh to full functionnal scope
+	'* Date:                31/08/2015
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (2S&TDM-ATS-0007 - vA)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	Private Const c_strZCNametag As String = ".Status.Name"
+	
+	Dim WithEvents m_OPC_ZCName As Variable
+	
+	
+	
+	
+	
+	
+	'* SubRoutine: Mimic_Open
+	'* It manages:
+	'*      - Default opening of the HILCCtrl Prep Phase
+	'*      - Adds the OPC variables to the collection of all permanently subscribed variables
+	'*      - Init variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim strOPCTreePath As String
+	       
+	    '* enable the "OK" Button
+	    Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_OkActive%").Value = True
+	    
+	    '* Enable the "Cancel" Button
+	    Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_CloseActive%").Value = True
+	
+	    Set m_OPC_ZCName = Variables.Add(ThisMimic.Branch & c_strZCNametag, fvVariableTypeText)
+	    If (m_OPC_ZCName.EnableEvents = True) Then
+	        m_OPC_ZCName_ValueChange
+	    Else
+	        m_OPC_ZCName.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'-------------------------------------------------------------------------------
+	' Name:         m_OPC_ZCName_ValueChange
+	' Description:  manage associated button color
+	'-------------------------------------------------------------------------------
+	Private Sub m_OPC_ZCName_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	   If (Check_Variable(m_OPC_ZCName, ThisMimic.Name)) Then
+	        Variables.Item(ThisMimic.Branch & ".QuestionText%").Value = lblQuestion.Text & " " & m_OPC_ZCName.Value & " ?"
+	   End If
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ZCName_ValueChange", Err.Description)
+	End Sub
+	'-------------------------------------------------------------------------------
+	' Name:         Gama_Removal_BP_Close_MouseEnter
+	' Description:  manage associated button color
+	'-------------------------------------------------------------------------------
+	''Private Sub Gama_Removal_BP_Close_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''On Error GoTo ErrorHandler
+	''
+	''   Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_CloseHover%").Value = True
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Close_MouseEnter", Err.Description)
+	''End Sub
+	
+	'-------------------------------------------------------------------------------
+	' Name:         Gama_Removal_BP_Close_MouseLeave
+	' Description:  manage associated button color
+	'-------------------------------------------------------------------------------
+	''Private Sub Gama_Removal_BP_Close_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''On Error GoTo ErrorHandler
+	''
+	''   Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_CloseHover%").Value = False
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Close_MouseLeave", Err.Description)
+	''End Sub
+	
+	'-------------------------------------------------------------------------------
+	' Name:         Gama_Removal_BP_Ok_MouseEnter
+	' Description:  manage associated button color
+	'-------------------------------------------------------------------------------
+	''Private Sub Gama_Removal_BP_Ok_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''On Error GoTo ErrorHandler
+	''
+	''   Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_OkHover%").Value = True
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseEnter", Err.Description)
+	''End Sub
+	
+	'-------------------------------------------------------------------------------
+	' Name:         Gama_Removal_BP_Ok_MouseLeave
+	' Description:  manage associated button color
+	'-------------------------------------------------------------------------------
+	''Private Sub Gama_Removal_BP_Ok_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''On Error GoTo ErrorHandler
+	''
+	''   Variables.Item(ThisMimic.Branch & ".Global_Gama_Removal_BP_OkHover%").Value = False
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseLeave", Err.Description)
+	''End Sub
+	    
+	   
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,191,191,191,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,64,64,64,0,0,0
+	COLOR,8,122,122,122,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,328,160,-2,0,328,160,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape1"
+	B,315,77,6,7,315,77,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Gama_Removal_BP_Close"
+	B,170,175,249,199,170,199,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,170,175,0,0,FONT,1,"Cerrar",37,FONT,1,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Global_Gama_Removal_BP_CloseHover%","Global_Gama_Removal_BP_CloseActive%","",""
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,GRP,"Group1"
+	B,0,160,331,161,0,161,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,160,331,160,0,160,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,160,331,160
+	O,END
+	O,BEGIN,L,"Poly3"
+		B,0,161,331,161,0,161,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,161,331,161
+	O,END
+O,END
+O,BEGIN,T,"Gama_Removal_BP_Ok"
+	B,40,175,119,199,40,199,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,40,175,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Global_Gama_Removal_BP_OkHover%","Global_Gama_Removal_BP_OkActive%","",""
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"GAMARemoval.Value",2,0,0,0,0.000000
+		AUTH,"Global_Gama_Removal_BP_OkActive%",1,0,0
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,13,84,67,100,13,100,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,13,84,0,0,FONT,1,"Preparaci¢n",36,FONT,1,"Preparaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,25,20,305,55,25,55,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,25,20,0,0,FONT,1,"Aguja",38,FONT,1,"Aguja",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"QuestionText%"
+	A,END
+O,END
+O,BEGIN,T,"lblQuestion"
+	B,20,40,300,75,20,75,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,20,40,0,0,FONT,1,"Do you want to remove GAMA on the sector ZC_01 ?",84,FONT,1,"Do you want to remove GAMA on the sector ZC_01 ?",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la inhibicion de GAMA para toda la linea",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END

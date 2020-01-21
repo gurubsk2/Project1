@@ -1,0 +1,141 @@
+ASCII32,14,5,2012,13:54,31,1.1
+W,BEGIN,"LineOperatingModeAutoWithTT_OneRegulationMode","LineOperatingModeAutoWithTTOneRegulationMode"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,15,20
+	SIZE,250,35,250,50,0,0,0,1280,1024,250,35
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithTT_OneRegulationMode.binary"
+W,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,215,215,215,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,113,111,100,0,0,0
+	COLOR,7,105,105,105,0,0,0
+COLORS,END
+O,BEGIN,T,"lblRegulationMode"
+	B,64,8,80,24,64,24,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,64,8,0,0,FONT,1,"Schedule",36,FONT,1,"Schedule",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim2",0,0,"",""
+		PP,"RegMode%"
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ( (@RegulationModeCommandType% == 1)  OR  (@CurrentRegulationMode% != CommandValue%))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,GRP,"Group1"
+	B,30,10,41,21,30,21,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape5"
+		B,30,21,41,10,30,21,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		AST,5,2,COLOR,3,COLOR,5,0,COLOR,5,0,COLOR,5,0,COLOR,6,0,COLOR,6
+		A,BEGIN,CB,"Anim4",0,0,"",""
+			PP,"RegulationModeButtonDisabled%"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,4,COLOR,4
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+		A,END
+		A,BEGIN,SR,"Anim1",0,0,"",""
+			PP,"@RegulationCommandValue%",0,"",0,0,3,1,0,0,10.000000,0,0,0
+			AUTH,"RegulationModeButtonDisabled%",0,0,0
+			ADVSENDVALUE,4,CommandValue%
+		A,END
+		A,BEGIN,SB,"Anim2",0,0,"",""
+			PP,"@AutoWithTTButtonOKEnabled%",2,0,0,0,0.000000
+			AUTH,"= ((NOT RegulationModeButtonDisabled%) AND ((@CurrentLineOperatingMode% == 2) AND (@CurrentRegulationMode% == @RegulationCommandValue%)))",0,0,0
+		A,END
+		A,BEGIN,SB,"Anim3",0,0,"",""
+			PP,"@AutoWithTTButtonOKEnabled%",1,0,0,0,0.000000
+			AUTH,"= ((NOT RegulationModeButtonDisabled%) AND ((@CurrentLineOperatingMode% == 2)  AND  (@CurrentRegulationMode% == @RegulationCommandValue%)))",1,0,0
+		A,END
+	O,END
+	O,BEGIN,E,"Shape3"
+		B,34,17,37,14,33,20,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CBG,"Anim2",0,0,"",""
+			PP,"= (@RegulationCommandValue% == CommandValue%)","RegulationModeButtonDisabled%","",""
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,7,COLOR,7
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+		A,END
+	O,END
+O,END

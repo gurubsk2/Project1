@@ -1,0 +1,71 @@
+ASCII32,15,10,2019,12:28,27,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Block Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Cycle Validation Message box
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                June '17
+	'* Change:              All
+	    
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	
+	
+	Private Const c_strInspectorPanelMimic As String = "Cycle_ValidationMessageBox"
+	Private Hold As POINTAPI
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	
+	
+	Private Sub Shape14_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_DblClickEx", "Begin subroutine")
+	    
+	    '* Open the Inspector Panel mimic
+	       'Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	    'MsgBox Variables.Item(GetSymbolBranch(Me) & ".HMI.Template.iEqpstate").Value
+	    closemimic (c_strInspectorPanelMimic)
+	    If Variables.Item(GetSymbolBranch(Me) & ".HMI.Template.iEqpstate").Value = 1 Then
+	      Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "IXL_Status_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol2475"
+	B,9880,912,9761,833,9761,912,65535,0,6400,0,4,0,0
+	O,BEGIN,R,"Shape14"
+		B,9880,912,9761,833,9880,912,65535,0,6400,0,8,1,1
+		ST,0,3,COLOR,1,COLOR,1,0,3,COLOR,1,3,COLOR,1,0,COLOR,2,0,COLOR,2
+	O,END
+O,END

@@ -1,0 +1,849 @@
+ASCII32,26,6,2015,12:37,45,1.1
+W,BEGIN,"View_WZ_InitConfig","View_WZ_InitConfig"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,522,418
+	SIZE,375,385,375,385,0,0,0,1280,1024,369,361
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Initialization workzone configuration"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,0,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,620,407
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"View_WZ_InitConfig.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	    '* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View_WZ_InitConfig
+	'* *******************************************************************************************
+	'* Purpose:      it manages the display of the workzone Initialisation
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric Foissey
+	'* Date:                January '13
+	'* Change:              All : CR ALPHA 336493
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	
+	Private Const m_strWZAppliedInitTag As String = ".WZAppliedInit.Value"
+	
+	Private Const m_strSpeedTag As String = ".RestrictionSpeed%"
+	
+	Private Const c_strColumnCondition As String = "txt_WZCondition"
+	Private Const c_strStateCondition As String = "txt_Condition"
+	Private Const c_strStateFalse As String = "_False"
+	Private Const c_strStateTrue As String = "_True"
+	
+	' Used to read the string (XML format) containing the workzone definition
+	Private Const c_strWorkZoneNode As String = "WZInit"
+	Private Const c_strWZSpeedAttr As String = "Speed"
+	Private Const c_strWZCondAttr As String = "condition"
+	
+	Private Const m_iLeftVisible As Integer = 192
+	Private Const m_iLeftInvisible As Integer = 1920
+	'* To manage the list of conditions
+	Private Const c_lLineMaxCount As Long = 8
+	
+	Private Const c_lConditionLeft As Long = 24
+	'* OPC Variables
+	'* ******************************************************
+	Private WithEvents m_OPC_WZAppliedInit As Variable
+	
+	Private m_OPC_SpeedAnim As Variable
+	
+	Dim m_WorkZoneManager As Iconis_CLS_WorkZones
+	
+	'* Module Variables
+	'* ***********************************************
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	
+	
+	
+	'* Subroutine: Mimic_Open
+	'* - read the id of the current LC
+	'* - Initialize the OPC Variable for TSR Button animation
+	'* *****************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim lPos As Long
+	    Dim strLCClientOPCVarName As String
+	    
+	    Set m_WorkZoneManager = Iconis_MOD_General.GetWorkzoneManager
+	    
+	    '* Retreive the OPC cluster name and OPC variable of the current sector
+	    lPos = InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare)
+	    strLCClientOPCVarName = Mid(ThisMimic.Branch, lPos + 1)
+	    
+	    '* Initialisation of the workzone manager for the current client ID
+	    m_WorkZoneManager.SetCurrentLC (strLCClientOPCVarName)
+	    
+	    '* Add variable for the aminations
+	    Set m_OPC_SpeedAnim = Variables.Add(ThisMimic.Branch & m_strSpeedTag, fvVariableTypeText)
+	    m_OPC_SpeedAnim.Value = "-"
+	    
+	    ' Create and initialize the list
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	    
+	    'the scrollbar is hidden
+	    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar
+	    m_List.NewColumn c_strColumnCondition, fvVariableTypeText, c_lConditionLeft
+	    
+	    '* Add variable containing the value of TSR Applied Init for the current LC
+	    Set m_OPC_WZAppliedInit = Variables.Add(ThisMimic.Branch & m_strWZAppliedInitTag, fvVariableTypeText)
+	    If ((m_OPC_WZAppliedInit.EnableEvents = True) And (m_OPC_WZAppliedInit.Status = fvVariableStatusGood)) Then
+	        m_OPC_WZAppliedInit_ValueChange
+	    Else
+	        m_OPC_WZAppliedInit.EnableEvents = True
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: Mimic_Design
+	'* Purpose: Manage the design mode of the mimic
+	'* ************************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	    
+	    txt_Condition1_False.Left = m_iLeftVisible
+	    txt_Condition2_False.Left = m_iLeftVisible
+	    txt_Condition3_False.Left = m_iLeftVisible
+	    txt_Condition4_False.Left = m_iLeftVisible
+	    txt_Condition5_False.Left = m_iLeftVisible
+	    txt_Condition6_False.Left = m_iLeftVisible
+	    txt_Condition7_False.Left = m_iLeftVisible
+	    txt_Condition8_False.Left = m_iLeftVisible
+	    
+	    txt_Condition1_True.Left = m_iLeftVisible
+	    txt_Condition2_True.Left = m_iLeftVisible
+	    txt_Condition3_True.Left = m_iLeftVisible
+	    txt_Condition4_True.Left = m_iLeftVisible
+	    txt_Condition5_True.Left = m_iLeftVisible
+	    txt_Condition6_True.Left = m_iLeftVisible
+	    txt_Condition7_True.Left = m_iLeftVisible
+	    txt_Condition8_True.Left = m_iLeftVisible
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_BeforeClose
+	'* Purpose: Manage the closing of the variable used
+	'* ************************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	    
+	    Variables.Remove (m_OPC_SpeedAnim.Name)
+	
+	    ' Destroy the list object
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	       
+	    
+	    If Not (m_OPC_WZAppliedInit Is Nothing) Then
+	        Variables.Remove (m_OPC_WZAppliedInit.Name)
+	        Set m_OPC_WZAppliedInit = Nothing
+	    End If
+	    
+	    txt_Condition1_False.Left = m_iLeftVisible
+	    txt_Condition2_False.Left = m_iLeftVisible
+	    txt_Condition3_False.Left = m_iLeftVisible
+	    txt_Condition4_False.Left = m_iLeftVisible
+	    txt_Condition5_False.Left = m_iLeftVisible
+	    txt_Condition6_False.Left = m_iLeftVisible
+	    txt_Condition7_False.Left = m_iLeftVisible
+	    txt_Condition8_False.Left = m_iLeftVisible
+	    
+	    txt_Condition1_True.Left = m_iLeftVisible
+	    txt_Condition2_True.Left = m_iLeftVisible
+	    txt_Condition3_True.Left = m_iLeftVisible
+	    txt_Condition4_True.Left = m_iLeftVisible
+	    txt_Condition5_True.Left = m_iLeftVisible
+	    txt_Condition6_True.Left = m_iLeftVisible
+	    txt_Condition7_True.Left = m_iLeftVisible
+	    txt_Condition8_True.Left = m_iLeftVisible
+	    
+	    Set m_WorkZoneManager = Nothing
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: m_OPC_WZAppliedInit_ValueChange
+	'* Purpose: Manage the OPC variable containing the initialisation applied
+	'* ************************************************************************************************
+	Private Sub m_OPC_WZAppliedInit_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", "Begin Subroutine")
+	    
+	    '* Reset variable used in the animation of tab
+	    If (m_OPC_WZAppliedInit.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", "The status of " & m_OPC_WZAppliedInit.Name & " is Waiting")
+	    ElseIf (m_OPC_WZAppliedInit.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", "The status of " & m_OPC_WZAppliedInit.Name & " is Config Error")
+	    ElseIf (m_OPC_WZAppliedInit.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", "The status of " & m_OPC_WZAppliedInit.Name & " is Not Connected")
+	    ElseIf (m_OPC_WZAppliedInit.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", "The Quality of " & m_OPC_WZAppliedInit.Name & " is not good")
+	    Else
+	        ReadXMLString
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZAppliedInit_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: ReadXMLString
+	'* Purpose: parse the XML in WZAppliedInit and update the display
+	'* ************************************************************************************************
+	Private Sub ReadXMLString()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLString", "Begin Subroutine")
+	
+	    Dim txtCondition() As Variant
+	    Dim bCondition() As Boolean
+	    Dim iCount As Integer
+	    Dim strXMLString As String
+	    Dim oDoc As DOMDocument
+	    Dim oWZList As IXMLDOMNodeList
+	    Dim oWZ As IXMLDOMElement
+	    Dim strSpeed As String
+	    Dim strCondition As String
+	    Dim i As Integer
+	    
+	    Dim iLeftTrue As Integer
+	    Dim iLeftFalse As Integer
+	    
+	    ReDim txtCondition(0)
+	    ReDim bCondition(0)
+	
+	    If Not (m_WorkZoneManager Is Nothing) Then
+	        strXMLString = m_OPC_WZAppliedInit.Value
+	        
+	        If (strXMLString <> "") Then
+	                        
+	            Set oDoc = New DOMDocument
+	            If Not (oDoc Is Nothing) Then
+	                ' Load the XML document from the specified string
+	                If (oDoc.loadXML(strXMLString) = True) Then
+	                    If Not (oDoc.documentElement Is Nothing) Then
+	                        ' Find all the nodes "Condition"
+	                        Set oWZList = oDoc.getElementsByTagName(c_strWorkZoneNode)
+	                        If Not (oWZList Is Nothing) Then
+	                            If (oWZList.length > 0) Then
+	                                Set oWZ = oWZList(0)
+	                                
+	                                ' read the attributes
+	                                strSpeed = oWZ.getAttribute(c_strWZSpeedAttr)
+	                                If (Val(strSpeed) = 255) Then
+	                                    strSpeed = "-"
+	                                End If
+	                                m_OPC_SpeedAnim.Value = strSpeed
+	                            
+	                                iCount = 0
+	                                ' read the condition
+	                                For i = 1 To c_lLineMaxCount
+	                                    strCondition = m_WorkZoneManager.Get_ConditionText(i)
+	                                
+	                                    If (strCondition <> "") Then
+	                                        ReDim Preserve txtCondition(iCount)
+	                                        ReDim Preserve bCondition(iCount)
+	                                    
+	                                        txtCondition(iCount) = strCondition
+	                                        bCondition(iCount) = Format(oWZ.getAttribute(c_strWZCondAttr & i))
+	
+	                                        iCount = iCount + 1
+	                                    End If
+	                                Next i
+	                            Else
+	                                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", _
+	                                         "No Workzone init has been defined in the OPC variable [" & m_OPC_WZAppliedInit.Name & "]")
+	                            
+	                            End If
+	                        Else
+	                                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", _
+	                                         "No Workzone init has been defined in the OPC variable [" & m_OPC_WZAppliedInit.Name & "]")
+	                        
+	                        End If
+	                        Set oWZList = Nothing
+	                    End If
+	                Else
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", _
+	                             "The content of the OPC variable [" & m_OPC_WZAppliedInit.Name & "] has not been loaded")
+	                End If
+	                Set oDoc = Nothing
+	            End If
+	            
+	            ' Prepare and display the condition text list
+	            m_List.FillColumn c_strColumnCondition, txtCondition
+	            m_List.Display
+	        
+	            'fill the condition state
+	            For i = 0 To c_lLineMaxCount - 1
+	                If (i > UBound(txtCondition)) Then
+	                    iLeftTrue = m_iLeftInvisible
+	                    iLeftFalse = m_iLeftInvisible
+	                Else
+	                    If (txtCondition(i) = "") Then
+	                        iLeftTrue = m_iLeftInvisible
+	                        iLeftFalse = m_iLeftInvisible
+	                    Else
+	                        If (bCondition(i)) Then
+	                            iLeftFalse = m_iLeftInvisible
+	                            iLeftTrue = m_iLeftVisible
+	                        Else
+	                            iLeftFalse = m_iLeftVisible
+	                            iLeftTrue = m_iLeftInvisible
+	                        End If
+	                    End If
+	                End If
+	                
+	                Select Case i
+	                Case 0
+	                   txt_Condition1_False.Left = iLeftFalse
+	                   txt_Condition1_True.Left = iLeftTrue
+	                Case 1
+	                   txt_Condition2_False.Left = iLeftFalse
+	                   txt_Condition2_True.Left = iLeftTrue
+	                Case 2
+	                   txt_Condition3_False.Left = iLeftFalse
+	                   txt_Condition3_True.Left = iLeftTrue
+	                Case 3
+	                   txt_Condition4_False.Left = iLeftFalse
+	                   txt_Condition4_True.Left = iLeftTrue
+	                Case 4
+	                   txt_Condition5_False.Left = iLeftFalse
+	                   txt_Condition5_True.Left = iLeftTrue
+	                Case 5
+	                   txt_Condition6_False.Left = iLeftFalse
+	                   txt_Condition6_True.Left = iLeftTrue
+	                Case 6
+	                   txt_Condition7_False.Left = iLeftFalse
+	                   txt_Condition7_True.Left = iLeftTrue
+	                Case 7
+	                   txt_Condition8_False.Left = iLeftFalse
+	                   txt_Condition8_True.Left = iLeftTrue
+	                End Select
+	            
+	            Next i
+	        Else
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", _
+	                     "The OPC variable [" & m_OPC_WZAppliedInit.Name & "] is empty")
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", _
+	                "WorkZone Manager is invalid")
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXMLString", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,113,111,100,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,172,168,153,0,0,0
+	COLOR,6,136,141,155,0,0,0
+	COLOR,7,179,179,179,0,0,0
+COLORS,END
+O,BEGIN,T,"txt_Condition1_False"
+	B,1920,71,2067,95,1920,95,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,71,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition2_False"
+	B,1920,100,2067,124,1920,124,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,100,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition3_False"
+	B,1920,129,2067,153,1920,153,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,129,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition4_False"
+	B,1920,158,2067,182,1920,182,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,158,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition5_False"
+	B,1920,187,2067,211,1920,211,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,187,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition6_False"
+	B,1920,216,2067,240,1920,240,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,216,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition8_False"
+	B,1920,274,2067,298,1920,298,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,274,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition7_False"
+	B,1920,245,2067,269,1920,269,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,245,0,0,FONT,1,"Authorized",36,FONT,1,"Authorized",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Not Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,365,320,4,4,339,320,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape2"
+	B,360,310,8,62,335,310,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,I,"Poly1"
+	B,8,15,360,55,16,23,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,16,15,8,15,8,55,360,55,360,15
+	PP,72,15
+O,END
+O,BEGIN,T,"txt_WZCondition6"
+	B,20000,249,20113,265,20000,265,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,249,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition6%"
+	A,END
+O,END
+O,BEGIN,T,"txt_WZCondition7"
+	B,20000,278,20113,294,20000,294,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,278,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition7%"
+	A,END
+O,END
+O,BEGIN,T,"txt_Condition7_True"
+	B,1920,245,2067,269,1920,269,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,245,0,0,FONT,1,"<Condition7Status>",36,FONT,1,"<Condition7Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition8_True"
+	B,1920,274,2067,298,1920,298,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,274,0,0,FONT,1,"<Condition8Status>",36,FONT,1,"<Condition8Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition5_True"
+	B,1920,187,2067,211,1920,211,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,187,0,0,FONT,1,"<Condition5Status>",36,FONT,1,"<Condition5Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_WZCondition4"
+	B,20000,191,20113,207,20000,207,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,191,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition4%"
+	A,END
+O,END
+O,BEGIN,T,"txt_Condition6_True"
+	B,1920,216,2067,240,1920,240,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,216,0,0,FONT,1,"<Condition6Status>",36,FONT,1,"<Condition6Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_WZCondition5"
+	B,20000,220,20113,236,20000,236,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,220,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition5%"
+	A,END
+O,END
+O,BEGIN,T,"btnRefuse"
+	B,152,325,215,354,152,354,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,152,325,0,0,FONT,2,"Refuse",37,FONT,2,"Refuse",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Close",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"txt_WZCondition2"
+	B,20000,133,20113,149,20000,149,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,133,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition2%"
+	A,END
+O,END
+O,BEGIN,T,"txt_WZCondition3"
+	B,20000,162,20113,178,20000,178,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,162,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition3%"
+	A,END
+O,END
+O,BEGIN,T,"txt_Condition3_True"
+	B,1920,129,2067,153,1920,153,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,129,0,0,FONT,1,"<Condition3Status>",36,FONT,1,"<Condition3Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition4_True"
+	B,1920,158,2067,182,1920,182,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,158,0,0,FONT,1,"<Condition4Status>",36,FONT,1,"<Condition4Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_Condition1_True"
+	B,1920,71,2067,95,1920,95,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,71,0,0,FONT,1,"<Condition1Status>",36,FONT,1,"<Condition1Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_WZCondition0"
+	B,24,75,137,91,24,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,24,75,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition0%"
+	A,END
+O,END
+O,BEGIN,T,"txt_Condition2_True"
+	B,1920,100,2067,124,1920,124,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,1920,100,0,0,FONT,1,"<Condition2Status>",36,FONT,1,"<Condition2Status>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Authorized",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_WZCondition1"
+	B,20000,104,20113,120,20000,120,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,20000,104,0,0,FONT,2,"<WZ Condition>",37,FONT,2,"<WZ Condition>",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<WZ Condition>",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txt_WZCondition1%"
+	A,END
+O,END
+O,BEGIN,T,"txtSpeedRestriction"
+	B,27,25,174,49,27,49,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,27,25,0,0,FONT,1,"<RestrictionSpeed>",36,FONT,1,"<RestrictionSpeed>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<RestrictionSpeed>",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim2",0,0,"",""
+		PP,"RestrictionSpeed%"
+	A,END
+O,END
+O,BEGIN,T,"txt_ATS12"
+	B,24,6,77,22,24,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,24,6,0,0,FONT,2,"Speed",37,FONT,2,"Speed",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Speed",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txt_kph"
+	B,181,29,216,45,181,45,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,181,29,0,0,FONT,2,"kph",37,FONT,2,"kph",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"kph",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,552,200,571,300,10,60,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,6,COLOR,6,1,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,27
+		Size,"450;2593"
+		MousePointer,0
+		Min,0
+		Max,32767
+		Position,0
+		PrevEnabled,1
+		NextEnabled,1
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END

@@ -1,0 +1,461 @@
+ASCII32,16,10,2019,9:34,54,1.1
+W,BEGIN,"Point_InspectorPanel","Point_InspectorPanel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,806,416
+	SIZE,305,365,305,365,0,0,0,1920,1080,295,337
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aguja: PT_18_DEP"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aguja: PT_DH_03_V3_BAN"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Point_InspectorPanel.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	    Option Explicit
+	    
+	    
+	'    Private Sub grpComandos_Click()
+	'
+	'        On Error GoTo ErrorHandler
+	'
+	'        Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	'        ThisMimic.Activate
+	'
+	'        Exit Sub
+	'ErrorHandler:
+	'        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	'    End Sub
+	    
+	    Private Function Mimic_BeforeClose() As Boolean
+	        On Error Resume Next
+	        Variables(ThisMimic.Branch & ".ButtonActivated%").Value = False
+	        Variables.Item(ThisMimic.Branch & ".blinking%").Value = False
+	    End Function
+	    
+	    Private Sub Mimic_Open()
+	        Dim iMonitor As Integer
+	        Dim sQNRENorte As String, sQNRESul As String
+	        Dim objMimic As Mimic
+	        On Error GoTo ErrorHandler
+	        Dim SPKSGroupName As String
+	        Dim osymbol As Symbol
+	 
+	  
+	        
+	        For Each objMimic In Application.ActiveProject.Mimics
+	        If (objMimic.FileName Like ThisMimic.FileName) Then
+	            If Not (objMimic.Branch = ThisMimic.Branch) Then
+	                objMimic.Close
+	            End If
+	        End If
+	    Next
+	    
+	        iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	        If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	        If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	    
+	        'Me.Caption = "   Aguja " & Variables(ThisMimic.Branch & ".Name%").Value
+	        Dim BranchName() As String
+	        BranchName = Split(ThisMimic.Branch, ":")
+	        Me.Caption = "Aguja: " & BranchName(1)
+	    
+	        SPKSGroupName = GetSPKSName(ThisMimic.Branch)
+	        Set osymbol = Me.Graphics.Item("SPKS_Status")
+	        osymbol.LocalBranch = "OPCCluster:@" & SPKSGroupName
+	        
+	        Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	        ThisMimic.Activate
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    End Sub
+	    
+	'* Subroutine: GetGTIZName
+	    '* Retrieves the Key group name based on the point equipment selected.
+	    '* ************************************************************************************
+	    Private Function GetSPKSName(strBranchPointName As String) As String
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "GetSPKSName", "Begin Function")
+	        Dim strPointName As String
+	        Dim lPos As Long
+	        '* Retrieve the area name
+	        lPos = InStrRev(strBranchPointName, ":", -1, vbTextCompare)
+	        If (lPos > 0) Then
+	            strPointName = Mid(strBranchPointName, lPos + 1)
+	        Else
+	            strPointName = strBranchPointName
+	        End If
+	       
+	        'To Extract the GTIZ object name from the point name from the GTIZ_List.xml located in the HMI working files folder.
+	        Dim strXMLString As String
+	        Dim oDoc As DOMDocument
+	        Dim oSPKSElementsList As IXMLDOMNodeList
+	        Dim oSPKSElement As IXMLDOMElement
+	        Dim oPointElementsList As IXMLDOMNodeList
+	        Dim oPointElement As IXMLDOMElement
+	        Dim str_Temp As String
+	        Dim i As Integer
+	        Dim c_strCurrentAreaAttr As String
+	        Dim c_strIDAttr As String
+	        Dim c_strNameAttr As String
+	       
+	        c_strIDAttr = "ID"
+	        c_strCurrentAreaAttr = "SPKS"
+	        c_strNameAttr = "Name"
+	    
+	        strXMLString = ThisProject.Path & "\Working Files\GDL_SPKSList.xml"
+	        
+	        Set oDoc = New DOMDocument
+	        
+	        If (oDoc.Load(strXMLString) = True) Then
+	            
+	            Set oSPKSElementsList = oDoc.documentElement.selectNodes("//" & c_strCurrentAreaAttr)
+	        
+	                For Each oSPKSElement In oSPKSElementsList
+	                    Set oPointElementsList = oSPKSElement.selectNodes(".//" & "Point")
+	                     For Each oPointElement In oPointElementsList
+	                        If oPointElement.Text = strPointName Then
+	                            GetSPKSName = oSPKSElement.getAttribute(c_strNameAttr)
+	                            Set oSPKSElementsList = Nothing
+	                            Set oPointElementsList = Nothing
+	                            Set oDoc = Nothing
+	                            Exit Function
+	                        End If
+	                    Next oPointElement
+	                   
+	                Next oSPKSElement
+	    
+	            Set oSPKSElementsList = Nothing
+	            Set oPointElementsList = Nothing
+	            
+	        End If
+	        
+	        Set oDoc = Nothing
+	     
+	    Exit Function
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "GetSPKSName", Err.Description)
+	    End Function
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,0,0,0,0,35,0
+	COLOR,6,0,0,0,0,46,0
+	COLOR,7,113,111,100,0,0,0
+	COLOR,8,0,0,0,0,44,0
+COLORS,END
+O,BEGIN,P,"Poly1"
+	B,10,10,285,330,18,10,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,18,10,106,10,114,18,114,41,285,41
+	PP,285,330,10,330,10,18
+O,END
+O,BEGIN,T,"Text5"
+	B,18,18,103,34,18,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,18,18,0,0,FONT,1,"Inspe‡Ýo",37,FONT,1,"Inspe‡Ýo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informaci¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Informaci¢n",FONT,1,37
+			ROLE,0,"Informaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"grpComandos"
+	B,114,10,218,41,114,41,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,114,10,218,41,122,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,122,10,210,10,218,18,218,41,114,41
+		PP,114,18
+	O,END
+	O,BEGIN,T,"Text1"
+		B,122,18,207,34,122,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,122,18,0,0,FONT,1,"Comandos",37,FONT,1,"Comandos",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Control",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Control",FONT,1,37
+				ROLE,0,"Control",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		PP,"Point_InspectorPanel_Control","*",1,0,1,0,"Point_InspectorPanel","*",0
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,186,85,246,109,186,109,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,5,COLOR,6,0,COLOR,3,0,COLOR,3,0,COLOR,7,0,COLOR,7
+	PP,1,186,85,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMIBlocking.Template.iEqpState",""
+		ADVFORMAT,2,"[<0]\'S¡\';[>0]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+				ROLE,0,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,33,89,113,105,33,105,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,33,89,0,0,FONT,1,"Modo de marcha",37,FONT,1,"Modo de marcha",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Block",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Bloqueada",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,186,124,246,148,186,148,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,5,COLOR,6,0,COLOR,3,0,COLOR,3,0,COLOR,7,0,COLOR,7
+	PP,1,186,124,0,0,FONT,1,"Activado",37,FONT,1,"Activado",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1," ",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMILocked.Template.iEqpState",""
+		ADVFORMAT,2,"[<0]\'S¡\';[>0]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+				ROLE,0,"[<0]\'S¡\';[>0]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,33,129,115,145,33,145,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,33,129,0,0,FONT,1,"Ocupaci¢n",37,FONT,1,"Ocupaci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Locked",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Enclavada",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,186,163,267,187,186,187,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,5,COLOR,6,0,COLOR,3,0,COLOR,3,0,COLOR,7,0,COLOR,7
+	PP,1,186,163,0,0,FONT,1,"Activado",37,FONT,1,"Activado",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMI.Template.iEqpState",""
+		ADVFORMAT,2,"[<0]\'?\';[=0]\'Normal\';[<3]\'Desviada\';[=3]\'Normal\';[>3]\'?\';@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'?\';[=0]\'Normal\';[<3]\'Desviada\';[=3]\'Normal\';[>3]\'?\';"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'?\';[=0]\'Normal\';[<3]\'Desviada\';[=3]\'Normal\';[>3]\'?\';"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text9"
+	B,33,169,113,185,33,185,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,33,169,0,0,FONT,1,"Ocupaci¢n",37,FONT,1,"Ocupaci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Positi¢n",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Posici¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text14"
+	B,186,202,246,226,186,226,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,5,COLOR,6,0,COLOR,3,0,COLOR,3,0,COLOR,7,0,COLOR,7
+	PP,1,186,202,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"INHIBIT.Status.Value",""
+		ADVFORMAT,2,"[=0]\'No\';\'S¡\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[==0]\'No\';\'S¡\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[=0]\'No\';\'S¡\'"
+				ROLE,0,"[==0]\'No\';\'S¡\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text15"
+	B,33,203,164,219,33,219,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,33,203,0,0,FONT,1,"Enclavada",36,FONT,1,"Enclavada",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mantainence",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Mantenimiento",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,33,245,176,261,33,261,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,33,245,0,0,FONT,1,"Mantenimiento",36,FONT,1,"Mantenimiento",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mantenimiento(SPKS)",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Mantenimiento(SPKS)",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"SPKS_Status"
+	B,186,241,246,265,186,265,65535,0,6400,0,1,0,0
+	PP,"SPKS_Status","OPCCluster:@",186,241,246,265,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,R,"Shape1"
+	B,105,38,16,15,105,38,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END

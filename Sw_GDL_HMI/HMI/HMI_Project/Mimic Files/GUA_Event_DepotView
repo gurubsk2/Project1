@@ -1,0 +1,1097 @@
+ASCII32,24,9,2018,12:22,51,1.1
+W,BEGIN,"GUA_Event_DepotView","GUA_Event"
+	TEMPLATE,"TemplateTaller_Alarms",0,1,1,1,0,0,1,1,1,1,0,0
+	POSITION,-1,-2
+	SIZE,1920,1200,1920,1200,0,0,0,3840,1080,1920,1200
+	BACKCOLOR,24,61,73,0,34,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+	GRID,0,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GUA_Event_DepotView.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	
+	
+	Public bUpdating As Boolean
+	
+	Private Sub btncerrar_Click()
+	On Error GoTo ErrorHandler
+	'Variables.Item("@Talleres%").Value = "Talleres"
+	Variables.Item("@Talleres" & GetmousepointerPossition & "%").Value = "Talleres"
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "btncerrar_Click", "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'
+	''Quality                            4
+	''Name                               5
+	''Label                              6
+	''State                              7
+	''Severity (alarm)                   8
+	''Time of Activation                 9
+	''Time of Inactivation               10
+	''Time of Ack                        11
+	''Time of Transition                 12
+	''Transition                         13
+	''Time of Activity                   14
+	''Help                               18
+	''Mimic                              19
+	''Time stamp validity                20
+	''Activation Time stamp validity     21
+	''Deactivation Time stamp validity   22
+	''Activity Time stamp validity       23
+	''Date                               24
+	''Event Type                         25
+	''Object Name                        26
+	''Event Name                         27
+	''FuncName                           28
+	''AreaName                           29
+	''UserName                           30
+	''TypeName                           31
+	''Event Message                      32
+	''Severity                           33
+	
+	
+	
+	Private Sub cbxEstacao_Change()
+	    Dim sSub As String
+	    
+	'    If chk_Scada Then sSub = "System;"
+	'    If chk_ATS Then sSub = sSub & "SIG;"
+	'    If chk_Power Then sSub = sSub & "ENE;"
+	'    If chk_Facilities Then sSub = sSub & "AUX;"
+	    
+	    If bUpdating Then Exit Sub
+	    sSub = "SIG;"
+	    Call FillComboBox(cbxEquipamento, "Tipo", sSub, cbxEstacao)
+	
+	End Sub
+	
+	
+	Private Sub cmdApply_filter_Click()
+	    Dim sAuxFiltroGrupoEquipamento As String
+	    Dim sTipoDataHora As String
+	    Dim StrFiltro As String, sSub As String
+	    Dim StrStation As String, VerDataHora, sCaracStr, sLCaracStr, sRCaracStr, sCaracStrSize, iCount, sFCaracStr, bSpecialCarac, StrFilterEquip, StrFilterEquiptxt, StrFilterStation, StrFilterStationtxt
+	   ' Dim StrFilterStation As String
+	
+	    On Error GoTo ErrorHandler
+	 
+	    'Preparar Filtro por DATA
+	    If [sS2KDataIniEventos%] <> "" And [sS2KDataFimEventos%] <> "" Then
+	        StrFiltro = "[] " & [sS2KDataIniEventos%] & "," & [sS2KDataFimEventos%]     'aplicar o filtro com as duas datas como parametro
+	    ElseIf [sS2KDataIniEventos%] <> "" Then
+	        StrFiltro = ">= " & [sS2KDataIniEventos%]    'aplicar o filtro de data com o valor da data inicial
+	    ElseIf [sS2KDataFimEventos%] <> "" Then
+	        StrFiltro = "<= " & [sS2KDataFimEventos%]    'aplicar o filtro de data com o valor da data final
+	    Else
+	        StrFiltro = vbNullString 'nao aplicara filtro de data/hora
+	    End If
+	    S2KAlarmViewer2.SetFilter 3, 24, StrFiltro
+	    
+	    
+	    'Preparar Filtro por Tipo del Equip
+	      
+	    
+	    'Filtrar por Nome de equipamento
+	    If UCase(txtNome.Value) = vbNullString Then
+	       S2KAlarmViewer2.SetFilter 3, 26, vbNullString
+	    Else
+	        'Verify * in equipment name
+	
+	        sCaracStr = UCase(txtNome.Value)
+	        sLCaracStr = Asc(sCaracStr)
+	        sRCaracStr = Right(sCaracStr, 1)
+	        'sLCaracStr = Left(sCaracStr, 1)
+	        
+	        sCaracStrSize = Len(sCaracStr)
+	    
+	            For iCount = 1 To sCaracStrSize
+	             sFCaracStr = Mid(sCaracStr, iCount, 1)
+	                If Asc(sFCaracStr) = "42" Then
+	                bSpecialCarac = True
+	                End If
+	            Next iCount
+	
+	        If Asc(sRCaracStr) = "42" And sLCaracStr = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 26, "= " & txtNome.Value
+	        ElseIf Asc(sRCaracStr) = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 26, "= " & txtNome.Value
+	        ElseIf sLCaracStr = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 26, "= " & txtNome.Value
+	        ElseIf bSpecialCarac = True Then
+	           S2KAlarmViewer2.SetFilter 3, 26, "= " & txtNome.Value
+	        Else
+	           S2KAlarmViewer2.SetFilter 3, 26, "= " & "*" & txtNome.Value & "*"
+	        End If
+	
+	    End If
+	
+	    'Filtrar por Description del equipamiento
+	    If UCase(txtEventDescription.Value) = vbNullString Then
+	       S2KAlarmViewer2.SetFilter 3, 32, vbNullString
+	    Else
+	        'Verify * in equipment description
+	
+	        sCaracStr = UCase(txtEventDescription.Value)
+	        sLCaracStr = Asc(sCaracStr)
+	        sRCaracStr = Right(sCaracStr, 1)
+	        'sLCaracStr = Left(sCaracStr, 1)
+	        
+	        sCaracStrSize = Len(sCaracStr)
+	    
+	            For iCount = 1 To sCaracStrSize
+	             sFCaracStr = Mid(sCaracStr, iCount, 1)
+	                If Asc(sFCaracStr) = "42" Then
+	                bSpecialCarac = True
+	                End If
+	            Next iCount
+	
+	        If Asc(sRCaracStr) = "42" And sLCaracStr = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 32, "= " & txtEventDescription.Value
+	        ElseIf Asc(sRCaracStr) = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 32, "= " & txtEventDescription.Value
+	        ElseIf sLCaracStr = "42" Then
+	            S2KAlarmViewer2.SetFilter 3, 32, "= " & txtEventDescription.Value
+	        ElseIf bSpecialCarac = True Then
+	           S2KAlarmViewer2.SetFilter 3, 32, "= " & txtEventDescription.Value
+	        Else
+	           S2KAlarmViewer2.SetFilter 3, 32, "= " & "*" & txtEventDescription.Value & "*"
+	        End If
+	
+	    End If
+	
+	    'Set severity
+	    S2KAlarmViewer2.SetFilter 3, 33, "[] 1, 1000"
+	
+	    'Aplicar Filtro
+	    S2KAlarmViewer2.ApplyFilters 3
+	    
+	    'Preparar Filtro por Localiza‡ao, Tipo de Equipamento e Tipo de Alarme
+	'    If chk_Scada Then sSub = "System;"
+	'    If chk_ATS Then sSub = sSub & "SIG;"
+	'    If chk_Power Then sSub = sSub & "ENE;"
+	'    If chk_Facilities Then sSub = sSub & "AUX;"
+	    
+	    sSub = "SIG;"
+	    StrFiltro = FindArea(cbxEstacao, cbxEquipamento, sSub)
+	
+	    S2KAlarmViewer2.SetGroups StrFiltro
+	
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "cmdApply_filter_Click", Err.Description)
+	
+	End Sub
+	
+	
+	
+	Private Sub cmdCancelFilter_Click()
+	    CleanFilters
+	    
+	End Sub
+	
+	Private Sub cmdRefresh_Click()
+	    S2KAlarmViewer2.RefreshEventView
+	    
+	End Sub
+	
+	Private Sub Mimic_Open()
+	    Dim sSub As String
+	
+	On Error Resume Next
+	
+	'    cbxEquipamento.AddItem "Todos"
+	'    cbxEstacao.AddItem "Area_TZA"
+	'    cbxEstacao.AddItem "Area_BAN"
+	'    cbxEstacao.AddItem "Area_NIL"
+	    
+	    'sSub is used for the subsystem, we need to confirm it with Rodrigo in the configuration
+	    'We'll chage it later, when the configuration generate the files "FilterConfigArea.txt" and "FilterConfigFunction.txt"
+	    'Let's use SIG, because the configuration file was created with this
+	    sSub = "SIG;"
+	    bUpdating = True
+	    Call FillComboBox(cbxEstacao, "Local", sSub)
+	    Call FillComboBox(cbxEquipamento, "Tipo", sSub)
+	    bUpdating = False
+	
+	    If [sS2KDataIniEventos%] Is Nothing Then Variables.Add "sS2KDataIniEventos%", fvVariableTypeText
+	    If [sS2KDataFimEventos%] Is Nothing Then Variables.Add "sS2KDataFimEventos%", fvVariableTypeText
+	    If [txtDataIniEventos%] Is Nothing Then Variables.Add "txtDataIniEventos%", fvVariableTypeText
+	    If [txtDataFimEventos%] Is Nothing Then Variables.Add "txtDataFimEventos%", fvVariableTypeText
+	    If [txtHoraIniEventos%] Is Nothing Then Variables.Add "txtHoraIniEventos%", fvVariableTypeText
+	    If [txtHoraFimEventos%] Is Nothing Then Variables.Add "txtHoraFimEventos%", fvVariableTypeText
+	    CleanFilters
+	
+	End Sub
+	
+	Function CleanFilters()
+	    
+	    cbxEstacao.ListIndex = 0
+	    cbxEquipamento.ListIndex = 0
+	'    cbxEstado.ListIndex = 0
+	'    cbxSeveridade.ListIndex = 0
+	    
+	    txtNome.Value = vbNullString
+	    txtEventDescription.Value = vbNullString
+	
+	    Variables.Item("txtDataIniEventos%").Value = "__.__.__"
+	    Variables.Item("txtDataFimEventos%").Value = "__.__.__"
+	    Variables.Item("txtHoraIniEventos%").Value = "__:__:__"
+	    Variables.Item("txtHoraFimEventos%").Value = "__:__:__"
+	    [sS2KDataIniEventos%] = ""
+	    [sS2KDataFimEventos%] = ""
+	
+	    S2KAlarmViewer2.SetFilter 3, 24, ""
+	    S2KAlarmViewer2.SetFilter 3, 26, ""
+	    S2KAlarmViewer2.SetFilter 3, 32, ""
+	    S2KAlarmViewer2.SetFilter 3, 33, "[] 1, 1000"
+	    S2KAlarmViewer2.ApplyFilters 3
+	    S2KAlarmViewer2.SetGroups ""
+	
+	End Function
+	
+	
+	'Private Function SetGroups()
+	'Dim sGroupFilter As String
+	'Dim sATS As String
+	'
+	'sATS = "UEVOL_REG_GDL_L3.ATS_2.Area/LI_GDL_L3/ML_GDL_L3"
+	'
+	'If cbxEstacao.Value = "Area_TZA" Then
+	'sGroupFilter = sATS & "/Territory_6/Area_TZA"
+	'ElseIf cbxEstacao.Value = "Area_BAN" Then
+	'sGroupFilter = sATS & "/Territory_5/Area_BAN"
+	'ElseIf cbxEstacao.Value = "Area_NIL" Then
+	'sGroupFilter = sATS & "/Territory_4/Area_NIL"
+	'ElseIf cbxEstacao.Value = "Area_NIL" Then
+	'sGroupFilter = sATS & "/Territory_3/Area_NIL"
+	'End If
+	'S2KAlarmViewer2.SetGroups sGroupFilter
+	'End Function
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-13,0,700,0,0,"Arial Narrow",0,0
+	FONT,4,-19,0,700,0,0,"Arial",0,0
+	FONT,5,-21,0,400,0,0,"Arial",0,0
+	FONT,6,-15,0,400,0,0,"Arial",0,178
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,130,130,130,0,0,0
+	COLOR,3,76,74,70,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,0,0,128,0,0,0
+	COLOR,7,128,128,128,0,0,0
+	COLOR,8,172,168,153,0,0,0
+	COLOR,9,0,0,0,0,0,1
+	COLOR,10,157,157,161,0,0,0
+	COLOR,11,176,176,176,0,0,0
+	COLOR,12,96,96,96,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,1906,673,1635,247,1906,673,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"Text34"
+	B,1796,392,1872,407,1796,407,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,1796,392,0,0,FONT,1,"Todos",36,FONT,1,"Todos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Todos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text37"
+	B,1796,395,1872,410,1796,410,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,1796,395,0,0,FONT,1,"Todos",36,FONT,1,"Todos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Todos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape7"
+	B,1901,358,1639,252,1901,358,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text14"
+	B,1640,269,1899,285,1640,285,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1640,269,0,0,FONT,2,"Fecha y Hora",37,FONT,2,"Fecha y Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,0
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text39"
+	B,1640,253,1899,267,1640,267,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1640,253,0,0,FONT,2,"FILTROS",37,FONT,2,"FILTROS",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"FILTROS",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"FILTROS",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text40"
+	B,1645,332,1729,355,1645,355,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,1645,332,0,0,FONT,2,"Final",37,FONT,2,"Final",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Final",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Final",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraEventsEnd","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"Text43"
+	B,1645,306,1729,329,1645,329,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,1645,306,0,0,FONT,2,"Inicial",37,FONT,2,"Inicial",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraEventsBeg","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"Text44"
+	B,1754,290,1795,305,1754,305,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1754,290,0,0,FONT,3,"Fecha ",37,FONT,3,"Fecha ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha ",FONT,3,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text45"
+	B,1827,291,1868,306,1827,306,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1827,291,0,0,FONT,3,"Fecha",37,FONT,3,"Fecha",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,3,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text46"
+	B,1737,310,1812,325,1737,325,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1737,310,0,0,FONT,2," . . ",37,FONT,2," . . ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtDataIniEventos%"
+	A,END
+O,END
+O,BEGIN,T,"Text47"
+	B,1816,310,1878,325,1816,325,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1816,310,0,0,FONT,2," : : ",37,FONT,2," : : ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtHoraIniEventos%"
+	A,END
+O,END
+O,BEGIN,T,"Text48"
+	B,1737,336,1812,351,1737,351,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1737,336,0,0,FONT,2," . . ",37,FONT,2," . . ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtDataFimEventos%"
+	A,END
+O,END
+O,BEGIN,T,"Text49"
+	B,1816,336,1878,351,1816,351,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1816,336,0,0,FONT,2," : : ",37,FONT,2," : : ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtHoraFimEventos%"
+	A,END
+O,END
+O,BEGIN,R,"Shape8"
+	B,1905,810,1634,683,1905,810,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"cmdApply_filter"
+	B,1647,690,1891,717,1647,717,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,1647,690,0,0,FONT,2,"Aplicar Filtro",37,FONT,2,"Aplicar Filtro",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar Filtro",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar Filtro",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdCancelFilter"
+	B,1647,733,1891,760,1647,760,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,1647,733,0,0,FONT,2,"Quitar Filtro",37,FONT,2,"Quitar Filtro",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Quitar Filtro",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Quitar Filtro",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdPrintEvents"
+	B,1647,776,1891,803,1647,803,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,10,0,COLOR,10,0,COLOR,4,0,COLOR,4
+	PP,1,1647,776,0,0,FONT,2,"Imprimir Eventos",37,FONT,2,"Imprimir Eventos",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imprimir Eventos",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imprimir Eventos",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape21"
+	B,1906,983,1635,819,1906,983,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"Text54"
+	B,1639,823,1901,842,1639,842,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1639,823,0,0,FONT,4,"EXPORTACIaN",37,FONT,4,"EXPORTACIaN",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"EXPORTACION",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"EXPORTACION",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape23"
+	B,1900,922,1638,846,1900,922,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"txtfile"
+	B,1640,847,1899,863,1640,863,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1640,847,0,0,FONT,2,"Formato del Archivo",37,FONT,2,"Formato del Archivo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Formato del Archivo",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Formato del Archivo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxFormatFile"
+	B,1657,878,1770,905,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"cmdRefresh"
+	B,1648,943,1892,970,1648,970,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,10,0,COLOR,10,0,COLOR,4,0,COLOR,4
+	PP,1,1648,943,0,0,FONT,2,"Actualizaci¢n",37,FONT,2,"Actualizaci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Actualizaci¢n",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Actualizaci¢n",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdExport"
+	B,1782,875,1895,905,1782,905,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,10,0,COLOR,10,0,COLOR,4,0,COLOR,4
+	PP,1,1782,875,0,0,FONT,2,"Exportar",37,FONT,2,"Exportar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Exportar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Exportar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape28"
+	B,1902,417,1640,366,1902,417,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text65"
+	B,1641,367,1900,383,1641,383,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1641,367,0,0,FONT,2,"Localizati¢n",37,FONT,2,"Localizati¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicaci¢n",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicaci¢n",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxEstacao"
+	B,1652,389,1887,413,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape29"
+	B,1902,506,1640,455,1902,506,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text66"
+	B,1642,456,1901,472,1642,472,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1642,456,0,0,FONT,2,"Tipo del Equipo",37,FONT,2,"Tipo del Equipo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxEquipamento"
+	B,1654,476,1889,500,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape30"
+	B,1900,585,1638,534,1900,585,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text67"
+	B,1640,535,1899,551,1640,551,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1640,535,0,0,FONT,2,"Nombre del Equipo",37,FONT,2,"Nombre del Equipo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtNome"
+	B,1652,556,1887,580,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape34"
+	B,1901,663,1639,612,1901,663,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text68"
+	B,1640,613,1899,629,1640,629,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1640,613,0,0,FONT,2,"Descripci¢n del Evento",37,FONT,2,"Descripci¢n del Evento",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n del Evento",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n del Evento",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text117"
+	B,776,229,1626,243,776,243,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,776,229,10,0,FONT,2,"Descripci¢n Alarma",36,FONT,2,"Descripci¢n Alarma",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1036
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n Alarma",FONT,2,36
+		LANG,END
+		LANG,BEGIN,1036
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Libell‚ Alarme",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape26"
+	B,1628,249,5,229,1628,249,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text64"
+	B,1483,232,1626,247,1483,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,1483,232,10,0,FONT,2,"Usuario",36,FONT,2,"Usuario",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Usuario",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Usuario",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text7"
+	B,7,232,146,247,7,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,7,232,10,0,FONT,2,"Fecha y Hora",36,FONT,2,"Fecha y Hora",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,410,232,705,247,410,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,410,232,10,0,FONT,2,"Tipo del Equipo",36,FONT,2,"Tipo del Equipo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text9"
+	B,907,232,1480,247,907,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,907,232,10,0,FONT,2,"Descripci¢n Evento",36,FONT,2,"Descripci¢n Evento",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n Evento",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n Evento",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text10"
+	B,250,232,407,247,250,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,250,232,10,0,FONT,2,"Ubicac¡on",36,FONT,2,"Ubicac¡on",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicac¡on",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicac¡on",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text11"
+	B,708,232,904,247,708,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,708,232,10,0,FONT,2,"Nombre del Equipo",36,FONT,2,"Nombre del Equipo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text12"
+	B,149,232,247,247,149,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,149,232,10,0,FONT,2,"Clasificaci¢n",36,FONT,2,"Clasificaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Clasificaci¢n",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Clasificaci¢n",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"S2KAlarmViewer2"
+	B,3,252,1627,1148,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"txtEventDescription"
+	B,1652,634,1887,658,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text38"
+	B,1655,560,1731,575,1655,575,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,1655,560,0,0,FONT,1,"Todos",36,FONT,1,"Todos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Todos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,1645,306,1729,329,1645,329,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,1645,306,0,0,FONT,2,"Inicial",37,FONT,2,"Inicial",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraEventsBeg","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,1645,306,1729,329,1645,329,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	PP,1,1645,306,0,0,FONT,2,"Inicial",37,FONT,2,"Inicial",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraEventsBeg","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,752,8,859,32,743,40,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,752,8,0,0,FONT,5,"",37,FONT,5,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," Eventos ",FONT,5,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,263,8,486,32,263,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,263,8,0,0,FONT,5," Eventos ",37,FONT,5," Eventos ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guadalajara - Linea 3",FONT,5,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,1467,4,1524,17,1467,17,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,1467,4,2,0,FONT,1,"Servidor",37,FONT,1,"Servidor",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Servidor",FONT,1,37
+		LANG,END
+		LANG,BEGIN,14337
+			ROLE_DEFAULT,0
+			ROLE,0,"¥a€ ",FONT,6,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text16"
+	B,1624,4,1673,17,1624,17,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,1624,4,2,0,FONT,1,"Fecha",37,FONT,1,"Fecha",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha",FONT,1,37
+		LANG,END
+		LANG,BEGIN,14337
+			ROLE_DEFAULT,0
+			ROLE,0,"¥a€ ",FONT,6,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text20"
+	B,1781,4,1830,17,1781,17,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,1781,4,2,0,FONT,1,"Hora",37,FONT,1,"Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,1,37
+		LANG,END
+		LANG,BEGIN,14337
+			ROLE_DEFAULT,0
+			ROLE,0,"¥a€ ",FONT,6,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btncerrar1"
+	B,1730,999,1814,1022,1730,1022,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,1730,999,0,0,FONT,2,"Cerrar",37,FONT,2,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"GUA_Event_DepotView","*"
+	A,END
+O,END

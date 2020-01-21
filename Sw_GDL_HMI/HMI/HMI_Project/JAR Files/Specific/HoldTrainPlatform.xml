@@ -1,0 +1,5 @@
+<HoldTrainPlatform>
+	<IniPlat>Plataforma Inicial</IniPlat>
+	<Train>Identificador único do trem (UniqueID)</Train>
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove e '1' aplica-->
+</HoldTrainPlatform>

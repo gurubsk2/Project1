@@ -1,0 +1,731 @@
+ASCII32,24,10,2016,6:52,39,1.1
+W,BEGIN,"Train_ServiceID","Train_ServiceID"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,592,440
+	SIZE,230,135,230,135,0,0,0,1280,1024,224,113
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Asociar servicio 1"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Destino Trem G13"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,2,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Train_ServiceID.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      TrainIndicatorManoeuvreCtrl
+	'* *******************************************************************************************
+	'* Purpose:     It manages: -
+	'*                  - display of the title in the title bar of the Mimic
+	'*                  - display of the label OK of the button
+	'*                  - combobox containing the list of destinations
+	'*                  - the command sending
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Danish Draboo
+	'* Date:                Oct '08
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              CR ALPHA 118291
+	'*                      Modify ReadXmlDestinations function
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 120759 and CR ALPHA 123600
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 123719
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320 - 7)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846 - B)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ------------------------------------------------------
+	Option Explicit
+	
+	Dim WithEvents OPC_HMITrainID           As Variable
+	Dim WithEvents OPC_UniqueID             As Variable
+	Dim WithEvents OPC_Destinations         As Variable
+	Dim WithEvents OPC_Command              As Variable
+	Dim WithEvents OPC_TrainMode            As Variable
+	Dim WithEvents OPC_TrainDestination     As Variable
+	Dim collDestinations                    As Object
+	Dim sLastTrainDestination               As String
+	Dim sNewTrainDestination                As String
+	Dim strInterposeCommand                 As String
+	Dim bBtnOK                              As Boolean
+	Dim bModeMainLine                       As Boolean
+	
+	
+	Public Sub Clear()
+	
+	End Sub
+	
+	Private Sub btnOK1_Click()
+	
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose:
+	'*      - Disables the "OK" button and the combo box
+	'*      - Subscribes all the OPC variables to the collection of variables
+	'* ---------------------------------------------------------------------------------
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	
+	    If Variables(Me.Branch & ".Attributes.HMITETrain.boolPlug_1").Value Then
+	        Me.Caption = "   Desasociar servicio " & Variables(ThisMimic.Branch & ".Attributes.HMITETrain.bstrPlug_5").Value
+	        Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 1
+	        txtService.Enabled = False
+	        txtService.Text = Variables(ThisMimic.Branch & ".Attributes.HMITETrain.bstrPlug_1").Value
+	    Else
+	        Me.Caption = "   Asociar servicio " & Variables(ThisMimic.Branch & ".Attributes.HMITETrain.bstrPlug_5").Value
+	        Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 0
+	        txtService.Enabled = True
+	        txtService = ""
+	    End If
+	
+	'
+	'    Dim arrBranchInfo() As String
+	'    Dim strClusterName As String
+	'
+	'    '* Disable the "OK" button
+	'    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 0
+	'
+	'    '* Disable the combo box
+	'    ComboBoxDestinations.Enabled = False
+	'    ComboBoxDestinations.Clear
+	'
+	'    '* OPC variable containing the name (HMITrainID) of the train
+	'    Set OPC_HMITrainID = Variables.Add(ThisMimic.Branch & ".TDS.bstrHMITrainID", fvVariableTypeText)
+	'    If (OPC_HMITrainID.EnableEvents = True) Then
+	'        If (OPC_HMITrainID.Status = fvVariableStatusGood) Then
+	'            OPC_HMITrainID_ValueChange
+	'        End If
+	'    End If
+	'    OPC_HMITrainID.EnableEvents = True
+	'
+	'    '* OPC variable containing the identifier (UniqueID) of the train
+	'    Set OPC_UniqueID = Variables.Add(ThisMimic.Branch & ".TDS.iTrainID", fvVariableTypeRegister)
+	'    If (OPC_UniqueID.EnableEvents = True) Then
+	'        If (OPC_UniqueID.Status = fvVariableStatusGood) Then
+	'            OPC_UniqueID_ValueChange
+	'        End If
+	'    End If
+	'    OPC_UniqueID.EnableEvents = True
+	'
+	'    '* OPC variable containing the list of destinations where the train can be automatically moved
+	'    Set OPC_Destinations = Variables.Add(ThisMimic.Branch & ".TIX.ManeuverDestinationList", fvVariableTypeText)
+	'    If (OPC_Destinations.EnableEvents = True) Then
+	'        If (OPC_Destinations.Status = fvVariableStatusGood) Then
+	'            OPC_Destinations_ValueChange
+	'        End If
+	'    End If
+	'    OPC_Destinations.EnableEvents = True
+	'
+	'    '* Extract the cluster name from the branch of the mimic
+	'    arrBranchInfo = Split(ThisMimic.Branch, ":")
+	'    If (UBound(arrBranchInfo) <> -1) Then
+	'        strClusterName = arrBranchInfo(0)
+	'    End If
+	'
+	'    '* OPC variable in which the command will be sent
+	'    Set OPC_Command = Variables.Add(strClusterName & ":IconisMain.TrainIDModule.TrainID.bstrInterposeBerth", fvVariableTypeText)
+	'    If (OPC_Command.EnableEvents = True) Then
+	'        If (OPC_Command.Status = fvVariableStatusGood) Then
+	'            OPC_Command_ValueChange
+	'        End If
+	'    End If
+	'    OPC_Command.EnableEvents = True
+	'
+	'    '* OPC variable containing the name (HMITrainID) of the train
+	'    Set OPC_TrainMode = Variables.Add(ThisMimic.Branch & ".TAO.iOperatingMode", fvVariableTypeRegister)
+	'    If (OPC_TrainMode.EnableEvents = True) Then
+	'        If (OPC_TrainMode.Status = fvVariableStatusGood) Then
+	'            OPC_TrainMode_ValueChange
+	'        End If
+	'    End If
+	'    OPC_TrainMode.EnableEvents = True
+	'
+	'    '* OPC variable containing the name (HMITrainID) of the train
+	'    Set OPC_TrainDestination = Variables.Add(ThisMimic.Branch & ".TIX.CurrentDestinationSiding", fvVariableTypeText)
+	'    If (OPC_TrainDestination.EnableEvents = True) Then
+	'        If (OPC_TrainDestination.Status = fvVariableStatusGood) Then
+	'            OPC_TrainDestination_ValueChange
+	'        End If
+	'    End If
+	'    OPC_TrainDestination.EnableEvents = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Subroutine: btnOK_Click
+	'* Purpose: - Build string corresponding to the command to be sent
+	'*          - Set the result in the variable associated to the OPC variable command
+	'* ---------------------------------------------------------------------------------
+	Private Sub btnOK_Click()
+	    Dim sInterposeCmd As String
+	    Dim iUniqID As Integer
+	    
+	    If Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 0 Then Exit Sub
+	
+	    iUniqID = GetTrainUniqueID(Me.Branch)
+	
+	    If Variables(Me.Branch & ".Attributes.HMITETrain.boolPlug_1").Value Then
+	        'Remove service ID
+	        'sInterposeCmd = "%UniqueID%|" & iUniqID & "|ManualDissociation|0" 'Dissociation on next stop or train stopped
+	        sInterposeCmd = "%UniqueID%|" & iUniqID & "|ManualDissociation|1" 'Immediate dissociation
+	    Else
+	        'Send new service ID
+	        sInterposeCmd = "%UniqueID%|" & iUniqID & "|ManualAssociationToTimetableTrip|" & txtService.Value
+	    End If
+	        
+	    SendTrainInterposeCmd (sInterposeCmd)
+	    Me.Close fvDoNotSaveChanges
+	
+	
+	'On Error GoTo ErrorHandler
+	'    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOK_Click", "Begin Subroutine")
+	'
+	'    Dim a As Variant
+	'    Dim strNewDestinationOPCVarName As String
+	'    Dim strCommand As String
+	'
+	'    If (Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = False) Then
+	'        Exit Sub
+	'
+	'    End If
+	'
+	'    '* Retrieve the name of the OPC variable associated to the destination (identified by its name)
+	'    '* selected by the operator in the combo box
+	'
+	'    a = collDestinations.items
+	'
+	'    strNewDestinationOPCVarName = a(ComboBoxDestinations.ListIndex)
+	'
+	'
+	'    '* Build string corresponding to the command to be sent : %UniqueID%|<UniqueID>|OSM|<NewDestinationOPCVarName>
+	'    strCommand = "%UniqueID%|" & OPC_UniqueID.Value & "|OSM|" & strNewDestinationOPCVarName
+	'
+	'
+	'    '* Check the status and the quality of the OPC variable related to the command
+	'    If ((OPC_Command.Status = fvVariableStatusGood) And (OPC_Command.Quality = 192)) Then
+	'
+	'
+	'            bBtnOK = True
+	''OPC_TrainMode.Value = 1 nao foi implementado, mas funciona o codigo do OPC_TrainMode.Value = 3
+	''            If OPC_TrainMode.Value = 1 Then 'DESCONHECIDO
+	''                'NAO IMPLEMENTADO
+	''
+	''            ElseIf OPC_TrainMode.Value = 2 Then 'MODO DEPOT
+	'            If OPC_TrainMode.Value = 2 Then 'MODO DEPOT
+	'
+	'                '"MAINLINE_IN"
+	'                OPC_TrainMode_ValueChange
+	'
+	''            ElseIf OPC_TrainMode.Value = 3 Then 'MODO MAINLINE
+	'            Else
+	'
+	'                bModeMainLine = True
+	'
+	'                strInterposeCommand = "%UniqueID%|" & Variables.Item(ThisMimic.Branch & ".TDS.iTrainID").Value _
+	'                                & "|%ATSOperatingMode%|" & "DEPOT_MAINLINE_OFF"
+	'                OPC_Command.Value = strInterposeCommand
+	'
+	'            End If
+	'
+	'    Else '* Status or quality are not good : no sending of the command
+	'        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", "The Train Manoeuvre command has not been sent")
+	'    End If
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    'MsgBox Err.Description
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'Procedure  : ComboBoxDestinations_Click
+	'Type       : Procedure
+	'Objective  : Manages combobox selection.
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/04/08     Wagner Queiroz &
+	'                        Artur Valverde    Creation
+	'=======================================================================================
+	
+	Private Sub ComboBoxDestinations_Change()
+	Dim Keys            As Variant
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDestinations_Change", "Begin Subroutine")
+	        Keys = collDestinations.Keys
+	        sLastTrainDestination = OPC_TrainDestination.Value
+	        sNewTrainDestination = Keys(ComboBoxDestinations.ListIndex)
+	        If sLastTrainDestination <> sNewTrainDestination Then
+	            '* Enable the "OK" button
+	            Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 1
+	        Else
+	            Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 0
+	        End If
+	        
+	'        If OPC_TrainMode.Value = 1 Then
+	'            Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 0
+	'        End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDestinations_Change", Err.Description)
+	End Sub
+	
+	''* Function: Mimic_BeforeClose
+	''* Purpose: Unsubscribes all the previously subscribed variables
+	''* ---------------------------------------------------------------------------------
+	'Private Function Mimic_BeforeClose() As Boolean
+	'On Error GoTo ErrorHandler
+	'    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	'
+	'    '* Unsubscribe the OPC Variables previously subscribed
+	'    '* ---------------------------------------------------
+	'    If Not OPC_HMITrainID Is Nothing Then
+	'        Variables.Remove (OPC_HMITrainID.Name)
+	'        Set OPC_HMITrainID = Nothing
+	'    End If
+	'
+	'    If Not OPC_UniqueID Is Nothing Then
+	'        Variables.Remove (OPC_UniqueID.Name)
+	'        Set OPC_UniqueID = Nothing
+	'    End If
+	'
+	'    If Not OPC_Destinations Is Nothing Then
+	'        Variables.Remove (OPC_Destinations.Name)
+	'        Set OPC_Destinations = Nothing
+	'    End If
+	'
+	'    If Not OPC_Command Is Nothing Then
+	'        Variables.Remove (OPC_Command.Name)
+	'        Set OPC_Command = Nothing
+	'    End If
+	'
+	'    If Not OPC_TrainMode Is Nothing Then
+	'        Variables.Remove (OPC_TrainMode.Name)
+	'        Set OPC_TrainMode = Nothing
+	'    End If
+	'
+	'    If Not OPC_TrainDestination Is Nothing Then
+	'        Variables.Remove (OPC_TrainDestination.Name)
+	'        Set OPC_TrainDestination = Nothing
+	'    End If
+	'
+	'Exit Function
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	'End Function
+	'
+	
+	
+	Private Sub OPC_Command_ValueChange()
+	    
+	    'ThisMimic.Close
+	    
+	End Sub
+	
+	'* Subroutine: OPC_Destinations_ValueChange
+	'* Purpose: Manages displaying the list of names of destinations in the combo box
+	'* ---------------------------------------------------------------------------------
+	Private Sub OPC_Destinations_ValueChange()
+	Dim iCountColl As Integer
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_Destinations_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (OPC_Destinations.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_Destinations_ValueChange", "The Status of OPC_Destinations is waiting")
+	    ElseIf (OPC_Destinations.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_Destinations_ValueChange", "The Status of OPC_Destinations is config Error")
+	    ElseIf (OPC_Destinations.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_Destinations_ValueChange", "The Status of OPC_Destinations is not connected")
+	    ElseIf (OPC_Destinations.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_Destinations_ValueChange", "The Quality of OPC_Destinations is not Good")
+	    Else '* Status and quality are good
+	        If (OPC_Destinations.Value <> "") Then
+	            '* Extract couple (destination name and associated OPC variable name) from the XML string
+	            ReadXmlDestinations (OPC_Destinations.Value)
+	            If (collDestinations.Count > 0) Then
+	                Dim k As Integer
+	                Dim a As Variant
+	                Dim sSelectedStation As String
+	                
+	                If ComboBoxDestinations.Value <> "" Then sSelectedStation = ComboBoxDestinations.Value
+	                '* Clear the combo box
+	                ComboBoxDestinations.Clear
+	                '* Reset the property Value of the combo box
+	                ComboBoxDestinations.Value = ""
+	    
+	                '* Fill the combo box
+	                a = collDestinations.Keys
+	                For k = 0 To collDestinations.Count - 1
+	                If [LibraryPath%] = "TRAF_L2EXT/" Then
+	                    If VerifyDestinyStation(a(k), ThisMimic.Branch) = "True" Then
+	                        ComboBoxDestinations.AddItem (a(k))
+	                    ElseIf VerifyDestinyStation(a(k), ThisMimic.Branch) = "SAC1" Then
+	                        ComboBoxDestinations.Clear
+	                        If collDestinations("SAC1") = "" Then
+	                            ComboBoxDestinations.AddItem ("SAC1")
+	                            collDestinations("SAC1") = "Stop_STA_PF_SAC_WL_S2"
+	                        End If
+	                    End If
+	                Else
+	                    ComboBoxDestinations.AddItem (a(k))
+	                End If
+	                    
+	                    If a(k) = sSelectedStation Then _
+	                        ComboBoxDestinations.Value = sSelectedStation
+	                Next
+	                
+	                '* Enable the combo box
+	                ComboBoxDestinations.Enabled = True
+	            End If
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_Destinations_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: OPC_HMITrainID_ValueChange
+	'* Purpose: Manages displaying the text in the title bar of the mimic
+	'* ---------------------------------------------------------------------------------
+	Private Sub OPC_HMITrainID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (OPC_HMITrainID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of OPC_HMITrainID is waiting")
+	    ElseIf (OPC_HMITrainID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of OPC_HMITrainID is config Error")
+	    ElseIf (OPC_HMITrainID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of OPC_HMITrainID is not connected")
+	    ElseIf (OPC_HMITrainID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Quality of OPC_HMITrainID is not Good")
+	    Else
+	        '* Format the text to be displayed in the title bar of the mimic
+	        ThisMimic.Caption = "   Translado " & OPC_HMITrainID.Value
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'Procedure  : OPC_TrainDestination_ValueChange
+	'Type       : Procedure
+	'Objective  : Verify mode train if necesary change it.
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/04/08     Wagner Queiroz &
+	'                        Artur Valverde    Creation
+	'=======================================================================================
+	
+	Private Sub OPC_TrainDestination_ValueChange()
+	On Error GoTo ErrorHandler
+	    If Not bBtnOK Then Exit Sub
+	
+	    If bModeMainLine = True Then
+	        strInterposeCommand = "%UniqueID%|" & Variables.Item(ThisMimic.Branch & ".TDS.iTrainID").Value _
+	                            & "|%ATSOperatingMode%|" & "MAINLINE_IN"
+	        OPC_Command.Value = strInterposeCommand
+	    End If
+	    
+	    ThisMimic.Close fvDoNotSaveChanges
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_TrainDestination_ValueChange", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'Procedure  : OPC_TrainMode_ValueChange
+	'Type       : Procedure
+	'Objective  : Get last train mode and send the new destiny.
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/04/08     Wagner Queiroz &
+	'                        Artur Valverde    Creation
+	'=======================================================================================
+	
+	Private Sub OPC_TrainMode_ValueChange()
+	Dim strCommand                      As String
+	Dim a                               As Variant
+	Dim Keys                            As Variant
+	Dim strNewDestinationOPCVarName     As String
+	
+	On Error GoTo ErrorHandler
+	    If Not bBtnOK Then Exit Sub
+	
+	    a = collDestinations.items
+	    Keys = collDestinations.Keys
+	    strNewDestinationOPCVarName = a(ComboBoxDestinations.ListIndex)
+	    
+	    '* Build string corresponding to the command to be sent : %UniqueID%|<UniqueID>|OSM|<NewDestinationOPCVarName>
+	    strCommand = "%UniqueID%|" & OPC_UniqueID.Value & "|OSM|" & strNewDestinationOPCVarName
+	    'strCommand = "%UniqueID%|" & OPC_UniqueID.Value & "|OSM|" & "Stop_STA_PF_VPT1_WL_S2"
+	    OPC_Command.Value = strCommand
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	             "The Train Manoeuvre command has been sent - OPC variable : " & OPC_Command.Name & _
+	             " - Value : " & strCommand)
+	    
+	    Exit Sub
+	    
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_TrainMode_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: OPC_UniqueID_ValueChange
+	'* Purpose: Get the Unique ID of the train
+	'* ---------------------------------------------------------------------------------
+	Private Sub OPC_UniqueID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_UniqueID_ValueChange", "Begin Subroutine")
+	    
+	    Dim strTraceMsg As String
+	    
+	    '* Check the status and the quality of the variable
+	    If (OPC_UniqueID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of OPC_UniqueID is waiting")
+	    ElseIf (OPC_UniqueID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of OPC_UniqueID is config Error")
+	    ElseIf (OPC_UniqueID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of OPC_UniqueID is not connected")
+	    ElseIf (OPC_UniqueID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Quality of OPC_UniqueID is not Good")
+	    Else '* Status and quality are good
+	        strTraceMsg = "Value of the Train Unique ID : " & OPC_UniqueID.Value
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_UniqueID_ValueChange", strTraceMsg)
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_UniqueID_ValueChange", Err.Description)
+	End Sub
+	
+	'* Function: ReadXmlDestinations
+	'* Purpose: Reads the xml string containing the couple (name and the associated OPC variable
+	'*          name) of each destination
+	'* ******************************************************************************************
+	Public Function ReadXmlDestinations(ByRef strXml As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXmlDestinations", "Begin Function")
+	   
+	    Dim oDoc As DOMDocument
+	    Dim FirstNodeLevel As IXMLDOMNodeList
+	    Dim oNodeClass As IXMLDOMNode
+	    
+	    Set oDoc = New DOMDocument
+	    Set collDestinations = Nothing
+	    Set collDestinations = CreateObject("Scripting.Dictionary")
+	
+	    '* Load the XML format string
+	    If oDoc.loadXML(strXml) Then
+	        Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName("Point")
+	        If (FirstNodeLevel.length <> 0) Then
+	            For Each oNodeClass In FirstNodeLevel
+	                Dim strName As String
+	                Dim strVariableName As String
+	                Dim oAttrDest As IXMLDOMAttribute
+	                
+	                For Each oAttrDest In oNodeClass.Attributes
+	                    If (oAttrDest.nodeName = "Name") Then
+	                        '* Destination Name
+	                        strName = oAttrDest.nodeValue
+	                    End If
+	                    If (oAttrDest.nodeName = "ID") Then
+	                        '* Name of the associated OPC variable
+	                        strVariableName = oAttrDest.nodeValue
+	                    End If
+	                Next
+	                If ((strName <> "") And (strVariableName <> "")) Then
+	                    '* Memorizes couple of data
+	                    collDestinations.Add strName, strVariableName
+	                End If
+	            Next
+	        End If
+	        Set FirstNodeLevel = Nothing
+	    End If
+	    Set oDoc = Nothing
+	'    If Split(Variables.Item(ThisMimic.Branch & ".TDSMB.bstrFrontTP").Value, "_")(2) = 37 Or Split(Variables.Item(ThisMimic.Branch & ".TDSMB.bstrFrontTP").Value, "_")(2) = 36 Then
+	'        If collDestinations("SAC1") = "" Then
+	'            collDestinations("SAC1") = "Stop_STA_PF_SAC_WL_S2"
+	'        End If
+	'    End If
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadXmlDestinations", Err.Description)
+	End Function
+	
+	
+	
+	
+	
+	Private Sub txtService_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "txtService_Change", "Begin Function")
+	    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = 1
+	  
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "txtService_Change", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,172,168,153,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,0,255,0,0,0,0
+	COLOR,7,255,0,255,0,0,0
+	COLOR,8,0,0,0,0,33,0
+	COLOR,9,0,0,0,0,35,0
+	COLOR,10,0,0,0,0,32,0
+COLORS,END
+O,BEGIN,T,"btnOK"
+	B,15,70,87,99,15,99,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,15,70,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonOKEnabled%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,7,COLOR,7
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,8,COLOR,8
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnOK1"
+	B,135,70,207,99,135,99,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,135,70,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,33,30,97,46,33,46,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,33,30,0,0,FONT,1,"Destino:",37,FONT,1,"Destino:",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Servicio",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Banchina",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destino:",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtService"
+	B,94,26,149,50,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+O,END

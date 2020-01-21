@@ -1,0 +1,52 @@
+ASCII32,11,8,2016,10:27,30,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,128,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,0,99,135,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Private Sub Symbol_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    Dim sMimicToOpen As String
+	    Dim iValue As Integer
+	    Dim sPosto As String
+	
+	    'Sai se nenhum botao de subesta‡ao estiver selecionado
+	    If Me.LocalBranch = "" Or Button <> 1 Then Exit Sub
+	
+	'    If InStr(Me.LocalBranch, "TREND") > 0 Then
+	'        StrObjectName = Split(Me.LocalBranch, ":")(1)
+	'        sMimicToOpen = Replace(Me.LocalBranch, ":" & StrObjectName, "")
+	'    Else
+	'        sMimicToOpen = Replace(Me.LocalBranch, "OPCCluster:Area/", "", , , vbTextCompare)
+	'        sMimicToOpen = Replace(sMimicToOpen, "OPCCluster:Function/", "", , , vbTextCompare)
+	'    End If
+	'
+	'    sMimicToOpen = sPosto & Replace(sMimicToOpen, "/", "_")
+	
+	    sMimicToOpen = Me.LocalBranch
+	    Call Navegation(ActiveMimic.FileName, sMimicToOpen, Me.LocalBranch)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol7"
+	B,1920,242,0,197,0,242,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape1"
+		B,1920,242,0,197,1920,242,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,2,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"a%"
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+		A,END
+	O,END
+O,END

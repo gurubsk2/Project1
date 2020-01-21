@@ -1,0 +1,197 @@
+ASCII32,11,2,2017,13:47,56,1.1
+W,BEGIN,"mmc_Unstabling_SO","mmc_Unstabling_SO"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,249,103
+	SIZE,797,770,797,770,0,0,0,1366,768,791,748
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Depot unstabling table for Service Oriented"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_Unstabling_SO.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      DepotUnStabling_ServOriented
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of depot unstabling for service oriented projects
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Swati Das
+	'* Date:                Sept '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	Private Const c_strTabCRowIDSel As String = ".TabCRowIDSel%"
+	
+	Private Sub Unstabling2_OnSelectedRowChange(ByVal stablingId As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Unstabling2_OnSelectedRowChange", "Begin subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & c_strTabCRowIDSel).Value = stablingId
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "IXL_Status_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"TabC", 0, 2, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-16,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,400,0,0,"Segoe UI",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,240,240,240,0,0,0
+	COLOR,5,215,215,215,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,128,128,128,0,0,0
+	COLOR,8,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,767,666,30,25,767,666,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text1"
+	B,35,12,137,36,35,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,35,12,0,0,FONT,1,"Stabling table",37,FONT,1,"Stabling table",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Stabling table",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"CancelButton"
+	B,664,706,749,731,664,731,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,664,706,0,0,FONT,2,"Close",37,FONT,2,"Close",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Close",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"CancelButton3"
+	B,529,631,624,656,529,656,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,529,631,0,0,FONT,2,"Add...",37,FONT,2,"Add...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Add...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ModeMgmt.Mode == 1)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+	A,END
+	A,BEGIN,LO,"Anim3",0,0,"",""
+		PP,"mmc_Unstabling_SOTripAdd","*",1,0,1,0,"","",0
+		AUTH,"=(ModeMgmt.Mode == 1)",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"CancelButton4"
+	B,641,631,736,656,641,656,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,641,631,0,0,FONT,2,"Modify...",37,FONT,2,"Modify...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modify...",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(TabCRowIDSel% != 0)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_Unstabling_SOTripModify","*",1,0,1,0,"","",0
+		AUTH,"=(TabCRowIDSel% != 0)",1,0,0
+	A,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,1,692,790,692,1,692,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,692,790,692
+O,END
+O,BEGIN,OCX,"Unstabling2"
+	B,57,45,747,617,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END

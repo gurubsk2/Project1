@@ -1,0 +1,82 @@
+ASCII32,11,9,2018,0:48,47,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* File Name:   missing Train visible
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*      - on click on identification group, open the train inspector panel on the branch
+	'*          of the first train on the berth
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Rejathkumar
+	'* Date:                Dec '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'******************************************************************
+	Private Const c_strTrainMissingIDTag As String = ".TrainIndicator.TIBerth.iMissingID"
+	
+	Private Const c_strTrainMissingMimic As String = "Train_Missing_Clear"
+	
+	Private Const c_strClusterSeparator As String = ":"
+	    
+	Dim WithEvents m_OPC_TrainMissingID As Variable
+	
+	Dim m_strOPCClusterName As String
+	
+	Dim m_bBtnClicked As Boolean
+	
+	
+	Private Sub MissingTrain_Click()
+	
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "MissingTrain_Click", "Begin Subroutine")
+	 
+	    Dim SymbolBranch As String
+	    
+	    SymbolBranch = GetSymbolBranch(ThisSymbol)
+	    
+	
+	    If Variables.Item(SymbolBranch & c_strTrainMissingIDTag).Value <> "" Then
+	         'Mimics.OpenInCenter c_strTrainMissingMimic, c_strClusterLevel1 & "Train" & Format(Variables.Item(SymbolBranch & c_strTrainMissingIDTag).Value, "000"), , , "", , , fvCenterOnParent
+	        OpenMimicInCenter c_strTrainMissingMimic, c_strClusterLevel1 & "Train" & Format(Variables.Item(SymbolBranch & c_strTrainMissingIDTag).Value, "000"), GetmousepointerPossition
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "MissingTrain_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"MissingTrain1367"
+	B,1036,360,999,345,999,360,65535,0,6400,0,8,0,0
+	O,BEGIN,R,"MissingTrain"
+		B,1036,360,999,345,1036,360,65535,0,6400,0,8,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"NotUsed%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

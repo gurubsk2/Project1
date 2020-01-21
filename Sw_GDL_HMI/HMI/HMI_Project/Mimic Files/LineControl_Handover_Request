@@ -1,0 +1,261 @@
+ASCII32,29,3,2017,17:57,39,1.1
+W,BEGIN,"LineControl_Handover_Request","LineControl_Handover_Request"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,983,425
+	SIZE,241,150,234,150,0,0,0,1280,1024,235,128
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control de L¡nea"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,1,1,1,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineControl_Handover_Request.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'''''* *******************************************************************************************
+	'''''* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'''''* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'''''* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'''''* *******************************************************************************************
+	'''''* Mimic Name:  Signal Contextual Menu
+	'''''* *******************************************************************************************
+	'''''* Purpose:     It manages display of:
+	'''''*                  - items of the contextual menu,
+	'''''*                  - title (type and name of device) of the contextual menu.
+	'''''* *******************************************************************************************
+	'''''* Modification History:
+	'''''* Author:              Danish Draboo
+	'''''* Date:                May '08
+	'''''* Change:              All
+	''''
+	'''''* Author:              Nicole FLORIAN
+	'''''* Date:                February '09
+	'''''* Change:              CR ALPHA 122248 and CR ALPHA 122766
+	'''''* *******************************************************************************************
+	'''''* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320 - 7)
+	'''''*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846 - B)
+	'''''* *******************************************************************************************
+	''''
+	Option Explicit
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	    On Error GoTo ErrorHandler
+	    
+	    'If the operator has no answare, then send the "No"
+	    If Not [@bAnsware%] Then
+	        Variables.Add(Me.Branch & ".MMGATSArea.Confirmation").Value = 0
+	    End If
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	
+	
+	
+	''''
+	'''''* Declarations
+	'''''* ******************************************************
+	''''Private Const strLineCtrlWithAck As String = ".MMGATSArea.NegociatedMode"
+	''''Private Const strLineCtrlWithoutAck As String = ".MMGATSArea.ForcedMode"
+	''''Private Const strLineCtrlConfirmation As String = ".MMGATSArea.Confirmation"
+	''''Private Const strLineCtrlSecurity As String = ".MMGATSArea.Security"
+	''''
+	''''
+	''''Dim m_OPC_LCtrlWithAck As Variable
+	''''Dim m_OPC_LCtrlWithoutAck As Variable
+	''''Dim m_OPC_LCtrlConf As Variable
+	''''Dim m_OPC_Security As Variable
+	''''
+	''''
+	''''
+	''''Private Sub btnRequest_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''''On Error GoTo ErrorHandler
+	''''    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnRequest_ClickEx", "Begin Subroutine")
+	''''    If (Check_Variable(m_OPC_LCtrlWithAck) And m_OPC_Security < 63) Then
+	''''        m_OPC_LCtrlWithAck = 1
+	''''    End If
+	''''
+	''''Exit Sub
+	''''ErrorHandler:
+	''''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnRequest_ClickEx", Err.Description)
+	''''End Sub
+	''''
+	''''
+	''''Private Sub btnTake_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	''''On Error GoTo ErrorHandler
+	''''    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnTake_ClickEx", "Begin Subroutine")
+	''''    If (Check_Variable(m_OPC_LCtrlWithoutAck) And m_OPC_Security < 63) Then
+	''''        m_OPC_LCtrlWithoutAck = 1
+	''''    End If
+	''''
+	''''Exit Sub
+	''''ErrorHandler:
+	''''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnTake_ClickEx", Err.Description)
+	''''End Sub
+	''''
+	'''''* Subroutine: Mimic_Open
+	'''''* Update the text in the title bar of the mimic
+	'''''* *****************************************************************************************
+	''''Private Sub Mimic_Open()
+	''''On Error GoTo ErrorHandler
+	''''    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	''''
+	''''
+	''''    Set m_OPC_LCtrlWithAck = Variables.Add(ThisMimic.Branch & strLineCtrlWithAck, fvVariableTypeRegister)
+	''''    Set m_OPC_LCtrlWithoutAck = Variables.Add(ThisMimic.Branch & strLineCtrlWithoutAck, fvVariableTypeRegister)
+	''''    Set m_OPC_LCtrlConf = Variables.Add(ThisMimic.Branch & strLineCtrlConfirmation, fvVariableTypeRegister)
+	''''
+	''''
+	''''
+	''''Exit Sub
+	''''ErrorHandler:
+	''''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	''''End Sub
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	''''
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,35,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+COLORS,END
+O,BEGIN,T,"btnRequest"
+	B,5,8,229,32,5,32,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,5,8,0,0,FONT,1,"Bloqueo...",36,FONT,1,"Bloqueo...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"¨Acepta el pedido de transferencia",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloqueo...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnRequest1"
+	B,5,32,208,56,5,56,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,5,32,0,0,FONT,1,"Acepta el pedido de transferencia del control de la linea?",36,FONT,1,"Acepta el pedido de transferencia del control de la linea?",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"del control de la linea?",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloqueo...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnAccept"
+	B,47,80,91,104,47,104,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,47,80,0,0,FONT,2,"Accept",37,FONT,2,"Accept",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Si",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"@bAnsware%",2,0,0,0,0.000000
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"MMGATSArea.Confirmation",2,0,0,0,0.000000
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"btnRefuse"
+	B,143,80,187,104,143,104,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,143,80,0,0,FONT,2,"Refuse",37,FONT,2,"Refuse",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"@bAnsware%",2,0,0,0,0.000000
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"MMGATSArea.Confirmation",1,0,0,0,0.000000
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END

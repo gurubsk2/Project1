@@ -1,0 +1,54 @@
+ASCII32,16,2,2018,10:11,59,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub cmdNav1_Click()
+	
+	   '    Dim Corresponding_Detailed_View
+	    Dim Station_Name As Variant
+	    Dim iMimicPosition As Variant
+	    Dim iMimicPosition_1 As String
+	'    Dim ParentMimic As Mimic
+	
+	'    On Station banner, station button is always named "Station_<Station_Acronym>":
+	        Station_Name = Split(ThisSymbol.LocalBranch, "_")
+	'    Only keep the Station Acronym ; set it as station centered on the detailed view to open
+	        Thisproject.Station_To_Center_On = Station_Name(1)
+	        
+	'        Set ParentMimic = Iconis_MOD_General.GetSymbolParentMimic(ThisSymbol)
+	'        OpenViewOnSameScreen VIEW_MainLineDetailedTrafficView, ParentMimic.Windows(1).Left
+	
+	'rparmeza
+	    iMimicPosition = Thisproject.ActiveMimic.Windows(1).Left
+	    iMimicPosition_1 = Thisproject.ActiveMimic.Branch
+	    
+	    If iMimicPosition_1 = "M2" Then
+	        iMimicPosition = 1921
+	        [Monitor%] = "M2"
+	    Else
+	        iMimicPosition = 0
+	        [Monitor%] = "M1"
+	    End If
+	    
+	    Mimics.Open "SR_Detailed_View", [Monitor%], , , "GDL_Operational_View", [Monitor%]
+	    Manage_ScrollBar_Position VIEW_MainLineDetailedTrafficView, "SR_Detailed_View", [Monitor%]
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Station_SR1619"
+	B,8828,399,8993,363,8828,399,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"cmdNav1"
+		B,8828,399,8993,363,8828,399,65535,0,6400,0,2,1,1
+		ST,5,1,COLOR,1,COLOR,1,0,3,COLOR,2,3,COLOR,2,0,COLOR,2,0,COLOR,2
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	O,END
+O,END

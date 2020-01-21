@@ -1,0 +1,75 @@
+ASCII32,18,9,2018,20:42,41,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,34,0
+	COLOR,6,255,0,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	'Private Const c_strInspectorPanelMimic As String = ""
+	Private Const c_strContextualMenuMimic As String = "mmc_OnlineTT"
+	Private Hold As POINTAPI
+	
+	Private Sub Group3_Click()
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_Click", "Begin subroutine")
+	       
+	    GetCursorpos Hold
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, "OPCClusterATSLV2:MainKernelExtended.TTCModule")
+	             
+	Exit Sub
+	ErrorHandler:
+	 Call CBTrace(CBTRACEF_ALWAYS, "mmc_OnlineTT", "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol19"
+	B,1697,149,1736,188,1697,188,65535,0,6400,0,1,0,0
+	O,BEGIN,GRP,"Group3"
+		B,1697,149,1736,188,1697,188,65535,0,6400,0,2,1,1
+		PP,0
+		O,BEGIN,R,"Shape11"
+			B,1736,188,1697,149,1736,188,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+			AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		O,END
+		O,BEGIN,BM,"Bitmap8"
+			B,1702,154,1731,182,1702,182,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,"bt06-RelOper.bmp",0,COLOR,6
+		O,END
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,2058
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@PCD"
+				LANG,END
+				LANG,BEGIN,2058
+					ROLE_DEFAULT,0
+					ROLE,0,"@PCD"
+				LANG,END
+			MULTILANG,END
+			PP,"Tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

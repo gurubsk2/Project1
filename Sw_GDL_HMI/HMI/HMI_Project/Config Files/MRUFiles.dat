@@ -1,0 +1,17 @@
+File,1,"GDL_Initial_View","M1",1
+File,1,"GDL_Initial_View","M2",1
+File,1,"GDL_Initial_View","M3",1
+File,1,"mmc_HMIStartupLoading","",1
+File,1,"GDL_Detailed_View","",1
+File,1,"GDL_Operational_View","",1
+File,1,"GDL_DepotDetailed_view","",1
+File,1,"View_WZManagement","OPCCluster:LCS_10241",1
+File,1,"LCS_10241_View_WZInSessionTrackPlan_Mainline","",1
+File,1,"WZ_Modify_HILCCtrlPrepPhase","OPCCluster:LCS_10241",1
+File,1,"WZ_Modify_HILCCtrl","OPCCluster:LCS_10241",1
+File,1,"TSR_SessionOpen_HILCCtrl","OPCCluster:LCS_10241",1
+File,1,"Platform_Running_Mode","OPCClusterATSLV2:STA_COD_12T_TZA_BH",1
+File,1,"Platform_TiempoRecorrido","OPCClusterATSLV2:STA_COD_12T_TZA_BH",1
+File,1,"Platform_ValidationMessagebox","OPCClusterATSLV2:STA_COD_12T_TZA_BH",1
+File,1,"Platform_InspectorPanel_Control","OPCClusterATSLV2:STA_COD_12T_TZA_BH",1
+

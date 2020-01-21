@@ -1,0 +1,5 @@
+<RunTimeLevelTrain>
+	<Train>Identificador único do trem (UniqueID)</Train>
+	<Level>Nível de Desempenho</Level> <!--Não é necessário quando removendo a imposição-->
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</RunTimeLevelTrain>

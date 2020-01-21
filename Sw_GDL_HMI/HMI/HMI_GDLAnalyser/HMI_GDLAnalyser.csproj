@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{242EE537-0766-4BBC-9999-E1014C8C0EB4}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HMI_GDLAnalyser</RootNamespace>
+    <AssemblyName>HMI_GDLAnalyser</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unicode Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>..\..\IconisBin8\ReleaseU\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\..\IconisUtilites\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="HMI_GDLAnalyser.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="IconisAnalyzer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="IconisAnalyzer.designer.cs">
+      <DependentUpon>IconisAnalyzer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="IconisAnalyzer.resx">
+      <DependentUpon>IconisAnalyzer.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>call "$(SolutionDir)Buildtools\buildTask.bat" "$(SolutionDir)" "$(ProjectDir)Properties\AssemblyInfo.cs"
+del /F /Q "$(SolutionDir)IconisBin8\ReleaseU\HMI_GDL.zip"
+del /F /Q "$(SolutionDir)IconisBin8\ReleaseU\Gudalajara_Videowall.zip"
+
+XCOPY "$(SolutionDir)\HMI\HMI_Project" "$(SolutionDir)HMI_GDL" /s /i
+del /F /Q "$(SolutionDir)HMI_GDL\Script Files\WorkSpace"
+
+XCOPY "$(SolutionDir)\HMI\Gudalajara_Videowall" "$(SolutionDir)Gudalajara_Videowall" /s /i
+del /F /Q "$(SolutionDir)Gudalajara_Videowall\Script Files\WorkSpace"
+
+XCOPY "D:\HMI_FVP\Guadalajara.fvp - Shortcut.lnk" "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup" /s /i
+XCOPY "D:\HMI_FVP\Gudalajara_Videowall.fvp - Shortcut.lnk" "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup" /s /i
+
+"C:\Program Files\7-zip\7z.exe" a -tzip "$(SolutionDir)IconisBin8\ReleaseU\HMI_GDL.zip" -r "$(SolutionDir)HMI_GDL"
+RD /S /Q "$(SolutionDir)HMI_GDL" 
+
+"C:\Program Files\7-zip\7z.exe" a -tzip "$(SolutionDir)IconisBin8\ReleaseU\Gudalajara_Videowall.zip" -r "$(SolutionDir)Gudalajara_Videowall"
+RD /S /Q "$(SolutionDir)Gudalajara_Videowall"
+
+rem attrib -R ..\Binaries\ReleaseU\SetupHMI_GDL.msi
+
+
+REM Run the Client Builder VB Checker
+perl -I "$(SolutionDir)HMI\BuildScripts" -w "$(SolutionDir)HMI\BuildScripts\VB_Checker.pl" "$(SolutionDir)HMI\HMI_Project"
+REM Run the Client Builder Symbols Checker
+perl -I "$(SolutionDir)HMI\BuildScripts" -w "$(SolutionDir)HMI\BuildScripts\CB_HMI_AnalyzeSymbolsUsage.pl" "$(SolutionDir)HMI\HMI_Project"</PreBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

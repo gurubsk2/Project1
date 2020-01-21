@@ -1,0 +1,720 @@
+ASCII32,26,5,2016,17:52,10,1.1
+W,BEGIN,"GAMAZone_Generic_InformationTab","GAMAZone_Generic_InformationTab"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,20,50
+	SIZE,300,180,300,180,0,0,0,1280,1024,300,180
+	BACKCOLOR,192,192,192,0,61,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,224,192,192,0,35,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GAMAZone_Generic_InformationTab.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Gama Zone information for Generic Gama
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                February '13
+	'* Change:              All - CR ALPHA 338071
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                June '13
+	'* Change:              CR ALPHA 338071 : complement 1 -> parse gamalist XML
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                July '13
+	'* Change:              CR ALPHA 338071 : complement 2 -> Change the track status display
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strEGamaSeparator As String = ";"
+	Private Const c_strOPCClusterSeparator As String = ":"
+	
+	Private Const c_lEGamaNameLeft As Long = 17
+	Private Const c_lEGamaStatusLeft As Long = 144
+	Private Const c_lEGamaStatusTxtLeft As Long = 161
+	Private Const c_lEGamaTrackStatusLeft As Long = 289
+	Private Const c_lEGamaTrackStatusTxtLeft As Long = 309
+	
+	'* To manage the list of devices
+	Private Const c_lLineMaxCount As Long = 5
+	Private Const c_strColumnEGamaName As String = "ElemGAMAName"
+	Private Const c_strColumnEGamaStatus As String = "EGamaStatus"
+	Private Const c_strColumnEGamaStatusTxt As String = "ElemGAMAStatus"
+	Private Const c_strColumnEGamaTrackStatus As String = "EGamaTrackStatus"
+	Private Const c_strColumnEGamaTrackStatusTxt As String = "ElemGAMATrackStatus"
+	
+	Private Const c_strAssociatedGamaName As String = ".GAMA.Value"
+	Private Const c_strAssociatedWZName As String = ".GTIZ.Value"
+	Private Const c_strAssociatedWZStatus As String = ".Detection.Template.uEqpStateLabel"
+	Private Const c_strListofBlocks As String = ".ListOfBlocks.Value"
+	
+	
+	Private Const c_strValue As String = ".Value"
+	
+	Private Const c_strEGamaListTag As String = ".ElementaryGamaList.Value"
+	
+	Private Const c_strEGamaStatusTag As String = ".EGAMAStatus.Value"
+	Private Const c_strEGamaTrackStatusTag As String = ".EGAMATrackStatus.Value"
+	Private Const c_strGamaSeparator As String = ";"
+	
+	Private Const c_txtNotAuthorised As String = "Not Authorised"
+	Private Const c_txtAuthorised As String = "Authorised"
+	
+	Private Const c_strWZIDSeparator As String = ";"
+	
+	'* Used to read the list of workzone IDs of the block
+	Private Const c_strWZListTag As String = ".WZAppliedListOfIDs.Value"
+	'* Used to read the LC client associated with the block
+	Private Const c_strLCTag As String = ".LCClient.Value"
+	
+	'*local tag for animation
+	Private Const c_strWZIndexTag As String = ".WZCurrentIndex%"
+	Private Const c_strWZCurrentIDTag As String = ".WZCurrentID%"
+	Private Const c_strWZCurrentSpeedTag As String = ".WZCurrentSpeed%"
+	Private Const c_strWZNotFirstTag As String = ".WZNotFirstIndex%"
+	Private Const c_strWZNotLastTag As String = ".WZNotLastIndex%"
+	
+	
+	
+	'* Module Variables
+	'* ***********************************************
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	Dim WithEvents m_OPCSet_EGAMA_Definitions As Iconis_CLS_OPCSet
+	Dim WithEvents m_OPC_EGAMAList As Variable
+	Dim WithEvents m_OPC_GAMAName As Variable
+	Dim WithEvents m_OPC_WZName As Variable
+	Dim WithEvents m_OPC_WZStatus As Variable
+	Dim WithEvents m_OPC_ListofBlocks As Variable
+	
+	'* Variable containing the LC Client
+	Dim WithEvents m_OPC_LCCLient As Variable
+	'* Variable containing the list of workzones
+	Dim WithEvents m_OPC_WZIDs As Variable
+	
+	Dim m_WorkZone_Manager As Iconis_CLS_WorkZones
+	
+	'* Variables for Animations
+	Dim m_OPC_CurrentIndex As Variable
+	Dim m_OPC_CurrentID As Variable
+	Dim m_OPC_CurrentSpeed As Variable
+	Dim m_OPC_FirstIndex As Variable
+	Dim m_OPC_LastIndex As Variable
+	
+	Dim m_WZ_count As Integer
+	Dim m_WZ_index As Integer
+	
+	Dim m_WZIDs() As String
+	
+	Dim m_OPCClusterName As String
+	Dim m_StrGamaList() As String
+	Dim GamaManager As Iconis_CLS_Gama
+	Dim strBlockName As String
+	
+	
+	Dim m_LCRead As Boolean
+	
+	'* SubRoutine: Mimic_Open
+	'*      - Init and display data for each device managed by the current sector
+	'*      - Display data for each device
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	  
+	    Dim GamaID As String
+	    
+	    m_LCRead = False
+	    
+	    Set GamaManager = Iconis_MOD_General.GetGamaManager
+	    
+	    '* extraction of the gama ID to display
+	    m_OPCClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    
+	    GamaID = Replace(ThisMimic.Branch, m_OPCClusterName, "")
+	    
+	    '* Create and initialize the list
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	
+	    Set m_WorkZone_Manager = Iconis_MOD_General.GetWorkzoneManager
+	        
+	    m_WZ_count = 0
+	    m_WZ_index = 0
+	    ReDim m_WZIDs(0)
+	    
+	    '* Add variable used for the animation
+	    Set m_OPC_CurrentIndex = Variables.Add(ThisMimic.Branch & c_strWZIndexTag, fvVariableTypeText)
+	    Set m_OPC_CurrentID = Variables.Add(ThisMimic.Branch & c_strWZCurrentIDTag, fvVariableTypeText)
+	    Set m_OPC_CurrentSpeed = Variables.Add(ThisMimic.Branch & c_strWZCurrentSpeedTag, fvVariableTypeText)
+	    Set m_OPC_FirstIndex = Variables.Add(ThisMimic.Branch & c_strWZNotFirstTag, fvVariableTypeBit)
+	    Set m_OPC_LastIndex = Variables.Add(ThisMimic.Branch & c_strWZNotLastTag, fvVariableTypeBit)
+	    
+	    m_OPC_CurrentIndex.Value = "0/0"
+	    m_OPC_CurrentID.Value = ""
+	    m_OPC_CurrentSpeed.Value = "-"
+	    m_OPC_FirstIndex.Value = True
+	    m_OPC_LastIndex.Value = True
+	
+	    'initialisation of the grid animation
+	    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	    
+	    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar
+	    m_List.NewColumn c_strColumnEGamaName, fvVariableTypeText, c_lEGamaNameLeft
+	    m_List.NewColumn c_strColumnEGamaStatus, fvVariableTypeRegister, c_lEGamaStatusLeft, c_strValue
+	    m_List.NewColumn c_strColumnEGamaStatusTxt, fvVariableTypeText, c_lEGamaStatusTxtLeft
+	    m_List.NewColumn c_strColumnEGamaTrackStatus, fvVariableTypeRegister, c_lEGamaTrackStatusLeft, c_strValue
+	    m_List.NewColumn c_strColumnEGamaTrackStatusTxt, fvVariableTypeText, c_lEGamaTrackStatusTxtLeft
+	        
+	    Set m_OPC_GAMAName = Variables.Add(ThisMimic.Branch & c_strAssociatedGamaName, fvVariableTypeText)
+	    If (m_OPC_GAMAName.Status = fvVariableStatusGood And m_OPC_GAMAName.EnableEvents = True) Then
+	        m_OPC_GAMAName_ValueChange
+	    End If
+	    m_OPC_GAMAName.EnableEvents = True
+	    
+	    Set m_OPC_WZName = Variables.Add(ThisMimic.Branch & c_strAssociatedWZName, fvVariableTypeText)
+	    If (m_OPC_WZName.Status = fvVariableStatusGood And m_OPC_WZName.EnableEvents = True) Then
+	        m_OPC_WZName_ValueChange
+	    End If
+	    m_OPC_WZName.EnableEvents = True
+	    
+	    Set m_OPC_ListofBlocks = Variables.Add(ThisMimic.Branch & c_strListofBlocks, fvVariableTypeText)
+	    If (m_OPC_ListofBlocks.Status = fvVariableStatusGood And m_OPC_ListofBlocks.EnableEvents = True) Then
+	        m_OPC_ListofBlocks_ValueChange
+	    End If
+	    m_OPC_ListofBlocks.EnableEvents = True
+	    
+	      
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Design
+	'* Restore the position of the controls
+	'* ******************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	        
+	    If Not (m_List Is Nothing) Then
+	        m_List.ShowAllControls
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Before closing the Mimic, destroy the list object
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    
+	     If Not (m_OPC_GAMAName Is Nothing) Then
+	        Variables.Remove (m_OPC_GAMAName.Name)
+	        Set m_OPC_GAMAName = Nothing
+	    End If
+	    
+	     If Not (m_OPC_WZName Is Nothing) Then
+	        Variables.Remove (m_OPC_WZName.Name)
+	        Set m_OPC_WZName = Nothing
+	    End If
+	
+	     If Not (m_OPC_WZStatus Is Nothing) Then
+	        Variables.Remove (m_OPC_WZStatus.Name)
+	        Set m_OPC_WZStatus = Nothing
+	    End If
+	    
+	     If Not (m_OPC_ListofBlocks Is Nothing) Then
+	        Variables.Remove (m_OPC_ListofBlocks.Name)
+	        Set m_OPC_ListofBlocks = Nothing
+	    End If
+	   
+	    If Not (m_OPC_EGAMAList Is Nothing) Then
+	        Variables.Remove (m_OPC_EGAMAList.Name)
+	        Set m_OPC_EGAMAList = Nothing
+	    End If
+	    
+	    If Not (m_OPCSet_EGAMA_Definitions Is Nothing) Then
+	        m_OPCSet_EGAMA_Definitions.Destroy
+	        Set m_OPCSet_EGAMA_Definitions = Nothing
+	    End If
+	    
+	    If Not (m_OPC_LCCLient Is Nothing) Then
+	        Variables.Remove (m_OPC_LCCLient.Name)
+	        Set m_OPC_LCCLient = Nothing
+	    End If
+	    
+	    If Not (m_OPC_WZIDs Is Nothing) Then
+	        Variables.Remove (m_OPC_WZIDs.Name)
+	        Set m_OPC_WZIDs = Nothing
+	    End If
+	    
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: m_OPC_GAMAName_ValueChange
+	'* update list list of data followed according the definition of the gama list
+	'* ************************************************************************************************
+	Private Sub m_OPC_GAMAName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "Begin Subroutine")
+	       
+	    ' Check the plug is OK for reading
+	    If (m_OPC_GAMAName.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Waiting")
+	    ElseIf (m_OPC_GAMAName.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Config Error")
+	    ElseIf (m_OPC_GAMAName.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Not Connected")
+	    Else
+	        If m_OPC_GAMAName.Status <> fvVariableStatusGood Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is not Good")
+	        Else
+	            'm_OPC_WZName.EnableEvents = False
+	            '* follow the current Elementary Gama List
+	            Set m_OPC_EGAMAList = Variables.Add(m_OPCClusterName & m_OPC_GAMAName.Value & c_strEGamaListTag, fvVariableTypeText)
+	            If (m_OPC_EGAMAList.Status = fvVariableStatusGood And m_OPC_EGAMAList.EnableEvents = True) Then
+	                m_OPC_EGAMAList_ValueChange
+	            End If
+	            m_OPC_EGAMAList.EnableEvents = True
+	        
+	        End If
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_WZName_ValueChange
+	'* get the name of associated WZ and then its status
+	'* ************************************************************************************************
+	Private Sub m_OPC_WZName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "Begin Subroutine")
+	       
+	    ' Check the plug is OK for reading
+	    If (m_OPC_WZName.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZName_ValueChange", "The status of " & m_OPC_WZName.Name & " is Waiting")
+	    ElseIf (m_OPC_WZName.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZName_ValueChange", "The status of " & m_OPC_WZName.Name & " is Config Error")
+	    ElseIf (m_OPC_WZName.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZName_ValueChange", "The status of " & m_OPC_WZName.Name & " is Not Connected")
+	    ElseIf (m_OPC_WZName.Status <> fvVariableStatusGood) Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZName_ValueChange", "The status of " & m_OPC_WZName.Name & " is not Good")
+	    Else
+	        
+	            Set m_OPC_WZStatus = Variables.Add(m_OPCClusterName & m_OPC_WZName.Value & c_strAssociatedWZStatus, fvVariableTypeText)
+	            If (m_OPC_WZStatus.Status = fvVariableStatusGood And m_OPC_WZStatus.EnableEvents = True) Then
+	                m_OPC_WZStatus_ValueChange
+	            End If
+	            m_OPC_WZStatus.EnableEvents = True
+	        
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZName_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_WZStatus_ValueChange
+	'* get the status of associated WZ
+	'* ************************************************************************************************
+	Private Sub m_OPC_WZStatus_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "Begin Subroutine")
+	       
+	    ' Check the plug is OK for reading
+	    If (m_OPC_WZStatus.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_WZStatus.Name & " is Waiting")
+	    ElseIf (m_OPC_WZStatus.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_WZStatus.Name & " is Config Error")
+	    ElseIf (m_OPC_WZStatus.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_WZStatus.Name & " is Not Connected")
+	    ElseIf (m_OPC_WZStatus.Status <> fvVariableStatusGood) Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_WZStatus.Name & " is not Good")
+	    Else
+	        
+	        Variables.Item(ThisMimic.Branch & ".WZStatus%").Value = m_OPC_WZStatus.Value
+	
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: m_OPC_ListofBlocks_ValueChange
+	'* get the list of blocks and choose the 1st one
+	'* ************************************************************************************************
+	Private Sub m_OPC_ListofBlocks_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ListofBlocks_ValueChange", "Begin Subroutine")
+	       
+	    ' Check the plug is OK for reading
+	    If (m_OPC_ListofBlocks.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_ListofBlocks.Name & " is Waiting")
+	    ElseIf (m_OPC_ListofBlocks.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_ListofBlocks.Name & " is Config Error")
+	    ElseIf (m_OPC_ListofBlocks.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_ListofBlocks.Name & " is Not Connected")
+	    ElseIf (m_OPC_ListofBlocks.Status <> fvVariableStatusGood) Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_WZStatus_ValueChange", "The status of " & m_OPC_ListofBlocks.Name & " is not Good")
+	    Else
+	        
+	        If InStr(1, m_OPC_ListofBlocks.Value, ";") Then
+	            Dim arrTemp() As String
+	            arrTemp() = Split(m_OPC_ListofBlocks.Value, ";")
+	            strBlockName = arrTemp(0)
+	        Else
+	            strBlockName = m_OPC_ListofBlocks.Value
+	        End If
+	        
+	        If strBlockName <> "" Then
+	        
+	            '* Add variable containing LC client
+	            Set m_OPC_LCCLient = Variables.Add(m_OPCClusterName & strBlockName & c_strLCTag, fvVariableTypeText)
+	            If ((m_OPC_LCCLient.EnableEvents = True) And (m_OPC_LCCLient.Status = fvVariableStatusGood)) Then
+	                m_OPC_LCCLient_ValueChange
+	            Else
+	                m_OPC_LCCLient.EnableEvents = True
+	            End If
+	        
+	
+	               
+	        End If
+	
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ListofBlocks_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: m_OPC_EGAMAList_ValueChange
+	'* update list list of data followed according the definition of the gama list
+	'* ************************************************************************************************
+	Private Sub m_OPC_EGAMAList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "Begin Subroutine")
+	        
+	    Dim i As Integer
+	    Dim BlockID As String
+	    
+	    If Not (m_OPCSet_EGAMA_Definitions Is Nothing) Then
+	        m_OPCSet_EGAMA_Definitions.Destroy
+	        Set m_OPCSet_EGAMA_Definitions = Nothing
+	    End If
+	    
+	    ' Check the plug is OK for reading
+	    If (m_OPC_EGAMAList.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Waiting")
+	    ElseIf (m_OPC_EGAMAList.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Config Error")
+	    ElseIf (m_OPC_EGAMAList.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Not Connected")
+	    Else
+	        If m_OPC_EGAMAList.Status <> fvVariableStatusGood Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is not Good")
+	        Else
+	            'm_OPC_EGAMAList.EnableEvents = False
+	            If Not (GamaManager Is Nothing) Then
+	                m_StrGamaList = GamaManager.ReadGamaListFromXML(m_OPC_EGAMAList.Value)
+	            
+	                Set m_OPCSet_EGAMA_Definitions = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	                
+	                For i = 0 To UBound(m_StrGamaList)
+	                    BlockID = GamaManager.Get_EGamaBlockID(m_StrGamaList(i))
+	                    m_OPCSet_EGAMA_Definitions.AddItem m_OPCClusterName & BlockID & "." & m_StrGamaList(i) & c_strEGamaStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	                    m_OPCSet_EGAMA_Definitions.AddItem m_OPCClusterName & BlockID & "." & m_StrGamaList(i) & c_strEGamaTrackStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	                Next i
+	                
+	                m_OPCSet_EGAMA_Definitions.DoConnect "CurrentEGamaDefinitions"
+	            End If
+	        End If
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_EGAMA_Definitions_OnRefresh
+	'* update the display of the list of elementary gama
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_EGAMA_Definitions_OnRefresh(lIndex As Long, Value As Variant, Status As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnRefresh", "Begin Subroutine")
+	       
+	    Dim i As Integer
+	    Dim iEGamaName As String
+	    Dim iEGamaStatus As Integer
+	    Dim iEGamaTrackStatus As Integer
+	
+	    
+	    Dim Arr_strEGamaName() As Variant
+	    Dim Arr_iEGamaStatus() As Variant
+	    Dim Arr_strEGamaStatus() As Variant
+	    Dim Arr_iEGamaTrackStatus() As Variant
+	    Dim Arr_strEGamaTrackStatus() As Variant
+	
+	    
+	    If (m_OPCSet_EGAMA_Definitions.IsAllGood) Then
+	    
+	        ReDim Arr_strEGamaName(UBound(m_StrGamaList))
+	        ReDim Arr_iEGamaStatus(UBound(m_StrGamaList))
+	        ReDim Arr_strEGamaStatus(UBound(m_StrGamaList))
+	        ReDim Arr_iEGamaTrackStatus(UBound(m_StrGamaList))
+	        ReDim Arr_strEGamaTrackStatus(UBound(m_StrGamaList))
+	        
+	        For i = 0 To UBound(m_StrGamaList)
+	            iEGamaName = GamaManager.Get_EGamaName(m_StrGamaList(i))
+	            iEGamaStatus = m_OPCSet_EGAMA_Definitions.Item(2 * i).Value
+	            iEGamaTrackStatus = m_OPCSet_EGAMA_Definitions.Item(2 * i + 1).Value
+	
+	
+	            Arr_strEGamaName(i) = iEGamaName
+	            Arr_iEGamaStatus(i) = iEGamaStatus
+	            If (iEGamaStatus = 1) Then
+	                Arr_strEGamaStatus(i) = c_txtAuthorised
+	            Else
+	                If (iEGamaStatus = 0) Then
+	                    Arr_strEGamaStatus(i) = c_txtNotAuthorised
+	                Else
+	                    Arr_strEGamaStatus(i) = "-"
+	                End If
+	            End If
+	            
+	            Arr_iEGamaTrackStatus(i) = iEGamaTrackStatus
+	            If (iEGamaTrackStatus = 0) Then
+	                Arr_strEGamaTrackStatus(i) = c_txtNotAuthorised
+	            Else
+	                If (iEGamaTrackStatus = 1) Then
+	                    Arr_strEGamaTrackStatus(i) = c_txtAuthorised
+	                Else
+	                    Arr_strEGamaTrackStatus(i) = "-"
+	                End If
+	            End If
+	        Next i
+	              
+	        m_List.FillColumn c_strColumnEGamaName, Arr_strEGamaName
+	        m_List.FillColumn c_strColumnEGamaStatus, Arr_iEGamaStatus, c_strValue
+	        m_List.FillColumn c_strColumnEGamaStatusTxt, Arr_strEGamaStatus
+	        m_List.FillColumn c_strColumnEGamaTrackStatus, Arr_iEGamaTrackStatus, c_strValue
+	        m_List.FillColumn c_strColumnEGamaTrackStatusTxt, Arr_strEGamaTrackStatus
+	        m_List.Display
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnRefresh", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_EGAMA_Definitions_OnConnection
+	'* update the array display for the first connection
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_EGAMA_Definitions_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnConnection", "Begin Subroutine")
+	    
+	    Dim i As Long
+	    
+	    For i = 0 To (UBound(arrValue) / 2)
+	        m_OPCSet_EGAMA_Definitions_OnRefresh i, arrValue(i), arrStatus(i)
+	    Next i
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnConnection", Err.Description)
+	End Sub
+	
+	'* Subroutine: ReadGamaList
+	'* update the display of the list of elementary gama
+	'* ************************************************************************************************
+	Private Function ReadGamaList(ByVal GamaList) As String()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, "Iconis_CLS_Gama", "ReadGamaList", "Begin Function")
+	
+	    If (GamaList <> "") Then
+	        ReadGamaList = Split(GamaList, c_strGamaSeparator)
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Gama", "ReadGamaList", _
+	                     "The OPC variable [GamaList] is empty")
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Gama", "ReadGamaList", Err.Description)
+	End Function
+	
+	
+	'* Subroutine: m_OPC_LCCLient_ValueChange
+	'* Purpose: Manage the OPC variable containing the LC Client
+	'* ************************************************************************************************
+	Private Sub m_OPC_LCCLient_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_LCCLient.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", "The status of " & m_OPC_LCCLient.Name & " is Waiting")
+	    ElseIf (m_OPC_LCCLient.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", "The status of " & m_OPC_LCCLient.Name & " is Config Error")
+	    ElseIf (m_OPC_LCCLient.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", "The status of " & m_OPC_LCCLient.Name & " is Not Connected")
+	    ElseIf (m_OPC_LCCLient.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", "The Quality of " & m_OPC_LCCLient.Name & " is not good")
+	    Else '* Status and quality are GOOD
+	        If (m_LCRead = False) Then
+	            m_LCRead = True
+	            m_WorkZone_Manager.SetCurrentLC (m_OPC_LCCLient.Value)
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_LCCLient_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-11,0,700,0,0,"Tahoma",0,0
+	FONT,3,-11,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,136,141,155,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,179,179,179,0,0,0
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,0,0,0,0,56,0
+	COLOR,7,62,62,62,0,0,0
+	COLOR,8,0,0,0,0,41,0
+	COLOR,9,0,0,0,0,32,0
+COLORS,END
+O,BEGIN,OCX,"ScrollBar"
+	B,622,55,641,179,10,60,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,27
+		Size,"450;3228"
+		MousePointer,0
+		Min,0
+		Max,32767
+		Position,0
+		PrevEnabled,1
+		NextEnabled,1
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END
+O,BEGIN,L,"HeaderVerLine4"
+	B,621,53,621,29,621,53,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,621,53,621,29
+O,END
+O,BEGIN,T,"Text1"
+	B,7,76,119,100,7,100,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,7,76,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,277,104,122,77,277,104,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,6,COLOR,6,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,6,COLOR,2,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+O,END
+O,BEGIN,T,"Text2"
+	B,128,77,272,101,128,101,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,128,77,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"StatusEnum.Value"
+	A,END
+O,END

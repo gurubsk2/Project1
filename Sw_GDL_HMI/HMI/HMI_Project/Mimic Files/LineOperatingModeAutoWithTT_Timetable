@@ -1,0 +1,659 @@
+ASCII32,19,9,2018,15:55,4,1.1
+W,BEGIN,"LineOperatingModeAutoWithTT_Timetable","LineOperatingModeAutoWithTTTimetable"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,8,25
+	SIZE,610,100,610,100,0,0,0,1424,1034,610,100
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,8,25
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithTT_Timetable.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto With TT Timetable
+	'* *******************************************************************************************
+	'* Purpose:     Manages the selection of the timetable to be loaded and the loading of it
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '09
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                August '09
+	'* Change:              Fix the CR ALPHA 146369
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                October '09
+	'* Change:              Fix the CR ALPHA 153908
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              Fix the CR ALPHA 182396
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              Fix the CR ALPHA 182430
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              Fix the CR ALPHA 183404
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '10
+	'* Change:              Fix the CR ALPHA 188820 (Add the progress bar)
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '12
+	'* Change:              CR ALPHA 270260
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '12
+	'* Change:              CR ALPHA 270260 - Complement1
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strFileExtensionSeparator As String = "."
+	Private Const c_strFileExtension As String = ".xml"
+	
+	'* Used to read the XML string containing the list of timetable names
+	Private Const c_strFileNode As String = "File"
+	Private Const c_strNameTag As String = "Name"
+	
+	'Private Const c_strAvailableFilesTag As String = "IconisMain.TPMModule.TPMFilesFinder.AvailableFiles"
+	'Private Const c_strFileToLoadTag As String = "IconisMain.TPMModule.TPMFilesFinder.FileToLoad"
+	'Private Const c_strScheduleFileLoadedTag As String = "IconisMain.TPMModule.TPMTPC.ScheduleFileLoaded"
+	'Private Const c_strScheduleFileFailureTag As String = "IconisMain.TPMModule.TPMTPC.ScheduleFileFailure"
+	'Private Const c_strScheduleFileLoadingProgressTag As String = "IconisMain.TPMModule.TPMTPC.ScheduleFileLoadingProgress"
+	Private Const c_strAvailableFilesTag As String = "MainKernelExtended.TTCModule.DBLoader.AvailableTimeTables"
+	Private Const c_strFileToLoadTag As String = "MainKernelExtended.TTCModule.DBLoader.TimeTableName"
+	Private Const c_strScheduleFileLoadedTag As String = "MainKernelExtended.TTCModule.DBLoader.ProcessingSuccessfull"
+	Private Const c_strScheduleFileFailureTag As String = "MainKernelExtended.TTCModule.DBLoader.ProcessingFailure"
+	Private Const c_strScheduleFileLoadingProgressTag As String = "MainKernelExtended.TTCModule.DBLoader.ProcessingProgress"
+	
+	'* File name of the "Line Operating Mode Auto With TT - Regulation Mode" mimic
+	Private Const c_strRegulationModeMimicName As String = "LineOperatingModeAutoWithTT_RegulationMode"
+	'* File name of the "Line Operating Mode Auto With TT - Ctrl" mimic
+	Private Const c_strAutoWithTTMimicName As String = "LineOperatingModeAutoWithTT_Ctrl"
+	
+	'* Regulation mode
+	Private Const c_iUnknownRegulationMode As Integer = 0     '* Unknown
+	
+	'* OPC variables
+	'* ******************************************************
+	Dim WithEvents m_OPC_AvailableTimetables As Variable
+	Dim WithEvents m_OPC_ScheduleFileLoaded As Variable
+	Dim WithEvents m_OPC_ScheduleFileFailure As Variable
+	Dim WithEvents m_OPC_ScheduleFileLoadingProgress As Variable
+	
+	'* Used for timetable loading command
+	Dim WithEvents m_OPC_FileToLoad As Variable
+	' Dim strOCPClusterName As String
+	
+	'* Module variables
+	'* ******************************************************
+	'* Flag indicating if the loading of a timetable is in progress or not
+	Private m_bLoadInProgress As Boolean
+	Dim strOCPClusterName As String
+	
+	Private Sub m_OPC_FileToLoad_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_FileToLoad_ValueChange", "Begin Subroutine")
+	
+	   ''Call m_OPC_ScheduleFileLoaded_ValueChange
+	   
+	  
+	
+	    Exit Sub
+	ErrorHandler:
+	
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_FileToLoad_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'*      On opening the mimic,
+	'*          - Init flag,
+	'*          - Add and init variables
+	'*          - Clear and disable the combo box
+	'*          - Add the OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	  ''  Dim strOCPClusterName As String
+	    
+	    '* Init flag
+	    m_bLoadInProgress = False
+	    
+	     '* Add and init a variable containing the value of loading progress
+	    Variables.Add ThisMimic.Branch & ".LoadingProgressValue%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".LoadingProgressValue%").Value = 0
+	    
+	    '* Clear the combo box
+	    ComboBoxFiles.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxFiles.Value = ""
+	    '* Disable the combo box
+	    ComboBoxFiles.Enabled = False
+	    
+	    '* Extract the cluster name from the branch of the mimic
+	    strOCPClusterName = Left(ThisMimic.Branch, InStr(ThisMimic.Branch, c_strServerSeparator))
+	    
+	    '* Variable containing the list of available timetables for loading
+	    Set m_OPC_AvailableTimetables = Variables.Add(strOCPClusterName & c_strAvailableFilesTag, fvVariableTypeText)
+	    If ((m_OPC_AvailableTimetables.Status = fvVariableStatusGood) And (m_OPC_AvailableTimetables.EnableEvents = True)) Then
+	        m_OPC_AvailableTimetables_ValueChange
+	    Else
+	        m_OPC_AvailableTimetables.EnableEvents = True
+	    End If
+	    
+	    '* Variable containing the value (in %) of loading progress
+	    Set m_OPC_ScheduleFileLoadingProgress = Variables.Add(strOCPClusterName & c_strScheduleFileLoadingProgressTag, fvVariableTypeRegister)
+	    If ((m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoadingProgress.EnableEvents = True)) Then
+	       m_OPC_ScheduleFileLoadingProgress_ValueChange
+	    Else
+	        m_OPC_ScheduleFileLoadingProgress.EnableEvents = True
+	    End If
+	    
+	    '* Variable containing the schedule file loaded status
+	    Set m_OPC_ScheduleFileLoaded = Variables.Add(strOCPClusterName & c_strScheduleFileLoadedTag, fvVariableTypeBit)
+	    If ((m_OPC_ScheduleFileLoaded.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoaded.EnableEvents = True)) Then
+	        m_OPC_ScheduleFileLoaded_ValueChange
+	    Else
+	        m_OPC_ScheduleFileLoaded.EnableEvents = True
+	    End If
+	    
+	    '* Variable containing the schedule file failure status
+	    Set m_OPC_ScheduleFileFailure = Variables.Add(strOCPClusterName & c_strScheduleFileFailureTag, fvVariableTypeBit)
+	    If ((m_OPC_ScheduleFileFailure.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileFailure.EnableEvents = True)) Then
+	        m_OPC_ScheduleFileFailure_ValueChange
+	    Else
+	        m_OPC_ScheduleFileFailure.EnableEvents = True
+	    End If
+	    
+	    '* Variable used to send the loading of the timetable
+	    Set m_OPC_FileToLoad = Variables.Add(strOCPClusterName & c_strFileToLoadTag, fvVariableTypeText)
+	    If ((m_OPC_FileToLoad.Status = fvVariableStatusGood) And (m_OPC_FileToLoad.EnableEvents = True)) Then
+	        m_OPC_FileToLoad_ValueChange
+	    Else
+	       m_OPC_FileToLoad.EnableEvents = True
+	    End If
+	    Call Variables.Add(ThisMimic.Branch & ".TimetableLoaded%", fvVariableTypeBit)
+	    
+	    
+	    If m_OPC_FileToLoad.Value <> "" And m_bLoadInProgress = False Then
+	       Mimics.Open "mmc_OnlineTTUnLoading", "OPCClusterATSLV2:MainKernelExtended.TTCModule"
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*  Before closing the Mimic, remove the OPC variable previously subscribed
+	'* **************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    Variables.Remove ThisMimic.Branch & ".LoadingProgressValue%"
+	    
+	    If Not (m_OPC_AvailableTimetables Is Nothing) Then
+	        Variables.Remove (m_OPC_AvailableTimetables.Name)
+	        Set m_OPC_AvailableTimetables = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileLoadingProgress Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoadingProgress.Name)
+	        Set m_OPC_ScheduleFileLoadingProgress = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileLoaded Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileLoaded.Name)
+	        Set m_OPC_ScheduleFileLoaded = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ScheduleFileFailure Is Nothing) Then
+	        Variables.Remove (m_OPC_ScheduleFileFailure.Name)
+	        Set m_OPC_ScheduleFileFailure = Nothing
+	    End If
+	    
+	    If Not (m_OPC_FileToLoad Is Nothing) Then
+	        Variables.Remove (m_OPC_FileToLoad.Name)
+	        Set m_OPC_FileToLoad = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'*  SubRoutine: btnLoad_Click
+	'*      Send the command of the loading of the timetable selected by the operator in the
+	'*      combo box
+	'* ******************************************************************************************
+	Private Sub btnLoad_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnLoad_Click", "Begin Subroutine")
+	    
+	    If (Variables.Item(ThisMimic.Branch & ".ButtonLoadEnabled%").Value = 0) Then Exit Sub
+	    
+	    Dim TimetableFileName As String
+	    
+	    '* Disable the "Load" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonLoadEnabled%").Value = 0
+	    
+	    '* Disable the combo box
+	    ComboBoxFiles.Enabled = False
+	        
+	    '* Retrieve the name of the timetable to be loaded (selected by the operator in the combo box)
+	    '* and add the extension (.xml)
+	    TimetableFileName = ComboBoxFiles.Value & c_strFileExtension
+	    
+	    '* Check if the status and quality of the OPC variable associated to the command of loading of the timetable
+	    '* are valid
+	    If ((m_OPC_FileToLoad.Status = fvVariableStatusGood) And (m_OPC_FileToLoad.Quality = 192)) Then
+	        '* Set the flag indicating that the loading of the timetable is in progress
+	        m_bLoadInProgress = True
+	        '* Disable the "Cancel" button of the parent mimic
+	        Variables.Item(ThisMimic.Branch & ".AutoWithTTButtonCancelEnabled%").Value = 0
+	        '* Send the command of loading of the timetable
+	        m_OPC_FileToLoad.Value = TimetableFileName
+	        
+	        '* Variable containing the value (in %) of loading progress
+	'        Set m_OPC_ScheduleFileLoadingProgress = Variables.Add(strOCPClusterName & c_strScheduleFileLoadingProgressTag, fvVariableTypeRegister)
+	'
+	'        If ((m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoadingProgress.EnableEvents = True)) Then
+	         
+	           m_OPC_ScheduleFileLoadingProgress_ValueChange
+	'        Else
+	'            m_OPC_ScheduleFileLoadingProgress.EnableEvents = True
+	'        End If
+	'
+	        '* Variable containing the schedule file loaded status
+	        Set m_OPC_ScheduleFileLoaded = Variables.Add(strOCPClusterName & c_strScheduleFileLoadedTag, fvVariableTypeBit)
+	        If ((m_OPC_ScheduleFileLoaded.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileLoaded.EnableEvents = True)) Then
+	            m_OPC_ScheduleFileLoaded_ValueChange
+	        Else
+	            m_OPC_ScheduleFileLoaded.EnableEvents = True
+	        End If
+	    
+	        '* Variable containing the schedule file failure status
+	        Set m_OPC_ScheduleFileFailure = Variables.Add(strOCPClusterName & c_strScheduleFileFailureTag, fvVariableTypeBit)
+	        If ((m_OPC_ScheduleFileFailure.Status = fvVariableStatusGood) And (m_OPC_ScheduleFileFailure.EnableEvents = True)) Then
+	       
+	            m_OPC_ScheduleFileFailure_ValueChange
+	        Else
+	            m_OPC_ScheduleFileFailure.EnableEvents = True
+	        End If
+	        
+	        
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnLoad_Click", _
+	                     "The command has been sent - OPC variable : " & m_OPC_FileToLoad.Name & _
+	                     " - Value : " & TimetableFileName)
+	    Else
+	        '* Command of loading of the timetable has not been sent
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnLoad_Click", _
+	                     "The command of timetable loading has not been sent - OPC variable : " & m_OPC_FileToLoad.Name & _
+	                     " - Value : " & TimetableFileName)
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnLoad_Click", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: ComboBoxFiles_Change
+	'*    Manage the combo box
+	'* ******************************************************************************************
+	Private Sub ComboBoxFiles_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxFiles_Change", "Begin Subroutine")
+	    
+	    '* Enable the "Load" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonLoadEnabled%").Value = 1
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxFiles_Change", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: FillComboBox
+	'*    - Read the xml string containing name of the available timetable files
+	'*    - Fill the combo box
+	'* ******************************************************************************************
+	Public Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	    
+	    Dim oDoc As DOMDocument
+	   
+	    '* Clear the combo box
+	    ComboBoxFiles.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxFiles.Value = ""
+	    '* Disable the combo box
+	    ComboBoxFiles.Enabled = False
+	    
+	    Set oDoc = New DOMDocument
+	    '* Load the XMl file
+	    If (oDoc.loadXML(m_OPC_AvailableTimetables.Value)) Then
+	        Dim FirstNodeLevel As IXMLDOMNodeList
+	             
+	        Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strFileNode)
+	        If (FirstNodeLevel.length <> 0) Then
+	             Dim oNodeClass As IXMLDOMNode
+	            For Each oNodeClass In FirstNodeLevel
+	                Dim oAttr As IXMLDOMAttribute
+	                Dim strFileName As String
+	                    
+	                For Each oAttr In oNodeClass.Attributes
+	                    If (StrComp(oAttr.nodeName, c_strNameTag, vbTextCompare) = 0) Then
+	                        '* Name attribute
+	                        strFileName = oAttr.nodeValue
+	                        Exit For
+	                    End If
+	                Next
+	                If (strFileName <> "") Then
+	                    Dim lPos As Long
+	                    
+	                    '* Add the timetable file name (without the extension) to the combo box
+	                    lPos = InStr(1, strFileName, c_strFileExtensionSeparator)
+	                    If (lPos > 0) Then
+	                        ComboBoxFiles.AddItem Left(strFileName, lPos - 1)
+	                    Else
+	                        ComboBoxFiles.AddItem strFileName
+	                    End If
+	                End If
+	            Next
+	        End If
+	        Set FirstNodeLevel = Nothing
+	    End If
+	    Set oDoc = Nothing
+	    
+	    If (ComboBoxFiles.ListCount > 0) Then
+	        '* Enable the combo box (if it exist at least one item)
+	        ComboBoxFiles.Enabled = True
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_AvailableTimetables_ValueChange
+	'*   Manages the list of available timetables
+	'* ***************************************************************
+	Private Sub m_OPC_AvailableTimetables_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_AvailableTimetables.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", "The status of " & m_OPC_AvailableTimetables.Name & " is Waiting")
+	    ElseIf (m_OPC_AvailableTimetables.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", "The status of " & m_OPC_AvailableTimetables.Name & " is Config Error")
+	    ElseIf (m_OPC_AvailableTimetables.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", "The status of " & m_OPC_AvailableTimetables.Name & " is Not Connected")
+	    ElseIf (m_OPC_AvailableTimetables.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", "The Quality of " & m_OPC_AvailableTimetables.Name & " is not good")
+	    Else '* Status and quality of the variable are good
+	        If (m_OPC_AvailableTimetables.Value <> "") Then
+	            '* Fill the combo box
+	            FillComboBox
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_AvailableTimetables_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileLoadingProgress_ValueChange
+	'*      Manage the OPC variable Schedule File Loading Progress
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileLoadingProgress_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "The status of " & m_OPC_ScheduleFileLoadingProgress.Name & " is Waiting")
+	    ElseIf (m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "The status of " & m_OPC_ScheduleFileLoadingProgress.Name & " is Config Error")
+	    ElseIf (m_OPC_ScheduleFileLoadingProgress.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "The status of " & m_OPC_ScheduleFileLoadingProgress.Name & " is Not Connected")
+	    ElseIf (m_OPC_ScheduleFileLoadingProgress.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", "The Quality of " & m_OPC_ScheduleFileLoadingProgress.Name & " is not good")
+	    Else '* Status and quality of the variable are good
+	        If (m_bLoadInProgress = True) Then
+	           Variables.Item(ThisMimic.Branch & ".LoadingProgressValue%").Value = m_OPC_ScheduleFileLoadingProgress.Value
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoadingProgress_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileLoaded_ValueChange
+	'*      Manage the OPC variable Schedule File Loaded
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileLoaded_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "Begin Subroutine")
+	    Dim lLeftPos As Long
+	    Dim lTopPos As Long
+	                
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_ScheduleFileLoaded.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "The status of " & m_OPC_ScheduleFileLoaded.Name & " is Waiting")
+	    ElseIf (m_OPC_ScheduleFileLoaded.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "The status of " & m_OPC_ScheduleFileLoaded.Name & " is Config Error")
+	    ElseIf (m_OPC_ScheduleFileLoaded.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "The status of " & m_OPC_ScheduleFileLoaded.Name & " is Not Connected")
+	    ElseIf (m_OPC_ScheduleFileLoaded.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", "The Quality of " & m_OPC_ScheduleFileLoaded.Name & " is not good")
+	    Else '* Status and quality of the variable are good
+	        If ((m_bLoadInProgress = True) And (m_OPC_ScheduleFileLoaded.Value = True)) Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", _
+	                         "The timetable has been loaded with success")
+	                
+	            '* Reset the flag
+	            m_bLoadInProgress = False
+	                    
+	            '* Set the variable indicating that a timetable has been loaded
+	            Variables.Item(ThisMimic.Branch & ".TimetableLoaded%").Value = True
+	           
+	'            lLeftPos = ThisMimic.Windows(1).Left
+	'            lTopPos = ThisMimic.Windows(1).Top + ThisMimic.Windows(1).Height
+	'            Mimics.Open c_strRegulationModeMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	'                        c_strAutoWithTTMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	'                        lLeftPos, lTopPos, True
+	                        
+	            If (Variables.Item("@CurrentRegulationMode%").Value = c_iUnknownRegulationMode) Then
+	                '* Enable the "OK" button
+	                Variables.Item("@AutoWithTTButtonOKEnabled%").Value = True
+	            End If
+	            
+	             '* Enable the "Cancel" button of the parent mimic
+	            Variables.Item(ThisMimic.Branch & ".AutoWithTTButtonCancelEnabled%").Value = True
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileLoaded_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ScheduleFileFailure_ValueChange
+	'*      Manage the OPC variable Schedule File Failure
+	'* ***************************************************************
+	Private Sub m_OPC_ScheduleFileFailure_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_ScheduleFileFailure.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "The status of " & m_OPC_ScheduleFileFailure.Name & " is Waiting")
+	    ElseIf (m_OPC_ScheduleFileFailure.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "The status of " & m_OPC_ScheduleFileFailure.Name & " is Config Error")
+	    ElseIf (m_OPC_ScheduleFileFailure.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "The status of " & m_OPC_ScheduleFileFailure.Name & " is Not Connected")
+	    ElseIf (m_OPC_ScheduleFileFailure.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "The Quality of " & m_OPC_ScheduleFileFailure.Name & " is not good")
+	    Else '* Status and quality of the variable are good
+	        If ((m_bLoadInProgress = True) And (m_OPC_ScheduleFileFailure.Value = True)) Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", "Loading of the timetable has failed")
+	            
+	            '* Reset the flag
+	            m_bLoadInProgress = False
+	            
+	            '* Enable the "Cancel" button of the parent mimic
+	            Variables.Item(ThisMimic.Branch & ".AutoWithTTButtonCancelEnabled%").Value = 1
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ScheduleFileFailure_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,215,215,215,0,0,0
+COLORS,END
+O,BEGIN,R,"shpTimetable"
+	B,608,95,3,6,608,95,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"lblTimetable"
+	B,15,-2,54,14,15,14,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,15,-2,0,0,FONT,1,"Timetable",36,FONT,1,"Timetable",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"PCD",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"PCD",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"lblName"
+	B,15,25,77,41,15,41,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,15,25,0,0,FONT,1,"Name",36,FONT,1,"Name",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Nombre",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBoxFiles"
+	B,110,25,480,49,10,60,64511,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnLoad"
+	B,504,22,575,51,504,51,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,504,22,0,0,FONT,1,"Load",37,FONT,1,"Load",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cargar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cargar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonLoadEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,S,"Symbol13"
+	B,110,56,480,83,110,83,65535,0,6400,0,1,0,0
+	PP,"TimetableCtrl_ProgressStatus","",110,56,480,83,0,0, 0, 1
+O,END

@@ -1,0 +1,289 @@
+ASCII32,19,9,2018,0:41,4,1.1
+W,BEGIN,"Station_ContextualMenu","Station_ContextualMenu"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1163,330
+	SIZE,228,80,228,78,0,0,0,1280,1024,226,78
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Station_ContextualMenu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	'* Declarations
+	'* ******************************************************
+	
+	'* Constants
+	'* ------------------------------------------------------
+	
+	
+	
+	
+	Private Sub Mimic_Open()
+	    Dim iMonitor As Integer, iItemTop As Integer
+	    
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    On Error GoTo ErrorHandler
+	
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then _
+	       Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then _
+	       Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	
+	    [@UserAccessCommand%] = True
+	    
+	    iItemTop = 24
+	    If Variables("bSupervisor%").Value Or Variables("bAdmin%").Value Then
+	        iItemTop = iItemTop + 28
+	        'Show inspector panel and line
+	        ThisMimic.Graphics("btnMenuItem2").Top = iItemTop
+	    Else
+	        'Show inspector panel and line
+	        ThisMimic.Graphics("btnMenuItem2").Top = -50
+	    End If
+	    Me.Windows(1).Height = iItemTop + 28
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 1
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem1_Click()
+	    On Error GoTo ErrorHandler
+	
+	    If Not [@UserAccessCommand%] Then Exit Sub
+	    
+	    RequestControl Me.Branch
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_Click", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 2
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem2_Click()
+	    Dim sTerritoryOPC As String
+	
+	    On Error GoTo ErrorHandler
+	
+	    sTerritoryOPC = GetTerritoryOPC(Me.Branch)
+	    If Not [@UserAccessCommand%] Or sTerritoryOPC = "" Then Exit Sub
+	
+	    Variables(sTerritoryOPC & ".TAS.GiveToOperator").Value = thisproject.Security.UserName
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_Click", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,0,0,255,0,0,0
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,238,238,238,0,0,0
+	COLOR,7,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,T,"btnMenuItem2"
+	B,3,52,224,76,3,76,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,52,5,0,FONT,1,"Tempo de Parada...",36,FONT,1,"Tempo de Parada...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tomar",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Tomar",FONT,1,36
+			ROLE,0,"Tomar",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=(@Plug% == 0) and (@UserAccessCommand%)","Item2Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem1"
+	B,3,26,224,50,3,50,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,26,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Pedir",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Pedir",FONT,1,36
+			ROLE,0,"Pedir",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim1",0,0,"",""
+		PP,"=(@Plug% == 0) and (@UserAccessCommand%)","Item1Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,0,13,280,14,0,14,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,14,280,14,0,14,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,0,14,280,14
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,13,280,13,0,13,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,0,13,280,13
+	O,END
+O,END
+O,BEGIN,T,"lblMenuTitle"
+	B,18,5,153,21,18,21,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,0,18,5,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control de estaci¢n",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Control de estaci¢n",FONT,1,36
+			ROLE,0,"Control de estaci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END

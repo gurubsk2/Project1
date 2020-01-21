@@ -1,0 +1,198 @@
+ASCII32,11,2,2017,13:51,43,1.1
+W,BEGIN,"mmc_Stabling_SOTripModify","mmc_Stabling_SOTripModify"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,348,318
+	SIZE,325,270,325,270,0,0,0,1366,768,319,248
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Stabling modification"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_Stabling_SOTripModify.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Trip_Addition
+	'* *******************************************************************************************
+	'* Purpose:     It allows creating a new trip by copying an existing timetable trip (then called reference trip)
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Wagner Queiroz
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	
+	'Var tags
+	Private Const c_strTabCRowIDSel As String = ".TabCRowIDSel%"
+	Private Const c_strbtnOKEnabled As String = ".OKButtonEnabled%"
+	
+	
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    StablingModification1.RowId = Variables.Item(ThisMimic.Branch & c_strTabCRowIDSel).Value
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* ************************************************************************************************
+	'* Subroutine: OKButton_Click
+	'* Send command to the Active X
+	'* ************************************************************************************************
+	Private Sub OKButton_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OKButton_Click", "Begin Subroutine")
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = True Then
+	    
+	        StablingModification1.SendCommand
+	        
+	        ThisMimic.Close
+	        
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OKButton_Click", Err.Description)
+	    
+	End Sub
+	
+	
+	'* ************************************************************************************************
+	'* Subroutine: StablingModification1_OnParametersFilled
+	'* check if all the parameters in the mimic are filled
+	'* ************************************************************************************************
+	Private Sub StablingModification1_OnParametersFilled(ByVal parametersValid As Boolean)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "StablingModification1_OnParametersFilled", "Begin Subroutine")
+	    
+	    '* Check the parameters
+	    If StablingModification1.ParametersFilled And parametersValid Then
+	    
+	        Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = True
+	        
+	    Else
+	    
+	        Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = False
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "StablingModification1_OnParametersFilled", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"TabC", 0, 2, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,215,215,215,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,T,"OKButton"
+	B,125,211,210,233,125,233,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,125,211,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"OKButtonEnabled%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,T,"CancelButton"
+	B,220,211,305,233,220,233,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,220,211,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,L,"Poly1"
+	B,1,199,334,199,1,199,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,199,334,199
+O,END
+O,BEGIN,OCX,"StablingModification1"
+	B,10,20,310,180,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END

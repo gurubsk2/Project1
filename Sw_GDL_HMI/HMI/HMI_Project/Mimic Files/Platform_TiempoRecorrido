@@ -1,0 +1,502 @@
+ASCII32,14,10,2019,8:13,35,1.1
+W,BEGIN,"Platform_TiempoRecorrido","Platform_TiempoRecorrido"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,796,506
+	SIZE,326,185,326,185,0,0,0,1280,1024,320,161
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modo de Marcha STA_COD_09T_TZA_BH"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Plataforma VPT_WL"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modo de Marcha PF_SAN_UP"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,7,1,500,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_TiempoRecorrido.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	
+	
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Project: GDL3
+	'* *******************************************************************************************
+	'* Purpose: Module: Trip Time Managemnet
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Description:         To Manage Optimal performance level of the trip
+	'* Date:                Nov 2016
+	'* Changes:                  All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	Option Explicit
+	Private Const c_strPerformanceLevel As String = ".ATR.RegPoint.PerformanceLevel"
+	Private Const c_strEffortReduction As String = ".ATR.RegPoint.EffortReduction"
+	Private Const c_strEnergySaving As String = ".ATR.RegPoint.EnergySaving"
+	Private Const c_strCoasting As String = ".ATR.RegPoint.CoastingMode"
+	Private Const c_PlatformList As String = "IconisHMI.PlatformsList.Information.Value"
+	
+	Dim WithEvents m_OPC_PlatformList As Variable
+	Dim m_strPlatformName As String
+	Dim WithEvents m_OPC_Performance As Variable
+	Dim WithEvents m_OPC_EffortReduction As Variable
+	Dim WithEvents m_OPC_Energysaving As Variable
+	Dim WithEvents m_OPC_Coasting As Variable
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	
+	    If Check_Variable(m_OPC_EffortReduction) And Check_Variable(m_OPC_Energysaving) And Check_Variable(m_OPC_Coasting) Then
+	    
+	        If (optRetirar.Value = True) Then
+	            m_OPC_EffortReduction.Value = False
+	            m_OPC_Energysaving.Value = False
+	            m_OPC_Coasting.Value = 0
+	            
+	        ElseIf optMin Then
+	          ' iValue = 0
+	            m_OPC_EffortReduction.Value = True
+	            m_OPC_Energysaving.Value = False
+	            m_OPC_Coasting.Value = 0
+	        ElseIf optNom Then
+	            m_OPC_EffortReduction.Value = False
+	            m_OPC_Energysaving.Value = True
+	            m_OPC_Coasting.Value = 0
+	            
+	            'iValue = 1
+	        ElseIf optMax Then
+	            m_OPC_EffortReduction.Value = False
+	            m_OPC_Energysaving.Value = False
+	            m_OPC_Coasting.Value = 1
+	            
+	        Else
+	            m_OPC_EffortReduction.Value = False
+	            m_OPC_Energysaving.Value = False
+	            m_OPC_Coasting.Value = 0
+	        
+	      End If
+	    End If
+	    'Variables(Me.Branch & ".RegPoint.TiempoRecorrido%").Value = iValue
+	        If Variables.Item(ThisMimic.Branch & ".Enabled%") = True Then
+	        Me.Close fvDoNotSaveChanges
+	        End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", Err.Description)
+	End Sub
+	
+	
+	Private Sub m_OPC_Coasting_ValueChange()
+	On Error GoTo ErrorHandler
+	If Check_Variable(m_OPC_Coasting) Then
+	        If (m_OPC_Coasting.Value = 1) Then
+	            optNom = True
+	            optRetirar.Enabled = True
+	            optRetirar.Value = True
+	            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	'        ElseIf (m_OPC_Coasting.Value = 0) Then
+	'            optAplicar.Value = True
+	'            optRetirar.Enabled = False
+	'            'Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	        End If
+	End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_Performance_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_EffortReduction_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	If Check_Variable(m_OPC_EffortReduction) Then
+	        If (m_OPC_EffortReduction.Value = True) Then
+	            optMin = True
+	            optRetirar.Enabled = True
+	            optRetirar.Value = True
+	            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	        ElseIf (m_OPC_EffortReduction.Value = False) Then
+	            optAplicar.Value = True
+	            optRetirar.Enabled = False
+	            'Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	        End If
+	End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_Performance_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_Energysaving_ValueChange()
+	On Error GoTo ErrorHandler
+	If Check_Variable(m_OPC_Energysaving) Then
+	        If (m_OPC_Energysaving.Value = True) Then
+	            optMax = True
+	            optRetirar.Enabled = True
+	            optRetirar.Value = True
+	            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	'        ElseIf (m_OPC_Energysaving.Value = False) Then
+	'            optAplicar.Value = True
+	'            optRetirar.Enabled = False
+	'            'Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	        End If
+	End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_Performance_ValueChange", Err.Description)
+	End Sub
+	
+	''Private Sub m_OPC_Performance_ValueChange()
+	''On Error GoTo ErrorHandler
+	''If Check_Variable(m_OPC_Performance) Then
+	''        If (m_OPC_Performance.Value = 2) Then
+	''            optMin = True
+	''            optRetirar.Enabled = True
+	''            optRetirar.Value = True
+	''            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	''        ElseIf (m_OPC_Performance.Value = 3) Then
+	''            optNom = True
+	''            optRetirar.Enabled = True
+	''            optRetirar.Value = True
+	''            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	''        ElseIf (m_OPC_Performance.Value = 4) Then
+	''            optMax = True
+	''            optRetirar.Enabled = True
+	''            optRetirar.Value = True
+	''            Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	''        ElseIf (m_OPC_Performance.Value = 0) Then
+	''        optAplicar.Value = True
+	''        optRetirar.Enabled = False
+	''        'Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	''        End If
+	''    End If
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_Performance_ValueChange", Err.Description)
+	''End Sub
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : Mimic_Open
+	'Type       : Procedure
+	'Objective  : Manages the initial values of the variables
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub Mimic_Open()
+	    On Error GoTo ErrorHandler
+	 
+	   Call Variables.Add(ThisMimic.Branch & ".Enabled%", fvVariableTypeBit)
+	   ' ThisMimic.Caption = "Modo de Marcha " & Variables(Me.Branch & ".Shortname%").Value
+	    optMin = False
+	    optNom = False
+	    optMax = False
+	    Variables.Item(ThisMimic.Branch & ".Enabled%").Value = False
+	''    Set m_OPC_Performance = Variables.Add(ThisMimic.Branch & c_strPerformanceLevel, fvVariableTypeRegister)
+	''    If ((m_OPC_Performance.Status = fvVariableStatusGood) And (m_OPC_Performance.EnableEvents = True)) Then
+	''        m_OPC_Performance_ValueChange
+	''    Else
+	''        m_OPC_Performance.EnableEvents = True
+	''    End If
+	    Set m_OPC_PlatformList = Variables.Add(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    If ((m_OPC_PlatformList.Status = fvVariableStatusGood) And (m_OPC_PlatformList.EnableEvents = True)) Then
+	        m_OPC_PlatformList_ValueChange
+	    Else
+	        m_OPC_PlatformList.EnableEvents = True
+	    End If
+	    Set m_OPC_EffortReduction = Variables.Add(ThisMimic.Branch & c_strEffortReduction, fvVariableTypeBit)
+	    If ((m_OPC_EffortReduction.Status = fvVariableStatusGood) And (m_OPC_EffortReduction.EnableEvents = True)) Then
+	        m_OPC_EffortReduction_ValueChange
+	    Else
+	        m_OPC_EffortReduction.EnableEvents = True
+	    End If
+	     Set m_OPC_Energysaving = Variables.Add(ThisMimic.Branch & c_strEnergySaving, fvVariableTypeBit)
+	    If ((m_OPC_Energysaving.Status = fvVariableStatusGood) And (m_OPC_Energysaving.EnableEvents = True)) Then
+	        m_OPC_Energysaving_ValueChange
+	    Else
+	        m_OPC_Energysaving.EnableEvents = True
+	    End If
+	       Set m_OPC_Coasting = Variables.Add(ThisMimic.Branch & c_strCoasting, fvVariableTypeRegister)
+	    If ((m_OPC_Coasting.Status = fvVariableStatusGood) And (m_OPC_Coasting.EnableEvents = True)) Then
+	        m_OPC_Coasting_ValueChange
+	    Else
+	        m_OPC_Coasting.EnableEvents = True
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    
+	End Sub
+	
+	Private Sub optAplicar_Click()
+	On Error GoTo ErrorHandler
+	
+	optMin.Enabled = True
+	optNom.Enabled = True
+	optMax.Enabled = True
+	
+	 Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optAplicar_Click", Err.Description)
+	End Sub
+	
+	Private Sub optMax_Click()
+	On Error GoTo ErrorHandler
+	Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optMax_Click", Err.Description)
+	End Sub
+	
+	Private Sub optMin_Click()
+	On Error GoTo ErrorHandler
+	Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optMin_Click", Err.Description)
+	End Sub
+	
+	Private Sub optNom_Click()
+	On Error GoTo ErrorHandler
+	Variables.Item(ThisMimic.Branch & ".Enabled%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optNom_Click", Err.Description)
+	End Sub
+	
+	Private Sub optRetirar_Click()
+	On Error GoTo ErrorHandler
+	optMin.Enabled = False
+	optNom.Enabled = False
+	optMax.Enabled = False
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optRetirar_Click", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_PlatformList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_PlatformList) = False Then Exit Sub
+	
+	    Call ReadXMLPlatformList(m_OPC_PlatformList.Value)
+	    ThisMimic.Caption = "Modo de Marcha " & m_strPlatformName
+	    'lblMenuTitle.Text = "And‚n "
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	Private Sub ReadXMLPlatformList(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLPlatformList", "Begin Subroutine")
+	   
+	   'Dim strXMLString As String
+	   Dim oDoc As DOMDocument
+	   Dim oPlatformList As IXMLDOMNodeList
+	   Dim oPlatform As IXMLDOMElement
+	   Dim strName As String
+	   Dim strBranch() As String
+	   Dim strID As String
+	   Dim strStationName As String
+	   Dim strStationID As String
+	   Dim dKM As Double
+	   Dim PlatformManager As Iconis_CLS_Platform
+	   
+	   strXMLString = m_OPC_PlatformList.Value
+	   If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "Platform"
+	                    Set oPlatformList = oDoc.documentElement.selectNodes("Platform")
+	                    If Not (oPlatformList Is Nothing) Then
+	                        If (oPlatformList.length > 0) Then
+	                            For Each oPlatform In oPlatformList
+	                                ' Name attribute
+	                                
+	                                ' ID attribute
+	                                strID = Format(oPlatform.getAttribute("ID"))
+	                                ' StationName attribute
+	'                                strStationName = Format(oPlatform.getAttribute(c_strStationNameAttr))
+	'                                ' StationID attribute
+	'                                strStationID = Format(oPlatform.getAttribute(c_strStationIDAttr))
+	'                                ' KM attribute
+	'                                dKM = oPlatform.getAttribute(c_strKMAttr)
+	                                strBranch = Split(ThisMimic.Branch, ":")
+	                                If ((strID <> "")) Then
+	                                    ' Create an instance of Iconis_CLS_Platform class module
+	                                    If strID = "Stop_" & strBranch(1) Then
+	                                        strName = Format(oPlatform.getAttribute("Name"))
+	                                   End If
+	                                End If
+	                                m_strPlatformName = strName
+	                            Next oPlatform
+	                         End If
+	                        Set oPlatformList = Nothing
+	                    End If
+	                End If
+	            
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", _
+	                     "The OPC variable [" & m_OPC_PlatformList.Name & "] is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", Err.Description)
+	End Sub
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,172,168,153,0,0,0
+	COLOR,7,122,122,122,0,0,0
+	COLOR,8,0,0,0,0,35,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,312,104,8,48,296,104,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtImposeDwellTimeLabel"
+	B,17,39,77,55,17,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,17,39,0,0,FONT,1,"Type of dwell time",36,FONT,1,"Type of dwell time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,65,120,144,149,65,149,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,65,120,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"=(Enabled%)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,177,120,256,149,177,149,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,177,120,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Annulla",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,60,8,148,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,172,8,260,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optMin"
+	B,19,64,107,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optNom"
+	B,119,64,207,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optMax"
+	B,219,64,307,88,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

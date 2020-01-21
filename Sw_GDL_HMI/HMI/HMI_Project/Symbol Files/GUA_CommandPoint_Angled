@@ -1,0 +1,127 @@
+ASCII32,24,9,2018,12:58,49,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,0,255,0,0,0,0
+	COLOR,5,255,0,255,0,0,0
+	COLOR,6,255,255,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Point Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                June '08
+	'* Change:              All
+	    
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172265
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Vasanth
+	'* Date:                Nov ' 15
+	'* Change:              CR#667323
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 260
+	Private Const c_lContextualMenuHeight As Long = 180
+	
+	Private Const c_strInspectorPanelMimic As String = "Point_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Point_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	Private Sub Point_Cmd1_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_DblClickEx", "Begin subroutine")
+	      Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	    
+	    '* Open the Inspector Panel mimic
+	    'Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	     Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub Point_Cmd1_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_MouseUp", "Begin subroutine")
+	       
+	    'Add plugs for maintenance command
+	    AddPointVariables GetSymbolBranch(Me)
+	       
+	    GetCursorpos Hold
+	'    xpos = hold.x_Pos
+	'    ypos = hold.y_Pos
+	    '* If mouse is right clicked
+	    Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	    Call Variables.Add(GetSymbolBranch(Me) & ".Detection.Template.Security", fvVariableTypeRegister)
+	    If (Button = 2) Then
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_MouseUp", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol1259"
+	B,3040,411,3094,468,3040,468,65535,0,6400,0,2,0,0
+	O,BEGIN,R,"Point_Cmd1"
+		B,3040,411,3094,468,3040,411,65535,0,6400,0,4,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+		A,BEGIN,CB,"Anim2",0,0,"",""
+			PP,"blinking%"
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,6
+			COL,0,COLOR,6,COLOR,6
+		A,END
+	O,END
+O,END

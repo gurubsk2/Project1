@@ -1,0 +1,248 @@
+ASCII32,22,2,2018,7:24,48,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	Dim ABC As String
+	Dim iMimicPosition As Variant
+	ABC = Thisproject.ActiveMimic.FileName
+	    If Button = 2 Then 'direito
+	        If ABC = "SR_Detailed_View" Then
+	        Call Navegation_1("GUA_notaequip", GetSymbolBranch(ThisSymbol))
+	        Else
+	        Call Navegation("GUA_notaequip", GetSymbolBranch(ThisSymbol))
+	        End If
+	
+	    Else
+	    
+	    If ActiveMimic.Branch = "M2" Then
+	        iPopupPosition = iPopupPosition + 1921
+	    Else
+	        iPopupPosition = 0
+	    End If
+	        
+	    StrObjectNameGUA = ThisSymbol.LocalBranch
+	        
+	'        If Split(StrObjectNameGUA, "_")(2) Like "SEC*" Then
+	'        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	'            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	'    End If
+	     If Split(StrObjectNameGUA, "_")(1) Like "SEAT*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR1*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR2*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR3*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR4*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR5*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR6*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SR7*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	    If Split(StrObjectNameGUA, "_")(1) Like "SAF1*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF2*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF3*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF4*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF5*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF6*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF7*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF8*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	     If Split(StrObjectNameGUA, "_")(1) Like "SAF9*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF10*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF11*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF12*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF13*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF14*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF15*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	      If Split(StrObjectNameGUA, "_")(1) Like "SAF16*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	    If Split(StrObjectNameGUA, "_")(1) Like "SAF17*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_ST", ThisSymbol.LocalBranch)
+	    End If
+	   
+	    End If
+	    
+	End Sub
+	
+	
+	Private Sub Navegation(sMimicClosed As String, ByVal sBranch As String)
+	    iMimicPosition = Thisproject.ActiveMimic.Windows(1).Left
+	    Dim oMimic As Mimic
+	
+	    If iMimicPosition >= 1920 Then
+	        iMimicPosition = 1920 + 720
+	    Else
+	        iMimicPosition = 720
+	    End If
+	    
+	    If TheseMimics.IsOpened(sMimicClosed) = False Then
+	        Mimics.Open sMimicClosed, sBranch, , , , , , , iMimicPosition, 400, True
+	        
+	    Else
+	       
+	    If Thisproject.Mimics.Item(sMimicClosed).Windows(1).Left <> iMimicPosition Then
+	        
+	        aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows(1).Left
+	        aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows(1).Left
+	           
+	        TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	           
+	        TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	    End If
+	    End If
+	End Sub
+	
+	Private Sub Navegation_1(sMimicClosed As String, ByVal sBranch As String)
+	Dim iMimicPosition_1 As String
+	    iMimicPosition_1 = Thisproject.ActiveMimic.Branch
+	
+	    If iMimicPosition_1 = "M2" Then
+	        iMimicPosition = 1920 + 720
+	    Else
+	        iMimicPosition = 720
+	    End If
+	    
+	    If TheseMimics.IsOpened(sMimicClosed) = False Then
+	        Mimics.Open sMimicClosed, sBranch, , , , , , , iMimicPosition, 400, True
+	        
+	    Else
+	       
+	    If Thisproject.Mimics.Item(sMimicClosed).Windows(1).Left <> iMimicPosition Then
+	        
+	        aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows(1).Left
+	        aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows(1).Left
+	           
+	        TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	           
+	        TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	    End If
+	    End If
+	End Sub
+	
+	Private Function GetSymbolBranch(theSymbol As Symbol) As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, "Iconis_MOD_General", "GetSymbolBranch", "Begin Subroutine")
+	
+	    GetSymbolBranch = theSymbol.LocalBranch
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_MOD_General", "GetSymbolBranch", Err.Description)
+	
+	End Function
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol109"
+	B,999,577,1052,624,999,624,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape11"
+		B,1052,624,999,577,1055,620,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		AST,7,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	O,END
+	O,BEGIN,R,"Shape29"
+		B,1051,623,1000,578,1051,618,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,2,3,COLOR,1,3,COLOR,1,0,COLOR,3,0,COLOR,3
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"POS.Template.bIsOn"
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,1,COLOR,1,1.000000
+			COL,1,COLOR,3,COLOR,3,2.000000
+			COL,1,COLOR,3,COLOR,3,3.000000
+			COL,1,COLOR,3,COLOR,3,4.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+O,END

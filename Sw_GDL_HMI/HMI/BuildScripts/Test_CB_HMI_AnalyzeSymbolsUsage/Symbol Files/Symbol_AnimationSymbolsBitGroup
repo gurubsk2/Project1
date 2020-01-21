@@ -1,0 +1,16 @@
+ASCII32,8,4,2015,17:53,45,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,""
+	B,264,64,320,107,264,107,1,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,S,"Symbol3"
+		B,264,64,320,107,264,107,65535,0,6400,0,2,1,0
+		PP,"Subsymbol_NoChildren","",264,94,320,107,1,0, 1, 1
+		A,BEGIN,OBG,"Anim1",0,0,"",""
+			PP,"bit1%","bit1%","bit1%","bit1%","branch",496,166,552,209,1,"Subsymbol_AnimationSymbolsBitGroup_0000",1,"Subsymbol_AnimationSymbolsBitGroup_0001",1,"Subsymbol_AnimationSymbolsBitGroup_0010",1,"Subsymbol_AnimationSymbolsBitGroup_0011",1,"Subsymbol_AnimationSymbolsBitGroup_0100",1,"Subsymbol_AnimationSymbolsBitGroup_0101",1,"Subsymbol_AnimationSymbolsBitGroup_0110",1,"Subsymbol_AnimationSymbolsBitGroup_0111",1,"Subsymbol_AnimationSymbolsBitGroup_1000",1,"Subsymbol_AnimationSymbolsBitGroup_1001",0,"",1,"Subsymbol_AnimationSymbolsBitGroup_1011",1,"Subsymbol_AnimationSymbolsBitGroup_1100",1,"Subsymbol_AnimationSymbolsBitGroup_1101",1,"Subsymbol_AnimationSymbolsBitGroup_1110",1,"Subsymbol_AnimationSymbolsBitGroup_1111",1,"Subsymbol_AnimationSymbolsBitGroup_Unavailable"
+		A,END
+	O,END
+O,END

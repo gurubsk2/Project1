@@ -1,0 +1,57 @@
+ASCII32,19,9,2018,23:17,52,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,32,0
+	COLOR,3,255,0,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	'Private Const c_strInspectorPanelMimic As String = ""
+	Private Const c_strContextualMenuMimic As String = "View_Stabling_ContextualMenu"
+	Private Hold As POINTAPI
+	Private Sub Symbol_Click()
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_Click", "Begin subroutine")
+	       
+	    GetCursorpos Hold
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	             
+	Exit Sub
+	ErrorHandler:
+	 Call CBTrace(CBTRACEF_ALWAYS, "Symbol_Click", "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol1"
+	B,1458,150,1499,190,1458,190,65535,0,6400,0,1,1,1
+	O,BEGIN,BM,"Bitmap3"
+		B,1458,150,1499,190,1458,190,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,"GUA_TablaBotao.bmp",0,COLOR,3
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Tabla de entrada/salidas"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

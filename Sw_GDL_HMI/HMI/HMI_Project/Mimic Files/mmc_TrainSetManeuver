@@ -1,0 +1,698 @@
+ASCII32,9,10,2019,5:35,46,1.1
+W,BEGIN,"mmc_TrainSetManeuver","mmc_TrainSetManeuver"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,839,508
+	SIZE,250,190,250,190,0,0,0,1280,1024,244,166
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Maniobra 1"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Maniobra 908"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,1,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_TrainSetManeuver.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	
+	' OPC tags used for retrieving train data
+	Private Const c_strTrainUniqueIDTag As String = ".HMITrain.iTrainID"
+	Private Const c_strTrainHMITrainIDTag As String = ".Attributes.HMITETrain.bstrPlug_6"
+	
+	' OPC tag used for retrieving list of possible destinations
+	Private Const c_strPossibleDestinationsListTag As String = ".Attributes.HMITETrain.ustrPlug_2"
+	
+	' OPC tag used for retrieving list of possible destinations for the command "Retirar"
+	Private Const c_strPossibleDestinationsListTagToRemove As String = ".Attributes.HMITETrain.ustrPlug_1"
+	
+	' OPC tag used for command sending
+	Private Const c_strTrainInterposeCmdTag As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeBerth"
+	
+	' OPC tag used for command sending "Maniobra - aplicar"
+	Private Const c_strTrainReleaseHoldPlatforms As String = "MainUO.HSMModule.HSMMgr.ReleaseHoldPlatforms"
+	
+	' Constant used to read the XML string containing the list of possible destinations
+	Private strPointNode As String
+	Private Const c_strIDAttr As String = "ID"
+	Private strNameAttr As String
+	Private Const c_strDestinationSeparator As String = ";"
+	
+	'* *******************************************************************************************
+	'* Variables
+	'* *******************************************************************************************
+	' OPC variables for train
+	Dim WithEvents m_OPCSet_TrainStatus As Iconis_CLS_OPCSet
+	Dim m_OPCSetItem_TrainID As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_HMITrainID As Iconis_CLS_OPCSet_Item
+	
+	' OPC variable to send command
+	Dim m_OPC_TrainInterposeCmd As Variable
+	
+	' OPC variable to send ReleaseHold command
+	Dim m_OPC_TrainReleaseHoldPlatform As Variable
+	
+	' OPC variable to read list of possible destinations
+	Dim WithEvents m_OPC_PossibleDestinationsList As Variable
+	
+	' Train attributes
+	Dim m_iUniqueID As Integer
+	Dim m_strHMITrainID As String
+	
+	' XML string containing list of possible destinations
+	Dim m_strPossibleDestinationsList As String
+	
+	' Command interpose
+	Dim m_strTrainInterposeCmd As String
+	
+	' Cluster name
+	Dim m_strClusterName As String
+	
+	' To check if Init is done
+	Dim m_bInitDone As Boolean
+	
+	' Collection of points
+	Dim m_collPoints As Collection
+	
+	Sub AddPoint(ID As String, Name As String)
+	    m_collPoints.Add Array(ID, Name), Name
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	
+	    If Not (m_OPCSet_TrainStatus Is Nothing) Then
+	        m_OPCSet_TrainStatus.Destroy
+	        Set m_OPCSetItem_HMITrainID = Nothing
+	        Set m_OPCSetItem_TrainID = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* *******************************************************************************************
+	'* Mimic_Open
+	'* *******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	    m_bInitDone = False
+	
+	    ' Initialize the mimic
+	    Initialize
+	    
+	    ' Extract the cluster name from the branch of the mimic
+	    m_strClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    
+	    ThisMimic.Caption = ""
+	    
+	    ' Set the OPC variables
+	    Set m_OPC_TrainInterposeCmd = Variables.Add(c_strClusterLevel2 & c_strTrainInterposeCmdTag, fvVariableTypeText)
+	    Set m_OPC_TrainReleaseHoldPlatform = Variables.Add(c_strClusterLevel2 & c_strTrainReleaseHoldPlatforms, fvVariableTypeText)
+	    
+	    If Variables(ThisMimic.Branch & c_strPossibleDestinationsListTag) Is Nothing Then Variables.Add ThisMimic.Branch & c_strPossibleDestinationsListTag, fvVariableTypeText
+	    If Variables(ThisMimic.Branch & c_strPossibleDestinationsListTagToRemove) Is Nothing Then Variables.Add ThisMimic.Branch & c_strPossibleDestinationsListTagToRemove, fvVariableTypeText
+	 
+	    ' Create the OPCSet to read the current status
+	    Set m_OPCSet_TrainStatus = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    Set m_OPCSetItem_TrainID = m_OPCSet_TrainStatus.AddItem(ThisMimic.Branch & c_strTrainUniqueIDTag, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItem_HMITrainID = m_OPCSet_TrainStatus.AddItem(ThisMimic.Branch & c_strTrainHMITrainIDTag, fvVariableTypeText, c_OPCReadOnly)
+	    m_OPCSet_TrainStatus.DoConnect (Me.Name & ThisMimic.Branch)
+	  
+	  
+	    If Variables(ThisMimic.Branch & ".Attributes.HMITETrain.boolPlug_1").Value Then
+	        optRetirar.Enabled = True
+	        optRetirar = True
+	        optAplicar.Enabled = False
+	        optAplicar = False
+	        optRetirar_Click
+	    Else
+	        optRetirar.Enabled = False
+	        optRetirar = False
+	        optAplicar.Enabled = True
+	        optAplicar = True
+	        optAplicar_Click
+	    End If
+	  
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* Initialize: Set the mimic with the default settings
+	'* *******************************************************************************************
+	Sub Initialize()
+	On Error GoTo ErrorHandler
+	
+	    
+	    'Me.Caption = "   Maniobra " & Variables.Item(ThisMimic.Branch & ".Attributes.HMITETrain.bstrPlug_5").Value
+	   
+	    
+	    ' Set the title label with the HMITrainID
+	   SetHMITrainID ("[ID]")
+	    
+	    ' List boxes cleared
+	    ListBox_1.Value = ""
+	
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	    ' Enable the cancellation button
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Active%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Initialize", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPCSet_CurTrainStatus_OnConnection: Set the display of the current data
+	'* *******************************************************************************************
+	Private Sub m_OPCSet_TrainStatus_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	
+	    m_iUniqueID = m_OPCSetItem_TrainID.Value
+	    m_strHMITrainID = m_OPCSetItem_HMITrainID.Value
+	    'm_strTrainOriginCode = m_OPCSetItem_OriginCode.Value
+	    'm_strTrainDestinationCode = m_OPCSetItem_DestinationCode.Value
+	    ThisMimic.Caption = "Maniobra " & m_strHMITrainID
+	    UpdateMimicWithCurrentValues
+	    
+	    m_bInitDone = True
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCSet_CurTrainStatus_OnConnection", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* UpdateMimicWithCurrentValues: Fill the mimic according the current train data
+	'* *******************************************************************************************
+	Function UpdateMimicWithCurrentValues()
+	On Error GoTo ErrorHandler
+	    
+	    ' Set the title label with the HMITrainID
+	    SetHMITrainID (m_strHMITrainID)
+	    
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "UpdateMimicWithCurrentValues", Err.Description)
+	End Function
+	
+	'* *******************************************************************************************
+	'* ListBox_1_Change: Manage the modification of destination
+	'* *******************************************************************************************
+	Private Sub ListBox_1_Change()
+	On Error GoTo ErrorHandler
+	
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ListBox_1_Change", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPC_PossibleDestinationsList_ValueChange: Manage the change of m_OPC_PossibleDestinationsList
+	'* *******************************************************************************************
+	Private Sub m_OPC_PossibleDestinationsList_ValueChange()
+	On Error GoTo ErrorHandler
+	    
+	    If Check_OPC_Variable(m_OPC_PossibleDestinationsList) Then
+	        
+	        ' Set the variable
+	        m_strPossibleDestinationsList = m_OPC_PossibleDestinationsList.Value
+	        
+	        ' Read the XML file
+	        ReadXML
+	        
+	        ' Build the list box containing possible destinations
+	        BuildListbox_1
+	        
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_PossibleDestinationsList_ValueChange", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* ReadXML: Read the XML string
+	'* *******************************************************************************************
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	   
+	    Dim oDoc As DOMDocument
+	    
+	    Dim oPointsList As IXMLDOMNodeList
+	    Dim oPoint As IXMLDOMElement
+	    Dim strPointID As String
+	    Dim strPointName As String
+	    
+	    Dim NbDestinations As Integer
+	    Dim strDestinations As String
+	
+	    Set m_collPoints = New Collection
+	
+	    If (m_strPossibleDestinationsList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strPossibleDestinationsList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oPointsList = oDoc.documentElement.selectNodes(strPointNode)
+	                    If Not (oPointsList Is Nothing) Then
+	                        If (oPointsList.length > 0) Then
+	                         
+	                            For Each oPoint In oPointsList
+	                                
+	                            strPointID = Format(oPoint.getAttribute(c_strIDAttr))
+	                                strPointName = Format(oPoint.getAttribute(strNameAttr))
+	                                If (strPointID <> "" And strPointName <> "") Then
+	                                    
+	                                    AddPoint strPointID, strPointName
+	                                    
+	                                End If
+	                            Next oPoint
+	                        End If
+	                        Set oPointsList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* BuildListbox_1: Build the list box containing possible destination
+	'* *******************************************************************************************
+	Private Sub BuildListbox_1()
+	On Error GoTo ErrorHandler
+	
+	    ListBox_1.Clear
+	    
+	    Dim PossibleDestination
+	    For Each PossibleDestination In m_collPoints
+	    
+	        ListBox_1.AddItem (PossibleDestination(1))
+	    
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* ManageConfirmationButton: Enable or disable the confirmation button
+	'* *******************************************************************************************
+	Private Sub ManageConfirmationButton()
+	On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = (ListBox_1.Value <> "")
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageConfirmationButton", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Button_1_Click: Manage the click on OK button
+	'* *******************************************************************************************
+	Private Sub Button_1_Click()
+	On Error GoTo ErrorHandler
+	
+	    Dim sInterposeCmd As String
+	   
+	    'MsgBox ("Selected value: destination [" & m_collPoints.Item(ListBox_1.Value)(0) & "]")
+	    
+	    If Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value Then
+	    
+	        If (m_iUniqueID > 0) And (ListBox_1.Value <> "") Then
+	        
+	    
+	            If optAplicar Then
+	                'Remove the hold command for the actual position of the train
+	                sInterposeCmd = "%UniqueID%|" & m_iUniqueID & "|HSMNoHoldList|" & txtLastStopPoint
+	                WriteTrainInterposeCmd sInterposeCmd
+	                
+	                'Send interpose command for manual assotiation
+	                sInterposeCmd = "%UniqueID%|" & m_iUniqueID & "|ManualAssociationToManeuverTrip|" & m_collPoints.Item(ListBox_1.Value)(0)
+	                WriteTrainInterposeCmd sInterposeCmd
+	            
+	            Else
+	                'Send interpose command for manual dissotiation
+	                sInterposeCmd = "%UniqueID%|" & m_iUniqueID & "|HSMHoldList|" & m_collPoints.Item(ListBox_1.Value)(0)
+	                WriteTrainInterposeCmd sInterposeCmd
+	            
+	                'Send interpose command for manual dissotiation
+	                sInterposeCmd = "%UniqueID%|" & m_iUniqueID & "|ManualDissociation|0"
+	                WriteTrainInterposeCmd sInterposeCmd
+	            
+	            End If
+	        End If
+	        
+	        Me.Close
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_Click", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* WriteTrainInterposeCmd: Write the interpose command to OPC plug
+	'* *******************************************************************************************
+	Private Sub WriteTrainInterposeCmd(StringCmd As String)
+	On Error GoTo ErrorHandler
+	    
+	    If (Check_OPC_Variable(m_OPC_TrainInterposeCmd)) And (StringCmd <> "") Then
+	        m_OPC_TrainInterposeCmd.Value = StringCmd
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "WriteTrainInterposeCmd", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* SetHMITrainID
+	'* *******************************************************************************************
+	Private Sub SetHMITrainID(strHMITrainID As String)
+	
+	    Variables.Item(ThisMimic.Branch & ".Title%").Value = Replace(Label_1.Text, "[ID]", strHMITrainID)
+	
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = True
+	
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = False
+	
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = True
+	
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = False
+	
+	End Sub
+	
+	
+	
+	Private Sub optAplicar_Click()
+	    
+	    strPointNode = "Point"
+	    strNameAttr = "Name"
+	
+	    Set m_OPC_PossibleDestinationsList = Variables(ThisMimic.Branch & c_strPossibleDestinationsListTag)
+	 
+	    If (m_OPC_PossibleDestinationsList.EnableEvents = True) Then
+	        m_OPC_PossibleDestinationsList_ValueChange
+	    Else
+	        m_OPC_PossibleDestinationsList.EnableEvents = True
+	    End If
+	
+	End Sub
+	
+	Private Sub optRetirar_Click()
+	    
+	    strPointNode = "STOP"
+	    strNameAttr = "NAME"
+	    
+	    Set m_OPC_PossibleDestinationsList = Variables(ThisMimic.Branch & c_strPossibleDestinationsListTagToRemove)
+	 
+	    If (m_OPC_PossibleDestinationsList.EnableEvents = True) Then
+	        m_OPC_PossibleDestinationsList_ValueChange
+	    Else
+	        m_OPC_PossibleDestinationsList.EnableEvents = True
+	    End If
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,64,64,64,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,240,127,5,47,240,127,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Label_1"
+	B,16,4,101,19,16,19,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,16,4,0,0,FONT,1,"",36,FONT,1,"",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Train [ID]",FONT,2,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Title%"
+	A,END
+O,END
+O,BEGIN,T,"Label_2"
+	B,-13,77,62,102,-13,102,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,-13,77,0,0,FONT,1,"",38,FONT,1,"",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destino:",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Destino:",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ListBox_1"
+	B,70,77,235,102,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Button_1"
+	B,16,134,96,159,16,159,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,16,134,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Ejecutar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Button_1_Hover%","Button_1_Active%","",""
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",1,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Button_2"
+	B,141,134,221,159,141,159,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,141,134,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Button_2_Hover%","Button_2_Active%","",""
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"mmc_TrainSetManeuver","*"
+	A,END
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,31,19,119,43,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,133,19,221,43,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"txtLastStopPoint"
+	B,15,205,160,229,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.bstrPlug_7",-517, 8, 1, "Text"
+	A,END
+O,END
+O,BEGIN,OCX,"txtHoldSkipList"
+	B,15,245,235,370,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.ustrPlug_1",-517, 8, 1, "Text"
+	A,END
+O,END
+O,BEGIN,OCX,"txtStopPointsWithManouvers"
+	B,15,395,235,525,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.ustrPlug_2",-517, 8, 1, "Text"
+	A,END
+O,END

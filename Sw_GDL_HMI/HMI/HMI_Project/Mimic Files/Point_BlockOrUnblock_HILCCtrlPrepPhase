@@ -1,0 +1,286 @@
+ASCII32,29,8,2018,17:34,19,1.1
+W,BEGIN,"Point_BlockOrUnblock_HILCCtrlPrepPhase","PointBlockOrUnblockHILCCtrlPrepPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,270,120,270,120,0,0,0,1280,1024,270,120
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Point_BlockOrUnblock_HILCCtrlPrepPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Point Block HILC Ctrl Prep Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*      - display of the switch name
+	'*      - display of the impacted point
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Olivier TAYEG
+	'* Date:                September '09
+	'* Change:              CR ALPHA 150248
+	'*                      Display the switch name and impacted point name
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              CR ALPHA 153911
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              CR ALPHA 185097
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '11
+	'* Change:              CR ALPHA 242915
+	'*                      HILC command with Preparation phase and Verification phase
+	
+	'* Author:              Vinay C.R
+	'* Date:                Feb '15
+	'* Change:              CR 00602340
+	'*                      HILC command with Preparation phase and Conformation phase
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strImpactedPointEndsTag As String = ".ImpactedPointEnds.Value"
+	
+	Private Const c_strImpactedPointsTag As String = ".ImpactedPoints%"
+	Private Const c_strSwitchNameTag As String = ".SwitchName%"
+	
+	'* OPC variables
+	'* ***********************************************
+	'* List of the impacted points, used to obtain the name of the associated switch
+	Dim WithEvents m_OPC_ImpactedPointEnds As Variable
+	
+	'* Local variable containing the name of the switch
+	Dim m_OPClocal_SwitchName As Variable
+	Dim m_OPClocal_ImpactedPointsList As Variable
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: It manages:
+	'*      - Default opening of the HILCCtrl Prep Phase
+	'*      - Adds the OPC variables to the collection of all permanently subscribed variables
+	'*      - Init variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    '* Add and reset the variable used for the switch name; The default value is a string ""
+	    Set m_OPClocal_SwitchName = Variables.Add(ThisMimic.Branch & c_strSwitchNameTag, fvVariableTypeText)
+	    m_OPClocal_SwitchName.Value = ""
+	
+	    '* Add and reset the variable used for the impacted point ends; The default value is a string "NA"
+	    Set m_OPClocal_ImpactedPointsList = Variables.Add(ThisMimic.Branch & c_strImpactedPointsTag, fvVariableTypeText)
+	    m_OPClocal_ImpactedPointsList.Value = "NA"
+	    
+	    '* Adding a OPC variable ImpactedPointEnds to the list of variables
+	    Set m_OPC_ImpactedPointEnds = Variables.Add(ThisMimic.Branch & c_strImpactedPointEndsTag, fvVariableTypeText)
+	    If (m_OPC_ImpactedPointEnds.EnableEvents = True) Then
+	        m_OPC_ImpactedPointEnds_ValueChange
+	    Else
+	        m_OPC_ImpactedPointEnds.EnableEvents = True
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, unsubscribe all the previously subscribed
+	'*          variables
+	'* *****************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	  
+	    If Not (m_OPClocal_SwitchName Is Nothing) Then
+	        Variables.Remove (m_OPClocal_SwitchName.Name)
+	        Set m_OPClocal_SwitchName = Nothing
+	    End If
+	    
+	    If Not (m_OPClocal_ImpactedPointsList Is Nothing) Then
+	        Variables.Remove (m_OPClocal_ImpactedPointsList.Name)
+	        Set m_OPClocal_ImpactedPointsList = Nothing
+	    End If
+	    
+	    If Not (m_OPC_ImpactedPointEnds Is Nothing) Then
+	        Variables.Remove (m_OPC_ImpactedPointEnds.Name)
+	        Set m_OPC_ImpactedPointEnds = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'-------------------------------------------------------------------------------
+	' Name:         m_OPC_ImpactedPointEnds_ValueChange
+	' Input:        none
+	' Output:       none
+	' Description:  Extract the name of the switch and of the other point from the XML string
+	'-------------------------------------------------------------------------------
+	Private Sub m_OPC_ImpactedPointEnds_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ImpactedPointEnds_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If Check_OPC_Variable(m_OPC_ImpactedPointEnds) Then
+	        Dim oDoc As DOMDocument
+	        Dim oListPointEnds As IXMLDOMNodeList
+	        Dim oPointEnd As IXMLDOMNode
+	        Dim oAttrDest As IXMLDOMAttribute
+	        
+	        ' This is the name of this point's switch
+	        Dim strSwitchName As String
+	    
+	        Set oDoc = New DOMDocument
+	
+	        If oDoc.loadXML(m_OPC_ImpactedPointEnds.Value) Then
+	            ' Read the XML format string to get the name of the point's switch
+	            For Each oAttrDest In oDoc.documentElement.Attributes
+	                If (oAttrDest.nodeName = "Switch") Then
+	                    '* Switch name
+	                    strSwitchName = oAttrDest.nodeValue
+	                End If
+	            Next oAttrDest
+	            
+	            ' Store the switch name into the animation variable
+	            m_OPClocal_SwitchName.Value = strSwitchName
+	            
+	            '* In the list of the impacted points, find the one from the same switch
+	            Set oListPointEnds = oDoc.documentElement.getElementsByTagName("PointEnd")
+	            For Each oPointEnd In oListPointEnds
+	                Dim strOtherPointSwitchName As String
+	
+	                For Each oAttrDest In oPointEnd.Attributes
+	                    Dim strName As String
+	                    Select Case oAttrDest.nodeName
+	                        Case "Switch"
+	                            '* Switch name
+	                            strOtherPointSwitchName = oAttrDest.nodeValue
+	                        Case "Name"
+	                            strName = oAttrDest.nodeValue
+	                    End Select
+	                Next oAttrDest
+	                ' Is the point in the same switch?
+	                If (strOtherPointSwitchName = strSwitchName) Then
+	                    m_OPClocal_ImpactedPointsList.Value = strName
+	                End If
+	            Next oPointEnd
+	
+	            Set oListPointEnds = Nothing
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ImpactedPointEnds_ValueChange", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial Narrow",0,0
+	FONT,3,-11,0,400,0,0,"Tahoma",0,0
+	FONT,4,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,113,111,100,0,0,0
+COLORS,END
+O,BEGIN,R,"shpPreparation"
+	B,248,94,6,8,111,62,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtPreparation"
+	B,14,2,104,18,14,18,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,14,2,0,0,FONT,1,"Preparation",36,FONT,1,"Preparation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Preparaci¢n",FONT,2,36
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Voorbereiding",FONT,3,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtPoint"
+	B,52,28,101,44,52,44,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,52,28,0,0,FONT,1,"Point",37,FONT,1,"Point",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aguja",FONT,4,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Wissel",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtPointName"
+	B,51,50,200,74,51,74,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,4,0,COLOR,1,0,COLOR,1,0,COLOR,5,0,COLOR,5
+	PP,1,51,50,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,4,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"HMINormal.Template.Name"
+	A,END
+O,END

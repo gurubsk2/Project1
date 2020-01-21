@@ -1,0 +1,1210 @@
+ASCII32,22,10,2019,13:51,14,1.1
+W,BEGIN,"Train_InspectorPanel","Train_InspectorPanel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,679,412
+	SIZE,560,372,560,372,0,0,0,1920,1080,552,346
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tren Tr003"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Tren 878"
+			ROLE,0,"Tren Tr003"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,1,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Train_InspectorPanel.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Block Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Feb '17
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	Private Const c_strTrainServiceID As String = ".Attributes.HMITETrain.bstrPlug_6"
+	Dim WithEvents m_OPC_ServiceID As Variable
+	Private Sub m_OPC_ServiceID_ValueChange()
+	On Error GoTo ErrorHandler
+	Dim sTrainID As String
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ServiceID_ValueChange", "Begin subroutine")
+	
+	If (Check_Variable(m_OPC_ServiceID)) Then
+	sTrainID = m_OPC_ServiceID.Value
+	    If sTrainID <> "" Then
+	      ' sTrainID = Split(sTrainID,
+	        Me.Caption = "Tren " & Format(sTrainID, "000")
+	    Else
+	        Me.Caption = "Tren ? "
+	    End If
+	        
+	End If
+	  Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ServiceID_ValueChange", Err.Description)
+	
+	End Sub
+	
+	Private Sub grpComandos_Click()
+	    
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpComandos_Click", "Begin subroutine")
+	    
+	    Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	     Variables.Item(ThisMimic.Branch & "Btn3Click%").Value = False
+	      Variables.Item(ThisMimic.Branch & "Btn2Click%").Value = True
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	End Sub
+	
+	Private Sub grpInfoROD_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpInfoROD_Click", "Begin subroutine")
+	    Mimics.Open ThisMimic.FileName & "_ROD", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	    Variables.Item(ThisMimic.Branch & "Btn3Click%").Value = True
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin subroutine")
+	    Variables.Item(TrainstrBranch & ".blinking%").Value = False
+	      
+	    Variables(ThisMimic.Branch & ".ButtonActivated%").Value = False
+	    If Not (m_OPC_ServiceID Is Nothing) Then
+	    Variables.Remove (m_OPC_ServiceID.Name)
+	    Set m_OPC_ServiceID = Nothing
+	End If
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	Private Sub Mimic_Open()
+	    Dim iMonitor As Integer
+	    Dim sQNRENorte As String, sQNRESul As String
+	    
+	    On Error GoTo ErrorHandler
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin subroutine")
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	    Set m_OPC_ServiceID = Variables.Add(ThisMimic.Branch & c_strTrainServiceID, fvVariableTypeText)
+	    'Me.Caption = "   Tren " & m_OPC_ServiceID.Value
+	    If m_OPC_ServiceID.EnableEvents = True Then
+	            m_OPC_ServiceID_ValueChange
+	     Else
+	            m_OPC_ServiceID.EnableEvents = True
+	    End If
+	    Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 11, 38, True
+	    ThisMimic.Activate
+	     Variables.Item(ThisMimic.Branch & "Btn3Click%").Value = False
+	      Variables.Item(ThisMimic.Branch & "Btn2Click%").Value = True
+	      Variables.Item(ThisMimic.Branch & "TabSelected%").Value = False
+	      
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,46,0
+	COLOR,3,113,111,100,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,0,0,0,32,0
+	COLOR,6,0,0,0,0,0,1
+	COLOR,7,160,160,160,0,0,0
+	COLOR,8,0,0,0,0,35,0
+	COLOR,9,0,0,0,0,44,0
+	COLOR,10,0,255,0,0,0,0
+	COLOR,11,194,0,0,0,0,0
+COLORS,END
+O,BEGIN,T,"Text15"
+	B,28,294,185,318,28,318,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,28,294,0,0,FONT,1,"Cerradas",37,FONT,1,"Cerradas",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape4"
+	B,534,327,20,226,534,327,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,P,"Poly1"
+	B,10,10,543,336,18,10,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,18,10,106,10,114,18,114,41,543,41
+	PP,543,336,10,336,10,18
+O,END
+O,BEGIN,GRP,"grpComandos"
+	B,114,10,218,41,114,41,65535,0,6400,0,1,1,0
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,114,10,218,41,122,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+		PP,122,10,210,10,218,18,218,41,114,41
+		PP,114,18
+	O,END
+	O,BEGIN,T,"Text1"
+		B,122,18,207,34,122,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		PP,1,122,18,0,0,FONT,1,"Control",37,FONT,1,"Control",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Control",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Control",FONT,1,37
+				ROLE,0,"Control",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		PP,"Train_InspectorPanel_Control","*",0,11,0,38,"*","",0
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+O,END
+O,BEGIN,T,"Text16"
+	B,21,51,51,67,21,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,21,51,0,0,FONT,1,"ID",36,FONT,1,"ID",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ID",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"ID",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,21,105,90,121,21,121,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,21,105,0,0,FONT,1,"Velocidad",36,FONT,1,"Velocidad",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Velocidad",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Velocidad",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text10"
+	B,21,121,58,145,21,145,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,21,121,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim2",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_1",""
+		ADVFORMAT,2,"0@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"0"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[==2]\'Aplicado\';[>2]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text18"
+	B,21,67,84,91,21,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,21,67,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1," ",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.bstrPlug_5"
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,108,51,166,67,108,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,108,51,0,0,FONT,1,"Servicio",36,FONT,1,"Servicio",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Service",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Servicio",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,108,67,167,91,108,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,108,67,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim2",0,0,"",""
+		PP,"Attributes.HMITETrain.bstrPlug_1"
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,193,51,266,67,193,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,193,51,0,0,FONT,1,"Localizado",36,FONT,1,"Localizado",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Localisation",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Localizado",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text7"
+	B,193,67,266,91,193,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,193,67,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.boolPlug_1",""
+		ADVFORMAT,2,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'No\';\'S¡\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text8"
+	B,293,51,385,67,293,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,293,51,0,0,FONT,1,"En regulaci¢n",36,FONT,1,"En regulaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"In Regulation",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"En regulaci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text14"
+	B,293,67,405,91,293,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,293,67,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"-",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.boolPlug_5",""
+		ADVFORMAT,2,"[=0]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'S¡\';\'No\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text19"
+	B,455,51,528,67,455,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,455,51,0,0,FONT,1,"Evacuable",36,FONT,1,"Evacuable",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Evacuable",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Evacuable",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text20"
+	B,455,67,528,91,455,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,455,67,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"EvacuationStatus.HMIPropertyBag.LongValue",""
+		ADVFORMAT,2,"[=0]\'No\';\'S¡\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'No\';\'YES\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[=0]\'No\';\'S¡\'"
+				ROLE,0,"[=0]\'No\';\'S¡\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text21"
+	B,62,125,95,141,62,141,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,62,125,0,0,FONT,1,"Km/h",36,FONT,1,"Km/h",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Km/h",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Stato aspetto restrittivo",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text22"
+	B,105,105,213,121,105,121,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,105,105,0,0,FONT,1,"Distancia acum.",36,FONT,1,"Distancia acum.",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Distance acum.",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Distancia acum.",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text23"
+	B,105,121,220,145,105,145,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,105,121,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.doublePlug_1",""
+		ADVFORMAT,2,"0@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"0"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[==2]\'Aplicado\';[>2]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text27"
+	B,224,125,257,141,224,141,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,224,125,0,0,FONT,1,"Km",36,FONT,1,"Km",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Km",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Stato aspetto restrittivo",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text29"
+	B,255,106,389,122,255,122,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,255,106,0,0,FONT,1,"Motivo de retenci¢n",36,FONT,1,"Motivo de retenci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Train Hold Reason",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Motivo de retenci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,261,214,21,161,261,214,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text12"
+	B,28,181,107,205,28,205,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,28,181,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_3",""
+		ADVFORMAT,2,"[<1]\'-\';[=1]\'MCS\';[=2]\'AMC\';[=3]\'RM15\';[=4]\'RM25\';[=5]\'ATP ByPass\';[=6]\'AM\';[=7]\'RMR\';[>7]\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'-\';[=1]\'MCS\';[=2]\'AMC\';[=3]\'RM15\';[=4]\'RM25\';[=5]\'ATP ByPass\';[=6]\'AM\';[=7]\'RMR\';[>7]\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[<1]\'-\';[=1]\'MCS\';[=2]\'AMC\';[=3]\'RM15\';[=4]\'RM25\';[=5]\'ATP ByPass\';[=6]\'AM\';[=7]\'RMR\';[>7]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text11"
+	B,117,165,176,181,117,181,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,0,117,165,0,0,FONT,1,"Marcha",36,FONT,1,"Marcha",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Marcha",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Marcha",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text13"
+	B,117,181,253,205,117,205,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,117,181,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_4",""
+		ADVFORMAT,2,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'A la deriva\';[=4]\'Baja Adherencia\';\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'A la deriva\';[=4]\'Baja Adherencia\';\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'A la deriva\';[=4]\'Baja Adherencia\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text9"
+	B,28,165,108,181,28,181,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,0,28,165,0,0,FONT,1,"Conduci¢n",36,FONT,1,"Conduci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Conduction",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Conduci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text24"
+	B,29,151,76,167,29,167,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,0,29,151,0,0,FONT,2,"Modo",37,FONT,2,"Modo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mode",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Modo",FONT,1,37
+			ROLE,0,"Modo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text31"
+	B,455,105,528,121,455,121,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,455,105,0,0,FONT,1,"Lanzadera",36,FONT,1,"Lanzadera",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Shuttle",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Lanzadera",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text32"
+	B,455,121,528,145,455,145,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,455,121,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"Attributes.HMITETrain.boolPlug_6",""
+		ADVFORMAT,2,"[<0]\'S¡\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'YES\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[<0]\'S¡\';\'No\'"
+				ROLE,0,"[<0]\'S¡\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text28"
+	B,29,240,253,264,29,264,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,6,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,29,240,0,0,FONT,1,"Freno de emergencia",37,FONT,1,"Freno de emergencia",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Freno de emergencia",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Freno de emergencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_5",""
+		ADVFORMAT,2,"[<0]\'-\';[=0]\'Desconocido\';[=1]\'Freno de emergencia no aplicado\';[=2]\'Freno de emergencia aplicado\';[>2]\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'-\';[=0]\'Desconocido\';[=1]\'Freno de emergencia no aplicado\';[=2]\'Freno de emergencia aplicado\';[>2]\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[<0]\'-\';[=0]\'Desconocido\';[=1]\'Freno de emergencia no aplicado\';[=2]\'Freno de emergencia aplicado\';[>2]\'-\'"
+				ROLE,0,"[<0]\'-\';[=0]\'Desconocido\';[=1]\'Freno de emergencia no aplicado\';[=2]\'Freno de emergencia aplicado\';[>2]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"= (GDLL3Attributes.HMITETrain.longPlug_5 == 2)"
+		COL,1,COLOR,10,COLOR,10
+		COL,1,COLOR,11,COLOR,11
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"Text34"
+	B,257,241,530,265,257,265,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,257,241,0,0,FONT,1,"Motivo freno de emergencia",37,FONT,1,"Motivo freno de emergencia",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Motivo freno de emergencia",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Motivo freno de emergencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_6",""
+		ADVFORMAT,2,"[<0]\'-\';[=0]\'Freno de emergencia no aplicado;[=1]\'Puertas destrabadas\';[=2]\'Retenci¢n aplicada\';[=3]\'Partida no permitida\'[=4]\'Sobre Velocidad\'[=5]\'Tren no localiazdo\';[=6]\'Falla grave\'[=7]\'Inmovilizaci¢n de seguridad\';[=8]\'Cambio de direcci¢n\';[=9]\'Cambio de modo de conducci¢n\';[=10]\'Emergencia de pasajero activada\';[=11]\'Pierda de comunicaci¢n con ZC\';[>11]\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'-\';[=0]\'Freno de emergencia no aplicado;[=1]\'Puertas destrabadas\';[=2]\'Retenci¢n aplicada\';[=3]\'Partida no permitida\'[=4]\'Sobre Velocidad\'[=5]\'Tren no localiazdo\';[=6]\'Falla grave\'[=7]\'Inmovilizaci¢n de seguridad\';[=8]\'Cambio de direcci¢n\';[=9]\'Cambio de modo de conducci¢n\';[=10]\'Emergencia de pasajero activada\';[=11]\'Pierda de comunicaci¢n con ZC\';[>11]\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[<0]\'-\';[=0]\'Freno de emergencia no aplicado;[=1]\'Puertas destrabadas\';[=2]\'Retenci¢n aplicada\';[=3]\'Partida no permitida\'[=4]\'Sobre Velocidad\'[=5]\'Tren no localiazdo\';[=6]\'Falla grave\'[=7]\'Inmovilizaci¢n de seguridad\';[=8]\'Cambio de direcci¢n\';[=9]\'Cambio de modo de conducci¢n\';[=10]\'Emergencia de pasajero activada\';[=11]\'Pierda de comunicaci¢n con ZC\';[>11]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text35"
+	B,28,278,162,294,28,294,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,28,278,0,0,FONT,1,"Estado puertas",36,FONT,1,"Estado puertas",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado puertas",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Estado puertas",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text26"
+	B,29,295,186,319,29,319,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,29,295,0,0,FONT,1,"Cerradas",37,FONT,1,"Cerradas",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerradas",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cerradas",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=((GDLL3Attributes.HMITETrain.longPlug_7==3) and (GDLL3Attributes.HMITETrain.longPlug_8==3))"
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,6,COLOR,6
+	A,END
+O,END
+O,BEGIN,GRP,"grpInfoROD"
+	B,218,10,322,41,218,41,65535,0,6400,0,1,1,0
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,218,10,322,41,226,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+		PP,226,10,314,10,322,18,322,41,218,41
+		PP,218,18
+	O,END
+	O,BEGIN,T,"Text1"
+		B,226,18,311,34,226,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		PP,1,226,18,0,0,FONT,1,"Info ROD",37,FONT,1,"Info ROD",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Info ROD",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Info ROD",FONT,1,37
+				ROLE,0,"Info ROD",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		PP,"Train_InspectorPanel_ROD","*",0,11,0,38,"*","",0
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,3.000000,0,0,0
+		ADVSENDVALUE,2,3
+	A,END
+O,END
+O,BEGIN,GRP,"grpComandos1"
+	B,10,10,114,41,10,41,65535,0,6400,0,1,1,0
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,10,10,114,41,18,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		PP,18,10,106,10,114,18,114,41,10,41
+		PP,10,18
+	O,END
+	O,BEGIN,T,"Text1"
+		B,18,18,103,34,18,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+		PP,1,18,18,0,0,FONT,1,"Informacion",37,FONT,1,"Informacion",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Information",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Informaci¢n",FONT,1,37
+				ROLE,0,"Informaci¢n",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"Train_InspectorPanel_Control","*"
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"Train_InspectorPanel_ROD","*"
+	A,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,2.000000,0,0,0
+		ADVSENDVALUE,2,2
+	A,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,309,36,227,16,309,36,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim2",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,208,35,126,15,208,35,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim2",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape3"
+	B,101,36,19,16,101,36,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim2",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text6"
+	B,29,217,96,233,29,233,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,0,29,217,0,0,FONT,2,"Info ATS",37,FONT,2,"Info ATS",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Info ATC",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Info ATC",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,253,121,436,145,253,145,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,253,121,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1," ",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"GDLL3Attributes.HMITETrain.longPlug_2",""
+		ADVFORMAT,2,"[<0]\'-\';[=0]\'Sin inmovilizaci¢n\';[=1]\'Movimiento de tren no aplicable\';[=2]\'Retenci¢n de ATS aplicada\';[=3]\'Sin visibilidad\';[=4]\'Sin autorizaci¢n del conductor\';[=5]\'Sin partida del tren\';[=6]\'Tracci¢n activada\';[=7]\'Puertas abiertas\';[=8]\'Necesidad de acci¢n del conductor\';[=9]\'Evacuaci¢n\';[>9]\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<0]\'-\';[=0]\'Sin inmovilizaci¢n\';[=1]\'Movimiento de tren no aplicable\';[=2]\'Retenci¢n de ATS aplicada\';[=3]\'Sin visibilidad\';[=4]\'Sin autorizaci¢n del conductor\';[=5]\'Sin partida del tren\';[=6]\'Tracci¢n activada\';[=7]\'Puertas abiertas\';[=8]\'Necesidad de acci¢n del conductor\';[=9]\'Evacuaci¢n\';[>9]\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[<0]\'-\';[=0]\'Sin inmovilizaci¢n\';[=1]\'Movimiento de tren no aplicable\';[=2]\'Retenci¢n de ATS aplicada\';[=3]\'Sin visibilidad\';[=4]\'Sin autorizaci¢n del conductor\';[=5]\'Sin partida del tren\';[=6]\'Tracci¢n activada\';[=7]\'Puertas abiertas\';[=8]\'Necesidad de acci¢n del conductor\';[=9]\'Evacuaci¢n\';[>9]\'-\'"
+				ROLE,0,"[<0]\'-\';[=0]\'Sin inmovilizaci¢n\';[=1]\'Movimiento de tren no aplicable\';[=2]\'Retenci¢n de ATS aplicada\';[=3]\'Sin visibilidad\';[=4]\'Sin autorizaci¢n del conductor\';[=5]\'Sin partida del tren\';[=6]\'Tracci¢n activada\';[=7]\'Puertas abiertas\';[=8]\'Necesidad de acci¢n del conductor\';[=9]\'Evacuaci¢n\';[>9]\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text36"
+	B,28,294,185,318,28,318,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,28,294,0,0,FONT,1,"Abiertas",37,FONT,1,"Abiertas",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Abiertas",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Abiertas",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((GDLL3Attributes.HMITETrain.longPlug_7==1) or (GDLL3Attributes.HMITETrain.longPlug_8==1))"
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,6,COLOR,6
+	A,END
+O,END
+O,BEGIN,R,"Shape6"
+	B,519,214,279,161,519,214,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text17"
+	B,287,151,355,167,287,167,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,0,287,151,0,0,FONT,2,"Modo",37,FONT,2,"Modo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Info ROD",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Info ROD",FONT,1,37
+			ROLE,0,"Info ROD",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text25"
+	B,286,177,335,201,286,201,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,6,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,286,177,0,0,FONT,1,"Freno de emergencia",37,FONT,1,"Freno de emergencia",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"DESA",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"DESA",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text30"
+	B,345,177,394,201,345,201,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,6,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,345,177,0,0,FONT,1,"DESA",37,FONT,1,"DESA",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"F.DIA",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"F.DIA",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text33"
+	B,405,177,454,201,405,201,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,6,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,405,177,0,0,FONT,1,"F.DIA",37,FONT,1,"F.DIA",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"F.LIN",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"F.LIN",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text37"
+	B,464,177,513,201,464,201,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,8,COLOR,6,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,464,177,0,0,FONT,1,"F.LIN",37,FONT,1,"F.LIN",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"SOC",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"SOC",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

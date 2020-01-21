@@ -1,0 +1,634 @@
+ASCII32,2,2,2018,11:6,31,1.1
+W,BEGIN,"GAMA_Removal_Ctrl_Panel","Gama_Removal_Panel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,2734,463
+	SIZE,290,270,290,270,0,0,0,1280,1024,284,245
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Zona GAMA GZ_11_BAN"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,0,0,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GAMA_Removal_Ctrl_Panel.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  GAMAZone Remove Ctrl
+	'* *******************************************************************************************
+	'* Purpose:     It manages GAMA removal, reads the list of elementary GAMAZone associated to
+	'*              the GAMA Zone selected, then call set each elementary
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                September '15
+	'* Change:              All
+	
+	
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	                
+	'* Constants
+	'*************************************************************************
+	
+	'* OPC Path
+	Private Const c_strEGAMAListTag As String = ".ElementaryGamaList.Value"
+	Private Const c_strEGAMACmdTag As String = ".EGAMARemoval.Value"
+	
+	Private Const c_strEGamaNode As String = "ElementaryGama"
+	Private Const c_strBlockNode As String = "Block"
+	
+	Private Const c_strEGamaIDAttr As String = "ID"
+	Private Const c_strBlockIDAttr As String = "ID"
+	
+	'* Command value to be written
+	Private Const c_iRemovalCmd As Long = 1
+	
+	'* OPC variables
+	'*************************************************************************
+	Dim WithEvents m_OPC_EGAMAList As Variable
+	
+	Dim WithEvents m_OPCSet_EGAMARemoveCmd As Iconis_CLS_OPCSet
+	Dim strCaption() As String
+	Dim m_OPCClusterName As String
+	Dim m_EGAMACount As Long
+	
+	
+	
+	
+	'* SubRoutine: Mimic_Open
+	'* It manages:
+	'*      - Default opening of the HILCCtrl Prep Phase
+	'*      - Adds the OPC variables to the collection of all permanently subscribed variables
+	'*      - Init variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim strOPCTreePath As String
+	    Dim TerritoryName As Variant
+	    
+	    m_OPCClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    strCaption = Split(ThisMimic.Branch, ":")
+	    ThisMimic.Caption = "Zona GAMA " & strCaption(1)
+	    m_EGAMACount = 0
+	    
+	    '* Disable the "OK" Button
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkActive%").Value = False
+	    '* Enable the "Cancel" Button
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_CloseActive%").Value = True
+	    '* Set invisible the "Close" button
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_CloseVisible%").Value = False
+	
+	
+	    Set m_OPC_EGAMAList = Variables.Add(ThisMimic.Branch & c_strEGAMAListTag, fvVariableTypeText)
+	    If ((m_OPC_EGAMAList.Status = fvVariableStatusGood) And (m_OPC_EGAMAList.EnableEvents = True)) Then
+	        m_OPC_EGAMAList_ValueChange
+	    Else
+	        m_OPC_EGAMAList.EnableEvents = True
+	    End If
+	    
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	'* Function: Mimic_BeforeClose
+	'* Before closing the mimic, unsubscribe all the previously subscribed variables
+	'* *****************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	  
+	    If Not (m_OPC_EGAMAList Is Nothing) Then
+	        Variables.Remove (m_OPC_EGAMAList.Name)
+	        Set m_OPC_EGAMAList = Nothing
+	    End If
+	
+	    
+	    If Not (m_OPCSet_EGAMARemoveCmd Is Nothing) Then
+	        m_OPCSet_EGAMARemoveCmd.Destroy
+	        Set m_OPCSet_EGAMARemoveCmd = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	Private Sub Gama_Removal_BP_Close_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Gama_Removal_BP_Close_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_CloseHover%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Close_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub Gama_Removal_BP_Close_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Gama_Removal_BP_Close_MouseLeave", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_CloseHover%").Value = False
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Close_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub Gama_Removal_BP_Ok_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkHover%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub Gama_Removal_BP_Ok_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseLeave", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkHover%").Value = False
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Ok_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_EGAMAList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "Begin Subroutine")
+	
+	    If (Check_Variable(m_OPC_EGAMAList, ThisMimic.Name)) Then
+	        CreateOPCSetFromXML (m_OPC_EGAMAList.Value)
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub CreateOPCSetFromXML(strXML As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "CreateOPCSetFromXML", "Begin Subroutine")
+	
+	
+	    Dim oDoc As DOMDocument
+	    Dim oBlockList As IXMLDOMNodeList
+	    Dim oBlock As IXMLDOMElement
+	    Dim oGamaList As IXMLDOMNodeList
+	    Dim oGama As IXMLDOMElement
+	    Dim Block As IXMLDOMElement
+	    Dim GAMAID As String
+	    Dim BlockID As String
+	    
+	    m_EGAMACount = 0
+	    
+	    If Not (m_OPCSet_EGAMARemoveCmd Is Nothing) Then
+	        m_OPCSet_EGAMARemoveCmd.Destroy
+	        Set m_OPCSet_EGAMARemoveCmd = Nothing
+	    End If
+	    
+	    Set m_OPCSet_EGAMARemoveCmd = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    
+	    'read the XML and update the EGAMA count
+	    If (strXML <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXML) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "ElementaryGAMA"
+	                    Set oGamaList = oDoc.documentElement.getElementsByTagName(c_strEGamaNode)
+	                    If Not (oGamaList Is Nothing) Then
+	                        If (oGamaList.length > 0) Then
+	                            
+	                            For Each oGama In oGamaList
+	                                ' read the attributes
+	                                GAMAID = oGama.getAttribute(c_strEGamaIDAttr)
+	                                
+	                                Set oBlockList = oGama.getElementsByTagName(c_strBlockNode)
+	                                BlockID = ""
+	                                
+	                                'Set oBlock = oBlockList.Item(0)
+	                                
+	                                For Each oBlock In oBlockList
+	                                ' read the attributes
+	                                BlockID = oBlock.getAttribute(c_strBlockIDAttr)
+	                                    
+	                                If (BlockID <> "") And (GAMAID <> "") Then
+	                                    m_EGAMACount = m_EGAMACount + 1
+	                                    m_OPCSet_EGAMARemoveCmd.AddItem m_OPCClusterName & BlockID & "." & GAMAID & c_strEGAMACmdTag, fvVariableTypeRegister, c_OPCWriteOnly
+	                                End If
+	                                Set oBlockList = Nothing
+	                            Next
+	                            Next oGama
+	                        Else
+	                            Call CBTrace(CBTRACEF_ALWAYS, "ThisMimic.Name", "CreateOPCSetFromXML", _
+	                                         "No Gama has been defined in the OPC variable [" & m_OPC_EGAMAList.Name & "]")
+	                        End If
+	                        Set oGamaList = Nothing
+	                    End If
+	                End If
+	            Else
+	                Call CBTrace(CBTRACEF_ALWAYS, "ThisMimic.Name", "CreateOPCSetFromXML", _
+	                             "The content of the OPC variable [" & m_OPC_EGAMAList.Name & "] has not been loaded")
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "ThisMimic.Name", "CreateOPCSetFromXML", _
+	                     "The OPC variable [" & m_OPC_EGAMAList.Name & "] is empty")
+	    End If
+	    
+	    If (m_EGAMACount <> 0) Then
+	        m_OPCSet_EGAMARemoveCmd.DoConnect ("GamaRemovalCmd")
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "CreateOPCSetFromXML", Err.Description)
+	End Sub
+	
+	
+	Private Sub m_OPCSet_EGAMARemoveCmd_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMARemoveCmd_OnConnection", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkActive%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMARemoveCmd_OnConnection", Err.Description)
+	End Sub
+	
+	
+	Private Sub m_OPCSet_EGAMARemoveCmd_OnDisconnection()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMARemoveCmd_OnDisconnection", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkActive%").Value = False
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMARemoveCmd_OnDisconnection", Err.Description)
+	End Sub
+	
+	'* SubRoutine:  Gama_Removal_BP_Ok_Click
+	'* It manages:
+	'*      - Disable the "OK" button
+	'*      - Sending HILCEnterSessionMessage
+	'*      - Sending HILCConfirmationMessage
+	'* *****************************************************************************
+	Private Sub Gama_Removal_BP_Ok_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Gama_Removal_BP_Ok_Click", "Begin Subroutine")
+	    Dim i As Long
+	    
+	    If (Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkActive%").Value = False) Then
+	        Exit Sub
+	    End If
+	    
+	    Variables.Item(ThisMimic.Branch & ".Gama_Removal_BP_OkActive%").Value = False
+	        
+	    If Not (m_OPCSet_EGAMARemoveCmd Is Nothing) Then
+	        
+	        For i = 0 To m_EGAMACount - 1
+	            m_OPCSet_EGAMARemoveCmd.Item(i).Value = c_iRemovalCmd
+	        Next i
+	        
+	        ThisMimic.Close
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Gama_Removal_BP_Ok_Click", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-11,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,64,64,64,0,0,0
+	COLOR,8,96,96,96,0,0,0
+	COLOR,9,122,122,122,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,276,107,6,8,276,107,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Gama_Removal_BP_Close"
+	B,176,213,255,237,176,237,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,4,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,176,213,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Gama_Removal_BP_CloseVisible%","Gama_Removal_BP_CloseActive%","",""
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Gama_Removal_BP_Ok"
+	B,30,211,109,235,30,235,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,4,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,30,211,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Gama_Removal_BP_OkHover%","Gama_Removal_BP_OkActive%","",""
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnClose2"
+	B,55,66,235,90,55,90,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,2,COLOR,3,0,COLOR,1,0,COLOR,1,0,COLOR,9,0,COLOR,9
+	PP,1,55,66,0,0,FONT,1,"GZ_XXX_XX_XXX",36,FONT,1,"GZ_XXX_XX_XXX",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GZ_XXX.",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Status.name"
+	A,END
+O,END
+O,BEGIN,T,"txtOriginSignal"
+	B,26,25,242,41,26,41,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,26,25,0,0,FONT,2,"Confirma la inhibicion de GAMA",37,FONT,2,"Confirma la inhibicion de GAMA",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la inhibicion de GAMA",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtOriginSignal1"
+	B,28,45,129,61,28,61,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,28,45,0,0,FONT,2,"de esta zona?",37,FONT,2,"de esta zona?",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"de esta zona?",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtOriginSignal2"
+	B,10,126,64,142,10,142,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,10,126,0,0,FONT,2,"de esta zona?",37,FONT,2,"de esta zona?",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"Symbol23"
+	B,271,186,12,146,12,186,65535,0,6400,0,1,0,0
+	PP,"HILC_Status","",271,186,12,146,0,0, 0, 1
+	SUB
+O,END

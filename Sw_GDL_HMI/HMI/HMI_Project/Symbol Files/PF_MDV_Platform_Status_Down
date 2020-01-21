@@ -1,0 +1,384 @@
+ASCII32,26,2,2018,4:16,5,1.1
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,33,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,0,0,0,0,32,0
+	COLOR,7,64,64,64,0,0,0
+	COLOR,8,0,0,0,0,35,0
+	COLOR,9,96,96,96,0,0,0
+	COLOR,10,0,0,0,0,34,0
+	COLOR,11,0,0,0,0,45,0
+	COLOR,12,204,204,204,0,0,0
+	COLOR,13,255,255,0,0,0,0
+	COLOR,14,18,24,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Point Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                June '08
+	'* Change:              All
+	    
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172265
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Vasanth
+	'* Date:                Nov ' 15
+	'* Change:              CR#667323
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	Private Const c_strInspectorPanelMimic As String = "Platform_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Platform_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	Private Sub PlatformCmd_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "PlatformCmd_DblClickEx", "Begin subroutine")
+	        
+	    '* Open the Inspector Panel mimic
+	   ' Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	       Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "PlatformCmd_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub PlatformCmd_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "PlatformCmd_MouseUp", "Begin subroutine")
+	       
+	    GetCursorpos Hold
+	'    xpos = hold.x_Pos
+	'    ypos = hold.y_Pos
+	    '* If mouse is right clicked
+	    If (Button = 2) Then
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	        'OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "PlatformCmd_MouseUp", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"STA_COD_02T_NOR_DN"
+	B,5116,768,5189,808,5116,807,65535,0,6400,0,1,0,0
+	O,BEGIN,T,"Text6"
+		B,5175,776,5184,780,5175,780,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		PP,1,5175,776,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"  ",FONT,1,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,DT,"Anim1",0,0,"",""
+			PP,"STMOrigin.STMOriginPoint.Activate"
+		A,END
+	O,END
+	O,BEGIN,RR,"Shape21"
+		B,5189,769,5116,787,5189,769,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+		PP,10,11
+	O,END
+	O,BEGIN,T,"Text7"
+		B,5153,791,5184,808,5153,808,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+		AST,5,2,COLOR,6,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,7,0,COLOR,7
+		PP,1,5153,791,0,0,FONT,2,"999",37,FONT,2,"999",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"999",FONT,2,37
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"999",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ATR.RegPoint.RemainingDwellTime >= 0)"
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,6,COLOR,6
+			COL,1,COLOR,1,COLOR,1
+		A,END
+		A,BEGIN,DR,"Anim2",0,0,"",""
+			PP,"= ABS(ATR.RegPoint.RemainingDwellTime)",""
+			ADVFORMAT,2,"[<-999]\'-999\';[>999]\'999\';#@l"
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"[<-999]\'-999\';[>999]\'999\';#"
+				LANG,END
+				LANG,BEGIN,1046
+					ROLE_DEFAULT,-1
+					ROLE,-1,"[<-999]\'-999\';[>999]\'999\';0"
+				LANG,END
+			MULTILANG,END
+		A,END
+	O,END
+	O,BEGIN,T,"Text8"
+		B,5122,791,5152,808,5122,808,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		AST,5,2,COLOR,8,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,7,0,COLOR,7
+		PP,1,5122,791,0,0,FONT,2,"999",37,FONT,2,"999",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"999",FONT,2,37
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"999",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(ATR.RegPoint.DwellTimeImposed>=0)"
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,8,COLOR,8
+			COL,1,COLOR,1,COLOR,1
+		A,END
+		A,BEGIN,DR,"Anim2",0,0,"",""
+			PP,"ATR.RegPoint.DwellTimeImposed",""
+			ADVFORMAT,2,"[<-999]\'-999\';[>999]\'999\';#@l"
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"[<-999]\'-999\';[>999]\'999\';#"
+				LANG,END
+				LANG,BEGIN,1046
+					ROLE_DEFAULT,-1
+					ROLE,-1,"[<-999]\'-999\';[>999]\'999\';0"
+				LANG,END
+			MULTILANG,END
+		A,END
+	O,END
+	O,BEGIN,R,"Shape22"
+		B,5184,808,5153,791,5184,808,65535,0,6400,0,2,0,0
+		ST,0,2,COLOR,9,COLOR,9,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ATR.RegPoint.DwellTimeApply > 0) and (ATR.RegPoint.RemainingDwellTime > 0)"
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,6,COLOR,6
+		A,END
+	O,END
+	O,BEGIN,R,"Shape23"
+		B,5184,808,5153,791,5184,808,65535,0,6400,0,2,0,0
+		ST,0,2,COLOR,9,COLOR,9,1,3,COLOR,9,3,COLOR,9,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim2",0,0,"",""
+			PP,"= (ATR.RegPoint.RemainingDwellTime >= 0)"
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,6,COLOR,6
+		A,END
+	O,END
+	O,BEGIN,R,"Shape24"
+		B,5152,808,5122,791,5152,808,65535,0,6400,0,2,0,0
+		ST,0,2,COLOR,9,COLOR,9,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(ATR.RegPoint.DwellTimeImposed>=0)"
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,6,COLOR,6
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group117"
+		B,5146,772,5159,785,5146,785,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,T,"Text5"
+			B,5146,772,5159,785,5146,785,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+			PP,1,5146,772,0,0,FONT,2,"D",37,FONT,2,"D",37
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"D",FONT,2,37
+				LANG,END
+			MULTILANG,END
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"= (HoldSkip.HSMPoint.OperatorSkip== 1)"
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,9,COLOR,9
+				COL,1,COLOR,6,COLOR,6
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,2,COLOR,2
+				COL,1,COLOR,6,COLOR,6
+			A,END
+		O,END
+		O,BEGIN,R,"Shape11"
+			B,5159,785,5146,772,5159,785,65535,0,6400,0,4,0,0
+			ST,2,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"= (HoldSkip.HSMPoint.OperatorSkip== 1)"
+				COL,0,COLOR,1,COLOR,1
+				COL,0,COLOR,9,COLOR,9
+				COL,0,COLOR,6,COLOR,6
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,6,COLOR,6
+			A,END
+		O,END
+	O,END
+	O,BEGIN,S,"PlatformCmd1739"
+		B,5116,768,5189,786,5116,786,65535,0,6400,0,2,0,0
+		PP,"PF_MDV_Platform_Command","",5116,768,5189,786,1,0, 0, 1
+	O,END
+	O,BEGIN,GRP,"Group118"
+		B,5146,771,5159,784,5146,784,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,T,"TxtManualHold"
+			B,5146,771,5159,784,5146,784,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,12,0,COLOR,12,0,COLOR,2,0,COLOR,2
+			PP,1,5146,771,0,0,FONT,2,"R",37,FONT,2,"R",37
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"R",FONT,2,37
+				LANG,END
+			MULTILANG,END
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"=(HoldSkip.HSMPoint.OperatorHold==1)"
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,13,COLOR,13
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,2,COLOR,2
+				COL,1,COLOR,4,COLOR,4
+			A,END
+		O,END
+		O,BEGIN,T,"TxtAutomaticHold"
+			B,5146,771,5159,784,5146,784,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,12,0,COLOR,12,0,COLOR,2,0,COLOR,2
+			PP,1,5146,771,0,0,FONT,2,"R",37,FONT,2,"R",37
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"R",FONT,2,37
+				LANG,END
+			MULTILANG,END
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"=(HoldSkip.HSMPoint.AutomaticHoldCounter>0)"
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,2,COLOR,2
+				COL,1,COLOR,4,COLOR,4
+			A,END
+		O,END
+		O,BEGIN,R,"Shape9"
+			B,5159,784,5146,771,5159,784,65535,0,6400,0,4,0,0
+			ST,2,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"=(HoldSkip.HSMPoint.AutomaticHoldCounter>0)"
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,2,COLOR,2
+				COL,1,COLOR,4,COLOR,4
+			A,END
+		O,END
+		O,BEGIN,R,"BorderUnk"
+			B,5159,784,5146,771,5159,784,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+			A,BEGIN,CB,"Anim1",0,0,"",""
+				PP,"=(HoldSkip.HSMPoint.AutomaticHoldCounter>0)OR (HoldSkip.HSMPoint.OperatorHold==1)"
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,1,COLOR,1
+				COL,1,COLOR,4,COLOR,4
+			A,END
+		O,END
+	O,END
+	O,BEGIN,R,"Shape25"
+		B,5183,780,5175,771,5183,780,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"ATR.RegPoint.Security"
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,2
+			COL,0,COLOR,2,COLOR,1
+			COL,0,COLOR,2,COLOR,14
+		A,END
+	O,END
+O,END

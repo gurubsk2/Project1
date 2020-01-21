@@ -1,0 +1,1091 @@
+ASCII32,15,10,2019,13:26,33,1.1
+W,BEGIN,"mmc_TrainShuttleMode","mmc_TrainShuttleMode"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1033,564
+	SIZE,270,240,270,240,0,0,0,1280,1024,264,212
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Lanzadera 001"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Lanzadera 907"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,0,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,3,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_TrainShuttleMode.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* File Name:  mmc_TrainShuttleMode
+	'* *******************************************************************************************
+	'* Purpose:     display the train information and the buttons to acces to controls on the
+	'*              train
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vasanth M
+	'* Date:                June 2017
+	'* Change:              Shuttle Gap (GDL)
+	'*
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (V3B)
+	'* *******************************************************************************************
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	
+	' OPC tags used for retrieving data
+	Private Const c_strTrainUniqueIDTag                     As String = ".HMITrain.iTrainID"
+	Private Const c_strsTrainAssociatedTag                  As String = ".Attributes.HMITETrain.boolPlug_1"
+	Private Const c_strTrainHMITrainIDTag                   As String = ".Attributes.HMITETrain.bstrPlug_6"
+	Private Const c_strTrainShuttleModeTag                  As String = ".Attributes.HMITETrain.boolPlug_6"
+	Private Const c_strTrainCurPlatformTag                  As String = ".Attributes.HMITETrain.bstrPlug_7"
+	Private Const c_strOriginDestinationListTag             As String = "IconisHMI.UO.ShuttleOriginDestinationList.Information.Value.bstrValue"
+	Private Const c_strInitialMinDwellTimeImposedTag        As String = ".ATR.RegPoint.InitialMinDwellTimeImposed"
+	Private Const c_strInitialMaxDwellTimeImposedTag        As String = ".ATR.RegPoint.InitialMaxDwellTimeImposed"
+	Private Const c_strInitialNominalDwellTimeImposedTag    As String = ".ATR.RegPoint.InitialNominalDwellTimeImposed"
+	Private Const c_charset                                 As String = "+0-0"
+	
+	' OPC tag used for command sending
+	Private Const c_strTrainInterposeCmdTag                 As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeBerth"
+	
+	'* *******************************************************************************************
+	'* Variables
+	'* *******************************************************************************************
+	' OPC variables
+	Dim WithEvents m_OPC_UniqueID                         As Variable
+	Dim WithEvents m_OPC_HMITrainID                       As Variable
+	Dim WithEvents m_OPCTrainAssociated                   As Variable
+	Dim WithEvents m_OPCTrainCurPlatform                  As Variable
+	Dim WithEvents m_OPCOriginDestinationList             As Variable
+	Dim WithEvents m_OPCTrainShuttleModeTag               As Variable
+	
+	
+	' Local Variables
+	Dim m_iUniqueID             As Integer
+	Dim m_strHMITrainID         As String
+	Dim m_iOriginMinDwellTime   As Integer
+	Dim m_iOriginMaxDwellTime   As Integer
+	Dim m_iDestMinDwellTime     As Integer
+	Dim m_iDestMaxDwellTime     As Integer
+	
+	' Collection of points
+	Dim m_collShuttle   As Collection
+	Dim m_strTxtVal     As String
+	
+	' OPC Set variables for Shuttle
+	Dim WithEvents m_OPCSet_DwellTimeStatus     As Iconis_CLS_OPCSet
+	Dim m_OPC_iOriginDefaultDwellTimeImposed    As Iconis_CLS_OPCSet_Item
+	Dim m_OPC_iDestDefaultDwellTimeImposed      As Iconis_CLS_OPCSet_Item
+	
+	
+	Private Sub Label_5_Click()
+	
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Mimic_Open
+	'* *******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    ' Set the HMITrainID
+	    SetHMITrainID ("[ID]")
+	    
+	    'Initialize mimic object
+	    Call Initialize
+	
+	
+	    ' Enable the cancellation button
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Active%").Value = True
+	    
+	    ' Add Variables
+	    Set m_OPC_UniqueID = Variables.Add(ThisMimic.Branch & c_strTrainUniqueIDTag, fvVariableTypeRegister)
+	    Set m_OPC_HMITrainID = Variables.Add(ThisMimic.Branch & c_strTrainHMITrainIDTag, fvVariableTypeText)
+	    Set m_OPCTrainShuttleModeTag = Variables.Add(ThisMimic.Branch & c_strTrainShuttleModeTag, fvVariableTypeBit)
+	    Set m_OPCTrainCurPlatform = Variables.Add(ThisMimic.Branch & c_strTrainCurPlatformTag, fvVariableTypeText)
+	    Set m_OPCTrainAssociated = Variables.Add(ThisMimic.Branch & c_strsTrainAssociatedTag, fvVariableTypeBit)
+	    
+	    Set m_OPCOriginDestinationList = Variables.Add(c_strClusterLevel2 & c_strOriginDestinationListTag, fvVariableTypeText)
+	   
+	    ' Subscribes all the OPC variables
+	    If (m_OPC_UniqueID.EnableEvents = True) Then
+	        m_OPC_UniqueID_ValueChange
+	    Else
+	        m_OPC_UniqueID.EnableEvents = True
+	    End If
+	
+	    If (m_OPC_HMITrainID.EnableEvents = True) Then
+	        m_OPC_HMITrainID_ValueChange
+	    Else
+	        m_OPC_HMITrainID.EnableEvents = True
+	    End If
+	    
+	    
+	    If (m_OPCTrainShuttleModeTag.EnableEvents = True) Then
+	        m_OPCTrainShuttleModeTag_ValueChange
+	    Else
+	        m_OPCTrainShuttleModeTag.EnableEvents = True
+	    End If
+	    
+	    If (m_OPCTrainCurPlatform.EnableEvents = True) Then
+	        m_OPCTrainCurPlatform_ValueChange
+	    Else
+	        m_OPCTrainCurPlatform.EnableEvents = True
+	    End If
+	    
+	    If (m_OPCOriginDestinationList.EnableEvents = True) Then
+	        m_OPCOriginDestinationList_ValueChange
+	    Else
+	        m_OPCOriginDestinationList.EnableEvents = True
+	    End If
+	
+	    If (m_OPCTrainAssociated.EnableEvents = True) Then
+	       m_OPCTrainAssociated_ValueChange
+	    Else
+	        m_OPCTrainAssociated.EnableEvents = True
+	    End If
+	
+	    'Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* OPC variables Value change events
+	'* *******************************************************************************************
+	Private Sub m_OPCOriginDestinationList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPCOriginDestinationList_ValueChange", "Begin Subroutine")
+	
+	    If Check_OPC_Variable(m_OPCOriginDestinationList) And m_OPCTrainCurPlatform.Value <> "" And m_OPCOriginDestinationList.Value <> "" Then
+	        Call ReadXMLOriginDestinationList(m_OPCTrainCurPlatform.Value, m_OPCOriginDestinationList.Value)
+	        BuildListbox_1
+	    End If
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCOriginDestinationList_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCTrainAssociated_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPCTrainAssociated_ValueChange", "Begin Subroutine")
+	    
+	    If Check_OPC_Variable(m_OPCTrainAssociated) = False Then Exit Sub
+	    
+	    ManageConfirmationButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCTrainAssociated_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCTrainCurPlatform_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPCTrainCurPlatform_ValueChange", "Begin Subroutine")
+	 
+	    If Check_OPC_Variable(m_OPCTrainCurPlatform) And m_OPCTrainCurPlatform.Value <> "" And m_OPCOriginDestinationList.Value <> "" Then
+	    Call ReadXMLOriginDestinationList(m_OPCTrainCurPlatform.Value, m_OPCOriginDestinationList.Value)
+	    BuildListbox_1
+	    End If
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCTrainCurPlatform_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCTrainShuttleModeTag_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPCTrainShuttleModeTag_ValueChange", "Begin Subroutine")
+	    
+	    If Check_OPC_Variable(m_OPCTrainShuttleModeTag) = False Then Exit Sub
+	    
+	    Call Enablebuttons
+	    
+	    ManageConfirmationButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCTrainShuttleModeTag_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* ManageConfirmationButton: Enable or disable confirmation button
+	'* *******************************************************************************************
+	Private Sub ManageConfirmationButton()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "ManageConfirmationButton", "Begin Subroutine")
+	
+	Dim bMimicInputVal As Boolean
+	  
+	    bMimicInputVal = False
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = bMimicInputVal
+	
+	    '*Check OPC variable status as per coding rules and check limits for mimic objects
+	    If (OpBtnApply = True) And Cbx_DestinationList.Value <> "" Then
+	
+	    bMimicInputVal = (Check_OPC_Variable(m_OPCTrainCurPlatform) And Check_OPC_Variable(m_OPCTrainShuttleModeTag) And _
+	                      Check_OPC_Variable(m_OPCTrainAssociated) And m_OPCSet_DwellTimeStatus.IsAllGood) And _
+	                     (Cbx_DestinationList.Value <> "" And m_OPCTrainCurPlatform.Value <> "" And m_OPCOriginDestinationList <> "") And _
+	                     (m_OPCTrainAssociated.Value = False)
+	
+	    ElseIf (OpBtnCancel = True) Then
+	   
+	    bMimicInputVal = Check_OPC_Variable(m_OPCTrainShuttleModeTag) And m_OPCTrainShuttleModeTag.Value = True
+	    
+	    End If
+	
+	    
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = bMimicInputVal
+	    
+	    'End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageConfirmationButton", Err.Description)
+	End Sub
+	''* *******************************************************************************************
+	''* Button_1_Click: Manage the click on OK button
+	''* *******************************************************************************************
+	Private Sub Button_1_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_1_Click", "Begin Subroutine")
+	
+	Dim m_strcollDestID              As String
+	Dim m_strcollName                As String
+	Dim m_strcollMvtID               As String
+	Dim m_strcollMirrorMvtID         As String
+	Dim m_iLoops                     As Integer
+	 
+	
+	    If Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value And OpBtnApply.Value = True Then
+	    
+	       m_strcollDestID = m_collShuttle.Item(Cbx_DestinationList.Value)(0)
+	       m_strcollName = m_collShuttle.Item(Cbx_DestinationList.Value)(1)
+	       m_strcollMvtID = m_collShuttle.Item(Cbx_DestinationList.Value)(2)
+	       m_strcollMirrorMvtID = m_collShuttle.Item(Cbx_DestinationList.Value)(3)
+	
+	       ' To get number of loops
+	       
+	       If IsNumeric(TxtBxLoops.Value) And (TxtBxLoops.Value > 0 And TxtBxLoops.Value < 999) Then
+	            m_iLoops = Val(TxtBxLoops.Value)
+	       ElseIf IsNull(TxtBxLoops.Value) Or TxtBxLoops.Value = 0 Or TxtBxLoops.Value = "" Then
+	            m_iLoops = -1
+	       End If
+	       
+	        'MsgBox ("%UniqueID%|" & m_iUniqueID & "|SetShuttleMode|" & m_OPCTrainCurPlatform.Value & "*" & m_strcollDestID _
+	            & "*" & m_strcollMvtID & "*" & m_strcollMirrorMvtID & "*" & m_iLoops & "*" & m_OPCTrainCurPlatform.Value & ";" & Val(m_OPC_iOriginDefaultDwellTimeImposed.Value) _
+	            & ";" & m_strcollDestID & ";" & Val(m_OPC_iDestDefaultDwellTimeImposed.Value) & ";*")
+	       
+	        ' Build string corresponding to the command to be sent for interpose
+	            Call ButtonCommand("btnTrainShuttle", "", "%UniqueID%|" & m_iUniqueID & "|SetShuttleMode|" & m_OPCTrainCurPlatform.Value & "*" & m_strcollDestID _
+	            & "*" & m_strcollMvtID & "*" & m_strcollMirrorMvtID & "*" & m_iLoops & "*" & m_OPCTrainCurPlatform.Value & ";" & Val(m_OPC_iOriginDefaultDwellTimeImposed.Value) _
+	            & ";" & m_strcollDestID & ";" & Val(m_OPC_iDestDefaultDwellTimeImposed.Value) & ";*")
+	
+	        Me.Close
+	    
+	    ElseIf Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value And OpBtnCancel.Value = True And m_OPCTrainShuttleModeTag Then
+	    
+	                ' Cancel Shuttle Cmd
+	
+	            Call ButtonCommand("btnTrainShuttle", "", "%UniqueID%|" & m_iUniqueID & "|CancelShuttleMode")
+	        
+	        'MsgBox "%UniqueID%|" & m_iUniqueID & "|CancelShuttleMode"
+	            
+	        Me.Close
+	        
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_Click", Err.Description)
+	End Sub
+	'
+	'* *******************************************************************************************
+	'* m_OPC_UniqueID_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_UniqueID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_UniqueID_ValueChange", "Begin Subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_UniqueID) Then
+	        m_iUniqueID = m_OPC_UniqueID.Value
+	    End If
+	
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_UniqueID_ValueChange", Err.Description)
+	End Sub
+	'
+	'* *******************************************************************************************
+	'* m_OPC_HMITrainID_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_HMITrainID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_HMITrainID_ValueChange", "Begin Subroutine")
+	
+	    ' Check the status and the quality of the variable
+	    If Check_OPC_Variable(m_OPC_HMITrainID) Then
+	
+	        ' Set the HMITrainID
+	        SetHMITrainID (Format(m_OPC_HMITrainID.Value, "000"))
+	
+	    End If
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* SetHMITrainID
+	'* *******************************************************************************************
+	Private Sub SetHMITrainID(strHMITrainID As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "SetHMITrainID", "Begin Subroutine")
+	
+	    ThisMimic.Caption = "Lanzadera " & strHMITrainID
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SetHMITrainID", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* BuildListbox_1: Build the list box containing possible destination
+	'* *******************************************************************************************
+	Private Sub BuildListbox_1()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "BuildListbox_1", "Begin Subroutine")
+	
+	    Cbx_DestinationList.Clear
+	    Cbx_DestinationList.Enabled = False
+	    
+	    Dim oPossibleDestination As Variant
+	    For Each oPossibleDestination In m_collShuttle
+	    
+	        Cbx_DestinationList.AddItem (oPossibleDestination(1))
+	    
+	    Next
+	    
+	    If Cbx_DestinationList.ListCount > 0 And OpBtnApply Then Cbx_DestinationList.Enabled = True
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* Cbx_DestinationList: call ManageConfirmationButton to enable OK button
+	'* *******************************************************************************************
+	Private Sub Cbx_DestinationList_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Cbx_DestinationList_Change", "Begin Subroutine")
+	   
+	  ' Subscribe variable of Origin Dwell times
+	                             
+	   If Cbx_DestinationList <> "" Then
+	      TxtBxLoops.Enabled = True
+	'      Call SetVariablesOriginDestDwelltime(Variables.Item(ThisMimic.Branch & ".CurPlaform%").Value, Cbx_DestinationList.Value)
+	      Call SetVariablesOriginDestDwelltime(m_OPCTrainCurPlatform, m_collShuttle.Item(Cbx_DestinationList.Value)(0))
+	      
+	      
+	      
+	      
+	   End If
+	
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Cbx_DestinationList_Change", Err.Description)
+	End Sub
+	
+	
+	Private Sub OpBtnApply_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "OpBtnApply_Click", "Begin Subroutine")
+	  
+	    Enablebuttons
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "OpBtnApply_Click", Err.Description)
+	End Sub
+	
+	Private Sub OpBtnCancel_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "OpBtnCancel_Click", "Begin Subroutine")
+	    
+	    Enablebuttons
+	        
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "OpBtnCancel_Click", Err.Description)
+	End Sub
+	
+	Private Sub TxtBxLoops_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "TxtBxLoops_Change", "Begin Subroutine")
+	    
+	    TxtBxLoops.Value = TxtBxMaxMinLimit(TxtBxLoops.Value, 0, 999)
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "TxtBxLoops_Change", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Initialize: To enable and disable mimic object
+	'* *******************************************************************************************
+	Private Sub Initialize()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "TxtBxOriginDwellTimes_Change", "Begin Subroutine")
+	    
+	    Cbx_DestinationList.Enabled = False
+	    Cbx_DestinationList.Value = ""
+	    OpBtnApply = False
+	    OpBtnCancel = False
+	    OpBtnApply.Enabled = False
+	    OpBtnCancel.Enabled = False
+	    TxtBxLoops.Enabled = False
+	    TxtBxLoops.Value = ""
+	    
+	    ManageConfirmationButton
+	       
+	    ' To hold Origin platform ID
+	    
+	    Call Variables.Add(ThisMimic.Branch & ".CurPlaform%", fvVariableTypeText)
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "TxtBxOriginDwellTimes_Change", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* ReadXMLOriginDestinationList: Read list of possible destinations
+	'* *******************************************************************************************
+	Function ReadXMLOriginDestinationList(ByVal strOriginPlatformId As String, ByVal strXmlOriginDestList As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "ReadXMLOriginDestinationList", "Begin Subroutine")
+	
+	Dim oDoc                     As DOMDocument
+	Dim oOriginList              As IXMLDOMNodeList
+	Dim oOrigin                  As IXMLDOMElement
+	Dim oDestList                As IXMLDOMNodeList
+	Dim oDest                    As IXMLDOMElement
+	Dim m_strID                  As String
+	Dim m_strName                As String
+	Dim m_strMvtID               As String
+	Dim m_strMirrorMvtID         As String
+	Const c_strOriginNode        As String = "Origin"
+	Const c_strDestNode          As String = "Destination"
+	Const c_strIDAttr            As String = "ID"
+	Const c_strNameAttr          As String = "Name"
+	Const c_strMvtIDAttr         As String = "MovementID"
+	Const c_strMirrorMvtIDAttr   As String = "MirrorMovementID"
+	
+	
+	    Set m_collShuttle = New Collection
+	    
+	    If (strOriginPlatformId <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(strXmlOriginDestList)) Then
+	                
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oOriginList = oDoc.documentElement.selectNodes("//" & c_strOriginNode & "[@" & c_strIDAttr & "=""" & strOriginPlatformId & """]")
+	                    If Not (oOriginList Is Nothing) Then
+	    
+	                        If (oOriginList.length > 0) Then
+	                        
+	                            For Each oOrigin In oOriginList
+	                            
+	                            Variables.Item(ThisMimic.Branch & ".CurPlaform%").Value = oOrigin.getAttribute(c_strNameAttr)
+	                 
+	                             Set oDestList = oOrigin.selectNodes(c_strDestNode)
+	                                                    
+	                                If (oDestList.length > 0) Then
+	                                    For Each oDest In oDestList
+	                                     m_strID = oDest.getAttribute(c_strIDAttr)
+	                                     m_strName = oDest.getAttribute(c_strNameAttr)
+	                                     m_strMvtID = oDest.getAttribute(c_strMvtIDAttr)
+	                                     m_strMirrorMvtID = oDest.getAttribute(c_strMirrorMvtIDAttr)
+	                                    
+	                                     m_collShuttle.Add Array(m_strID, m_strName, m_strMvtID, m_strMirrorMvtID), m_strName
+	                                      
+	                                    Next oDest
+	                                End If
+	                            Next oOrigin
+	                            
+	                        End If
+	                        Set oDestList = Nothing
+	                        Set oOriginList = Nothing
+	                        
+	                    End If
+	                    
+	                End If
+	                
+	            End If
+	            Set oDoc = Nothing
+	            
+	        End If
+	        
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXMLOriginDestinationList", Err.Description)
+	
+	End Function
+	''* *******************************************************************************************
+	''* SetVariablesOriginDestDwelltime: Subscribe Origin and Destination Dwell time variables
+	''* *******************************************************************************************
+	Public Sub SetVariablesOriginDestDwelltime(ByVal strOriginPlatformId As String, ByVal strDestPlatformId As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "SetVariablesOriginDestDwelltime", "Begin Subroutine")
+	     ' Unsubscribe the OPC Set
+	
+	     If Not (m_OPCSet_DwellTimeStatus Is Nothing) Then
+	           m_OPCSet_DwellTimeStatus.Destroy
+	           Set m_OPCSet_DwellTimeStatus = Nothing
+	     End If
+	
+	    'MsgBox "Origem:" & strOriginPlatformId & " destination: " & strDestPlatformId
+	
+	    Set m_OPCSet_DwellTimeStatus = mod_UO_General.CreateNew_Iconis_CLS_OPCSet
+	
+	    Set m_OPC_iOriginDefaultDwellTimeImposed = m_OPCSet_DwellTimeStatus.AddItem(c_strClusterLevel2 & strOriginPlatformId & c_strInitialNominalDwellTimeImposedTag, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPC_iDestDefaultDwellTimeImposed = m_OPCSet_DwellTimeStatus.AddItem(c_strClusterLevel2 & strDestPlatformId & c_strInitialNominalDwellTimeImposedTag, fvVariableTypeRegister, c_OPCReadOnly)
+	    
+	    m_OPCSet_DwellTimeStatus.DoConnect (Me.Name & "m_OPCSet_DwellTimeStatus")
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "SetVariablesOriginDestDwelltime", Err.Description)
+	End Sub
+	Private Sub m_OPCSet_DwellTimeStatus_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_DwellTimeStatus_OnConnection", "Begin Subroutine")
+	
+	  If m_OPCSet_DwellTimeStatus.IsAllGood Then
+	  
+	    
+	    ManageConfirmationButton
+	    
+	  End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCSet_DwellTimeStatus_OnConnection", Err.Description)
+	End Sub
+	Private Sub m_OPCSet_DwellTimeStatus_OnRefresh(lIndex As Long, Value As Variant, Status As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_DwellTimeStatus_OnRefresh", "Begin Subroutine")
+	
+	  If m_OPCSet_DwellTimeStatus.IsAllGood Then
+	  
+	   
+	    ManageConfirmationButton
+	    
+	  End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPCSet_DwellTimeStatus_OnRefresh", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Mimic_BeforeClose
+	'* *******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	    
+	    ' Remove all the OPC variables
+	
+	    If Not (m_OPC_UniqueID Is Nothing) Then
+	       Variables.Remove (m_OPC_UniqueID.Name)
+	       Set m_OPC_UniqueID = Nothing
+	    End If
+	
+	    If Not (m_OPC_HMITrainID Is Nothing) Then
+	       Variables.Remove (m_OPC_HMITrainID.Name)
+	       Set m_OPC_HMITrainID = Nothing
+	    End If
+	    
+	    If Not (m_OPCTrainShuttleModeTag Is Nothing) Then
+	       Variables.Remove (m_OPCTrainShuttleModeTag.Name)
+	       Set m_OPCTrainShuttleModeTag = Nothing
+	    End If
+	    
+	    If Not (m_OPCTrainCurPlatform Is Nothing) Then
+	       Variables.Remove (m_OPCTrainCurPlatform.Name)
+	       Set m_OPCTrainCurPlatform = Nothing
+	    End If
+	
+	    If Not (m_OPCOriginDestinationList Is Nothing) Then
+	       Variables.Remove (m_OPCOriginDestinationList.Name)
+	       Set m_OPCOriginDestinationList = Nothing
+	    End If
+	    
+	    If Not (m_OPCTrainAssociated Is Nothing) Then
+	       Variables.Remove (m_OPCTrainAssociated.Name)
+	       Set m_OPCTrainAssociated = Nothing
+	    End If
+	    
+	    If Not (m_OPCSet_DwellTimeStatus Is Nothing) Then
+	       m_OPCSet_DwellTimeStatus.Destroy
+	       Set m_OPCSet_DwellTimeStatus = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	Function TxtBxMaxMinLimit(ByVal TxtVal As String, ByVal MinVal As String, ByVal MaxVal As String) As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	'*Declare a global variable Dim m_strTxtVal as  string
+	'*Declare a global Cconstant Const c_charset  As String = "+0-0"
+	Dim i As Integer
+	Dim bChar As Boolean
+	Dim strChar() As String
+	
+	   bChar = False
+	   strChar = Split(c_charset, "0")
+	        For i = 0 To UBound(strChar) - 1
+	         If InStr(TxtVal, strChar(i)) Then
+	              bChar = True
+	              Exit For
+	         End If
+	        Next
+	    
+	        If bChar = True Then
+	        ElseIf IsNumeric(TxtVal) And Val(TxtVal) < Val(MinVal) And bChar = False Then
+	            m_strTxtVal = TxtVal
+	        ElseIf IsNumeric(TxtVal) And Val(TxtVal) > Val(MaxVal) And bChar = False Then
+	        ElseIf IsNumeric(TxtVal) And Val(TxtVal) >= Val(MinVal) And Val(TxtVal) <= Val(MaxVal) And bChar = False Then
+	            m_strTxtVal = TxtVal
+	        ElseIf TxtVal = "" Then
+	            m_strTxtVal = ""
+	        Else
+	            m_strTxtVal = m_strTxtVal
+	        End If
+	        
+	    TxtBxMaxMinLimit = m_strTxtVal
+	 
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	Public Sub Enablebuttons()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Enablebuttons", "Begin Subroutine")
+	
+	    If m_OPCTrainShuttleModeTag.Value = True And OpBtnCancel = True Then
+	       OpBtnApply.Enabled = True
+	       OpBtnApply = False
+	       OpBtnCancel.Enabled = True
+	       OpBtnCancel = True
+	       Cbx_DestinationList.Clear
+	       Cbx_DestinationList.Enabled = False
+	       TxtBxLoops.Enabled = False
+	    ElseIf m_OPCTrainShuttleModeTag.Value = True And OpBtnApply = True Then
+	       OpBtnApply.Enabled = True
+	       OpBtnApply = True
+	       OpBtnCancel.Enabled = True
+	       OpBtnCancel = False
+	       BuildListbox_1
+	    ElseIf m_OPCTrainShuttleModeTag.Value = True Then ' @ Mimic open
+	       OpBtnApply.Enabled = True
+	       OpBtnApply = False
+	       OpBtnCancel.Enabled = True
+	       OpBtnCancel = True
+	    ElseIf m_OPCTrainShuttleModeTag.Value = False Then ' @ Mimic open
+	       OpBtnApply.Enabled = True
+	       OpBtnApply = True
+	       OpBtnCancel.Enabled = False
+	       OpBtnCancel = False
+	       BuildListbox_1
+	    End If
+	    
+	    ManageConfirmationButton
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Enablebuttons", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,191,191,191,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,160,160,160,0,0,0
+	COLOR,7,0,255,0,0,0,0
+	COLOR,8,255,0,255,0,0,0
+	COLOR,9,122,122,122,0,0,0
+	COLOR,10,240,240,240,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape_1"
+	B,265,220,0,0,265,220,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtPlatformID0"
+	B,2000,135,2049,160,2000,160,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,135,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID0%"
+	A,END
+O,END
+O,BEGIN,T,"txtPlatformID1"
+	B,2000,160,2050,185,2000,185,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,160,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID1%"
+	A,END
+O,END
+O,BEGIN,T,"txtPlatformID2"
+	B,2000,185,2050,210,2000,210,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,185,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID2%"
+	A,END
+O,END
+O,BEGIN,T,"txtPlatformID3"
+	B,2000,210,2050,235,2000,235,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,210,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID3%"
+	A,END
+O,END
+O,BEGIN,T,"txtPlatformID4"
+	B,2000,235,2050,260,2000,260,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,235,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID4%"
+	A,END
+O,END
+O,BEGIN,T,"txtPlatformID5"
+	B,2000,260,2050,285,2000,285,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,2000,260,5,0,FONT,1,"<ID>",36,FONT,1,"<ID>",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<ID>",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"txtPlatformID5%"
+	A,END
+O,END
+O,BEGIN,L,"Line_10"
+	B,15,154,246,154,15,154,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,15,154,246,154
+O,END
+O,BEGIN,L,"Line_11"
+	B,14,55,14,155,14,155,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,14,55,14,155
+O,END
+O,BEGIN,T,"Button_1"
+	B,15,168,115,193,15,193,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,5,COLOR,1,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,15,168,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Ejecutar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Button_1_Active%"
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,8,COLOR,8
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,9,COLOR,9
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",1,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Button_2"
+	B,146,168,246,193,146,193,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,5,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,146,168,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Button_2_Active%"
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,8,COLOR,8
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,9,COLOR,9
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Label_5"
+	B,25,66,78,85,25,85,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,25,66,0,0,FONT,1,"Destination",38,FONT,1,"Destination",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destino:",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Destino:",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"Cbx_DestinationList"
+	B,82,65,243,89,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Label_7"
+	B,20,101,78,120,20,120,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20,101,0,0,FONT,1,"Number of loops",38,FONT,1,"Number of loops",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Retornos:",FONT,2,38
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Vueltas :",FONT,2,38
+			ROLE,0,"Retornos:",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"TxtBxLoops"
+	B,82,99,137,128,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"OpBtnApply"
+	B,29,17,49,41,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"OpBtnCancel"
+	B,153,17,173,41,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Label_Train1"
+	B,51,20,95,39,51,39,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,51,20,0,0,FONT,1,"Train",38,FONT,1,"Train",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Label_Train2"
+	B,178,20,223,39,178,39,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,178,20,0,0,FONT,1,"Aplicar",38,FONT,1,"Aplicar",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Retirar",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Line_3"
+	B,246,55,246,155,246,155,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,246,55,246,155
+O,END
+O,BEGIN,L,"Line_4"
+	B,15,55,246,55,15,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,15,55,246,55
+O,END

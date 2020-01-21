@@ -1,0 +1,253 @@
+ASCII32,4,12,2018,23:53,23,1.1
+W,BEGIN,"View_MultiServerPlayback","View_MultiServerPlayback"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1075,896
+	SIZE,259,218,259,218,0,0,0,1366,768,253,190
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Playback"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,0,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,0,0,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"View_MultiServerPlayback.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View Playback Mimic
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of playback views for ATS and SCADA
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Swati Das
+	'* Date:                DEc '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Architecture Description SyAD Urban Operation (T-221 E120190)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOK_Click", "Begin Subroutine")
+	    
+	    If (optATS.Value = True) Then
+	        Mimics.Open "mmc_MultiServerPlayback", , , , , , , , GetScreenPosition(1) + 1075, 440, True
+	    
+	    ElseIf (optSCADA.Value = True) Then
+	        If (ThisProject.ProjectLine = "L46") Then
+	            Mimics.Open "mmc_MultiServerPlayback_L46", , , , , , , , GetScreenPosition(1) + 1300, 440, True
+	        ElseIf (ThisProject.ProjectLine = "L5") Then
+	            Mimics.Open "mmc_MultiServerPlayback_L5", , , , , , , , GetScreenPosition(1) + 1300, 440, True
+	        End If
+	    End If
+	    
+	    ThisMimic.Close
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: Mimic_Open
+	'*  On opening the mimic,
+	'*      - Init variables used in the animations of buttons
+	'*      - Add OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	   
+	    optATS.Enabled = True
+	    optSCADA.Enabled = True
+	    
+	    optATS.Value = False
+	    optSCADA.Value = False
+	    
+	    Variables.Item(ThisMimic.Branch & "btnOKEnabled%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: optOperModeAutoWithoutTT_Click
+	'* Selects the line operating Mode
+	'* ********************************************************************************
+	Private Sub optATS_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "optOperModeAutoWithoutTT_Click", "Begin Subroutine")
+	    Variables.Item(ThisMimic.Branch & "btnOKEnabled%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optOperModeAutoWithoutTT_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: optOperModeAutoWithTT_Click
+	'* Selects the line operating Mode
+	'* ********************************************************************************
+	Private Sub optSCADA_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "optOperModeAutoWithTT_Click", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & "btnOKEnabled%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "optOperModeAutoWithTT_Click", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"HDW", 1, 0, "{16C4B4DD-E660-48A4-8D94-B813A49B6243}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,96,96,96,0,0,0
+	COLOR,5,240,240,240,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,255,255,255,0,0,0
+	COLOR,8,128,128,128,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,237,123,15,22,237,123,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text3"
+	B,27,9,108,33,27,33,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,27,9,0,0,FONT,1,"Select the line operating mode",37,FONT,1,"Select the line operating mode",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Playback files",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,54,44,102,63,54,63,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,54,44,0,0,FONT,1,"Manual",36,FONT,1,"Manual",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ATS",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,54,80,223,99,54,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,54,80,0,0,FONT,1,"Automatic without timetable",36,FONT,1,"Automatic without timetable",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"SCADA",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,-7,140,419,140,-7,140,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,-7,140,419,140
+O,END
+O,BEGIN,T,"CancelButton"
+	B,158,153,243,178,158,178,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,158,153,0,0,FONT,1,"Cancel...",37,FONT,1,"Cancel...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,63,153,148,178,63,178,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,63,153,0,0,FONT,1,"<< Previous",37,FONT,1,"<< Previous",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"btnOKEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,7,COLOR,7
+		COL,0,COLOR,3,COLOR,3
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,OCX,"optATS"
+	B,24,44,39,68,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optSCADA"
+	B,24,81,39,103,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

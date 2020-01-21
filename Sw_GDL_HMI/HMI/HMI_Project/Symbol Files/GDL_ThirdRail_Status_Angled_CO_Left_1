@@ -1,0 +1,87 @@
+ASCII32,21,7,2017,9:18,47,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,255,255,0,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,0,255,0,0,0,0
+	COLOR,8,255,0,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Module:      Cmd_GDL Third Rail_Click
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*                  - Open a Mimic based on Third Rail Status request
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra
+	'* Date:                July '17
+	'* Change:              A11
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	
+	Private Sub Poly7_Click()
+	Dim sBranch As String
+	On Error GoTo ErrorHandler
+	sBranch = Me.LocalBranch
+	
+	'Call Variables.Add(sBranch & ".AEEquipment.Template.iEqpState", fvVariableTypeBit)
+	If Variables.Item(sBranch & ".AEEquipment.Template.iEqpState").Value = 1 Then
+	    If ModalQuestion("¨Confirma el pedido al TEN" & Chr(10) & "de corte de Tension en esta seccion?", "Corte de Tension  " & Variables(sBranch & ".Name").Value) Then
+	        Variables.Item(sBranch & ".AEEquipment.Template.iEqpState").Value = 0
+	    End If
+	        Else
+	        Variables.Item(sBranch & ".AEEquipment.Template.iEqpState").Value = 1
+	  End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol599"
+	B,461,301,361,399,361,399,1,0,6400,0,1,0,0
+	O,BEGIN,P,"Poly7"
+		B,461,301,361,399,452,300,256,0,6400,0,2,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,461,302,456,301,361,396,363,399
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"AEEquipment.Template.iEqpState"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,6,COLOR,6
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,7,COLOR,7
+			COL,0,COLOR,8,COLOR,8
+		A,END
+		A,BEGIN,SB,"Anim2",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"Corte de Tension"
+				LANG,END
+			MULTILANG,END
+			PP,"NotUsed%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

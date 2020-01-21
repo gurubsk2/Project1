@@ -1,0 +1,5 @@
+<SYNERGY>
+  <TargetRelease Value="1.00.0" PrefixValue="SMLT2_HMI_" Prefix="MLT2_HMI_"/>
+  <NewRelease Value="Sw_MLT2_PMS_HMI,1.00.0"/>
+  <IntegrationTestingFolder Value="3100"/>
+</SYNERGY>

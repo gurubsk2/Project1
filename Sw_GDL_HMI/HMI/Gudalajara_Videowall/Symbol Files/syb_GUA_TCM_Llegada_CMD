@@ -1,0 +1,76 @@
+ASCII32,28,10,2016,12:30,39,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,0,0,0,0,0,0
+	COLOR,5,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    If Button = 2 Then 'direito
+	        TheseMimics.Open ("GUA_notaequip")
+	    Else
+	        iPopupPosition = Thisproject.ActiveMimic.Windows(1).Left
+	    
+	        iPopupPositionl = (((ThisSymbol.Left + 1680) + ThisSymbol.Width) * 0.753)
+	        iPopupPositiont = (ThisSymbol.Top + ThisSymbol.Height) * 0.753
+	    
+	    
+	        iPopupPositionl = (ThisSymbol.Left + ThisSymbol.Width) * 0.753
+	        iPopupPositiont = (ThisSymbol.Top + ThisSymbol.Height) * 0.753
+	    
+	        If iPopupPositionl > 1100 Then iPopupPositionl = (iPopupPositionl - 20)
+	        
+	        StrObjectNameGUA = ThisSymbol.LocalBranch
+	        
+	        If Split(StrObjectNameGUA, "_")(4) Like "Llegada*" Then
+	        Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_TCMLLEGADA", ThisSymbol.LocalBranch)
+	    End If
+	    End If
+	    
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol44"
+	B,236,801,320,829,236,829,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape20"
+		B,320,829,237,801,320,829,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,2,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"POS.Template.bIsOn"
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,3,COLOR,3,1.000000
+			COL,1,COLOR,1,COLOR,1,2.000000
+			COL,1,COLOR,1,COLOR,1,3.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+		A,END
+	O,END
+	O,BEGIN,R,"Shape3"
+		B,319,829,236,801,323,827,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,4,0,COLOR,4
+		AST,7,1,COLOR,1,COLOR,4,0,COLOR,5,0,COLOR,5,0,COLOR,3,0,COLOR,3
+	O,END
+O,END

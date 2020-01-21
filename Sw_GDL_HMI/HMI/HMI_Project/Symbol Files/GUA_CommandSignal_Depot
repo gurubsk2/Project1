@@ -1,0 +1,277 @@
+ASCII32,28,9,2018,8:15,53,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,255,64,64,0,0,0
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,0,255,0,0,0,0
+	COLOR,6,255,0,255,0,0,0
+	COLOR,7,255,255,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Signal Command Active
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                June '08
+	'* Change:              All
+	    
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              Adding of new types of signals
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172265
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '11
+	'* Change:              CR ALPHA 236912
+	'*                      Update constant associated to the height of contextual menu
+	
+	'* Author:              Vasanth
+	'* Date:                Nov '15
+	'* Change:              CR 00667323 Code Updated for OpenContextualMenu and Point API is Added
+	'* Author:              Chaitra
+	'* Date:                August '16
+	'* Change:              CR 00737149 Code Updated for blinking of the symbol when the contextual menu is opened
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Const c_strServerSeparator As String = ":"
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 222
+	Private Const c_strInspectorPanelMimic As String = "Signal_InspectorPanel_Depot"
+	Private Const c_strContextualMenuMimic As String = "Signal_ContextualMenu_Depot"
+	Private Const c_strDestinationsTag As String = ".Destinations.Value"
+	Private Const c_iCommandValue As Integer = 1
+	Private Const c_strNormalRouteCommandTag As String = ".Detection.Template.iCommand"
+	Private m_OPC_DestSignal As Variable
+	Private m_OPC_RouteCommand As Variable
+	Dim strOrginSignalBranch As String
+	Dim strRoutename As String
+	Dim strDestSignalBranch As String
+	Dim strRoute As String
+	Private Hold As POINTAPI
+	
+	
+	Private Sub Signal_Cmd2_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_MouseUp", "Begin subroutine")
+	    Dim i As Integer
+	 
+	  If (Button = 1) Then
+	  
+	    'Get the actual possition of Mouse pointer
+	        GetCursorPos Hold
+	        m_strCurrSelectedOriginSignal = GetSymbolBranch(Me)
+	        If Variables.Item(m_strCurrSelectedOriginSignal & ".DestinationSelectable%").Value = True Then
+	            Set m_OPC_DestSignal = Variables.Add(m_strSelectedOriginSignal & c_strDestinationsTag, fvVariableTypeText)
+	            Call ExecuteDestination
+	        Else
+	               
+	        If m_strSelectedOriginSignal = "" Then
+	            'Do Nothing
+	        ElseIf m_strSelectedOriginSignal = m_strCurrSelectedOriginSignal Then
+	            ResetDestinationAnimation
+	            ThisProject.iRouteSelectionTimerCount = -1
+	            Exit Sub
+	        Else
+	            ThisProject.iRouteSelectionTimerCount = -1
+	            ResetDestinationAnimation
+	        End If
+	        If VerifyVariable(Variables.Add(GetSymbolBranch(Me) & c_strDestinationsTag, fvVariableTypeText)) Then
+	            Call ReadDestinations(Variables.Item(GetSymbolBranch(Me) & c_strDestinationsTag).Value)
+	            For i = LBound(m_DestinationList) To UBound(m_DestinationList)
+	                If Variables.Item("OPCCluster:" & m_DestinationList(i) & ".DestinationSelectable%").Value Then
+	                    Variables.Item("OPCCluster:" & m_DestinationList(i) & ".DestinationSelectable%").Value = False
+	                Else
+	                    Variables.Item("OPCCluster:" & m_DestinationList(i) & ".DestinationSelectable%").Value = True
+	                End If
+	            Next
+	        End If
+	   'If m_strPrevAnimatedSignalBranch <> m_strCurAnimatedSignalBranch Then m_strPrevAnimatedSignalBranch = m_strCurAnimatedSignalBranch
+	        
+	        If ThisProject.iRouteSelectionTimerCount = -1 Then
+	            ThisProject.iRouteSelectionTimerCount = 0
+	        Else
+	            ThisProject.iRouteSelectionTimerCount = -1
+	            
+	        End If
+	   
+	        m_strSelectedOriginSignal = m_strCurrSelectedOriginSignal
+	        If m_strSelectedOriginSignal = "" Then Exit Sub
+	        If m_strSelectedOriginSignal <> "" Then
+	            strOrginSignalBranch = m_strSelectedOriginSignal
+	            strDestSignalBranch = GetSymbolBranch(Me)
+	        End If
+	    End If
+	
+	End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_MouseUp", Err.Description)
+	End Sub
+	
+	'* Subroutine: Symbol_DblClickEx
+	'* Purpose: Open the Inspector Panel mimic when the command symbol is double
+	'*          clicked
+	'*********************************************************************************
+	Private Sub Signal_Cmd2_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_DblClickEx", "Begin subroutine")
+	   Dim i As Integer
+	       Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	             If VerifyVariable(Variables.Add(GetSymbolBranch(Me) & c_strDestinationsTag, fvVariableTypeText)) Then
+	        'Call ReadDestinations(Variables.Item(GetSymbolBranch(Me) & c_strDestinationsTag).Value)
+	        For i = LBound(m_DestinationList) To UBound(m_DestinationList)
+	        Variables.Item("OPCCluster:" & m_DestinationList(i) & ".DestinationSelectable%").Value = False
+	        Next
+	        End If
+	    '* Open the Inspector Panel mimic
+	   ' Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me)
+	    Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Subroutine: Symbol_MouseUp
+	'* Purpose: Open the Contextual Menu mimic when the command symbol is right
+	'*          clicked
+	'*********************************************************************************
+	Private Sub Signal_Cmd2_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_MouseUp", "Begin subroutine")
+	       
+	    'Add plugs for maintenance command
+	    AddSignalVariables GetSymbolBranch(Me)
+	       
+	    '* If mouse is right clicked
+	    If (Button = 2) Then
+	    'Get the actual possition of Mouse pointer
+	        GetCursorPos Hold
+	        Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_MouseUp", Err.Description)
+	End Sub
+	
+	Private Function ReadXml() As String
+	 Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Shape1_Click", "Begin subroutine")
+	 Dim strDestSignal As String
+	 Dim xmlDoc              As DOMDocument
+	  Dim FirstNodeLevel      As IXMLDOMNodeList
+	  Dim oElementClass       As IXMLDOMElement
+	 
+	  Const strSignal As String = "Signal"
+	  Const strID As String = "ID"
+	    Dim strRoutename As String
+	 Set xmlDoc = New DOMDocument
+	 xmlDoc.loadXML (m_OPC_DestSignal)
+	strDestSignal = Split(strDestSignalBranch, ":")(1)
+	Set oElementClass = xmlDoc.documentElement.selectSingleNode("//" & strSignal & "[@" & strID & "=""" & strDestSignal & """]")
+	ReadXml = oElementClass.getAttribute("RouteID")
+	
+	 Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Shape1_Click", Err.Description)
+	 End Function
+	 
+	Private Sub ExecuteDestination()
+	  Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Shape1_Click", "Begin subroutine")
+	If m_strSelectedOriginSignal = "" Then Exit Sub
+	If m_strSelectedOriginSignal <> "" Then
+	    strOrginSignalBranch = m_strSelectedOriginSignal
+	    strDestSignalBranch = GetSymbolBranch(Me)
+	End If
+	If strDestSignalBranch = "" Then Exit Sub
+	Set m_OPC_DestSignal = Variables.Add(m_strSelectedOriginSignal & c_strDestinationsTag, fvVariableTypeText)
+	If ReadXml = "" Then Exit Sub
+	strRoutename = ReadXml
+	strRoute = "OPCCluster:" & strRoutename & c_strNormalRouteCommandTag
+	
+	Set m_OPC_RouteCommand = Variables.Add(strRoute, fvVariableTypeRegister)
+	 
+	If ((m_OPC_RouteCommand.Status = fvVariableStatusGood) And (m_OPC_RouteCommand.Quality = 192)) Then
+	   m_OPC_RouteCommand.Value = c_iCommandValue
+	   ResetDestinationAnimation
+	End If
+	 
+	  
+	  
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Shape1_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"Scripting", 1, 0, "{420B2830-E718-11CF-893D-00A0C9054228}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol61"
+	B,3144,2540,3189,2561,3144,2561,65535,0,6400,0,2,0,0
+	O,BEGIN,R,"Shape4"
+		B,3189,2561,3144,2540,3189,2561,65535,0,6400,0,4,0,0
+		ST,0,2,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"DestinationSelectable%"
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,3,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+		A,END
+	O,END
+	O,BEGIN,R,"Signal_Cmd2"
+		B,3189,2561,3144,2540,3189,2561,65535,0,6400,0,4,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+		A,BEGIN,CB,"Anim2",0,0,"",""
+			PP,"blinking%"
+			COL,0,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,6,COLOR,6
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,7
+			COL,0,COLOR,7,COLOR,7
+		A,END
+	O,END
+O,END

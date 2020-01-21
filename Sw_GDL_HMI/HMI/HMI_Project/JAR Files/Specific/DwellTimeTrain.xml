@@ -1,0 +1,5 @@
+<DwellTimeTrain>
+	<Train>Identificador único do trem (UniqueID)</Train>
+	<DwellTime>Tempo de Parada</DwellTime> <!--Não é necessário quando removendo a imposição-->
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</DwellTimeTrain>

@@ -1,0 +1,208 @@
+ASCII32,19,9,2018,17:22,53,1.1
+W,BEGIN,"mmc_OnlineTTGenTripPlanServOrientedServiceReduction","mmc_OnlineTTGenTripPlanNonServOriTripAddition"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,750,382
+	SIZE,314,200,314,200,0,0,0,1366,768,308,178
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Service reduction"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Reducir servicio"
+			ROLE,0,"Reducir servicio"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTTGenTripPlanServOrientedServiceReduction.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Trip_Addition
+	'* *******************************************************************************************
+	'* Purpose:     It allows creating a new trip by copying an existing timetable trip (then called reference trip)
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Wagner Queiroz
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	
+	'Var tags
+	Private Const c_strTABcSelTripNumber        As String = "TabCSelTripNumber%"
+	Private Const c_strbtnOKEnabled             As String = "OKButtonEnabled%"
+	
+	
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    ocxServiceReduction.TripNumber = Variables.Item(c_strTABcSelTripNumber).Value
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* ************************************************************************************************
+	'* Subroutine: OKButton_Click
+	'* Send command to the Active X
+	'* ************************************************************************************************
+	Private Sub OKButton_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OKButton_Click", "Begin Subroutine")
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = True Then
+	    
+	        ocxServiceReduction.SendCommand
+	        
+	        ThisMimic.Close
+	        
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "OKButton_Click", "EXCEPTION: " & Err.Description)
+	    
+	End Sub
+	
+	
+	'* ************************************************************************************************
+	'* Subroutine: ocxServiceReduction_OnParametersFilled
+	'* check if all the parameters in the mimic are filled
+	'* ************************************************************************************************
+	Private Sub ocxServiceReduction_OnParametersFilled(ByVal parametersValid As Boolean)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ocxServiceReduction_OnParametersFilled", "Begin Subroutine")
+	    
+	    '* Check the parameters
+	    If ocxServiceReduction.ParametersFilled And parametersValid Then
+	    
+	        Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = True
+	        
+	    Else
+	    
+	        Variables.Item(ThisMimic.Branch & c_strbtnOKEnabled).Value = False
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ocxServiceReduction_OnParametersFilled", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"TabC", 0, 3, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,400,0,0,"Arial",0,0
+	FONT,3,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,160,160,160,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,T,"OKButton"
+	B,122,144,207,166,122,166,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,122,144,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Aceptar",FONT,2,37
+			ROLE,0,"Aceptar",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"OKButtonEnabled%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"CancelButton"
+	B,217,144,302,166,217,166,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,217,144,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancel",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Cancelar",FONT,2,37
+			ROLE,0,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,L,"Poly1"
+	B,-1,133,321,133,-1,133,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,-1,133,321,133
+O,END
+O,BEGIN,OCX,"ocxServiceReduction"
+	B,5,8,303,128,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,5,COLOR,5,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END

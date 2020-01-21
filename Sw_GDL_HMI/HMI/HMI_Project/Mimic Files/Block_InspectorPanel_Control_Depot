@@ -1,0 +1,328 @@
+ASCII32,26,10,2017,11:31,19,1.1
+W,BEGIN,"Block_InspectorPanel_Control_Depot","Block_InspectorPanel_Control"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,11,38
+	SIZE,272,155,272,155,0,0,0,1920,1080,272,155
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque: B_390"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque: B_390"
+			ROLE,0,"Bloque: B_390"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Block_InspectorPanel_Control_Depot.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  BlockCtrlPanel
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Omar HAFADI
+	'* Date:                May '15
+	'* Change:              All
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                September '15
+	'* Change:              Clean up unused code
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'******************************************************************
+	
+	'* Path of mimics
+	
+	'* Path of the OPC variable containing the list of devices belonging to the track plan
+	Private Const c_strDevicesListTag As String = "IconisHMI.TrackPortionsList.Information.Value.bstrValue"
+	
+	'* Path of the OPC variable containing the checkable status
+	Private Const c_strCheckableTag As String = ".HMISDCheckableStatus.Value"
+	
+	'* Path of the OPC variable containing the command
+	Private Const c_strCommandTag As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeTC"
+	
+	Private Const c_LeftSubRoute As String = "LeftSubRoute.String.Value"
+	
+	Private Const c_RightSubRoute As String = "RightSubRoute.String.Value"
+	
+	Private Const c_LeftSubrouteStatus As String = "LeftSubRouteStatus.Value"
+	
+	Private Const c_RightSubrouteStatus As String = "RightSubRouteStatus.Value"
+	
+	Private Const c_LeftSubrouteStatusSecurity As String = "LeftSubRouteStatus.Security"
+	Private Const c_RightSubrouteStatusSecurity As String = "RightSubRouteStatus.Security"
+	
+	Private Const c_strEGamaValue As String = ".ElementaryGamaList.String.Value"
+	Private Const c_strEGamaRemoval_Value As String = ".EGAMARemoval.Value"
+	Private Const c_strEGamaStatus As String = ".EGAMAStatus.Value"
+	Private Const c_StrEGamaSecurity As String = "ElementaryGamaList.String.Security"
+	Private Const c_StrBlockSecurity As String = "HMIBlockStatus.Template.Security"
+	'* OPC variables
+	'******************************************************************
+	
+	
+	Private Const c_strTrafficOperation As String = "@HMI.UserRights.TrafficOperation%"
+	
+	
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	
+	Dim WithEvents m_OPC_checkable As Variable
+	
+	Dim WithEvents m_OPC_bCommand As Variable
+	
+	Dim m_OPC_LeftSubroute As Variable
+	Dim m_OPC_RightSubRoute As Variable
+	Dim m_OPC_LeftSubrouteStatus As Variable
+	Dim m_OPC_RightSubrouteStatus As Variable
+	Dim m_OPC_LeftSubrouteSecurity As Variable
+	Dim m_OPC_RightSubrouteSecurity As Variable
+	Dim m_OPC_EGamaSecurity As Variable
+	Dim m_OPC_BlockSecurity As Variable
+	Dim WithEvents m_OPC_EGamaValue As Variable
+	Dim WithEvents m_OPC_EGamaRemoval As Variable
+	Dim WithEvents m_OPC_EGamaStatus As Variable
+	
+	'* Module variables
+	'******************************************************************
+	'* Name of the OPC Cluster
+	Dim m_strClusterName As String
+	
+	'* Flag indicating that a HILC command is (or not) in progress (prep. phase or conf. phase)
+	Dim m_iHILCCommandInProgress As Integer
+	
+	'* Name of the SDD
+	
+	Dim m_LeftSubroute As String
+	Dim m_RightSubroute As String
+	
+	
+	
+	Private Sub cmdSubRoute_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSubRoute", "Begin Subroutine")
+	If ((m_OPC_LeftSubrouteStatus.Status = fvVariableStatusGood) And (m_OPC_LeftSubrouteStatus.Value = 0) And (m_OPC_BlockSecurity < 63)) Then
+	    'If m_OPC_LeftSubrouteStatus.Value = 1 Then
+	        m_LeftSubroute = m_strClusterName & m_OPC_LeftSubroute.Value
+	        
+	          'Mimics.OpenInCenter "SubRoute_HILCCtrl", m_LeftSubroute, ThisMimic.ReferenceSet, ThisMimic.Region, , , , fvCenterOnRegion
+	            Call OpenMimicInCenter("SubRoute_HILCCtrl", m_LeftSubroute, Getmousepointerpossition)
+	 ElseIf ((m_OPC_RightSubrouteStatus.Status = fvVariableStatusGood) And (m_OPC_RightSubrouteStatus.Value = 0) And (m_OPC_BlockSecurity < 63)) Then
+	         m_RightSubroute = m_strClusterName & m_OPC_RightSubRoute.Value
+	        'Mimics.OpenInCenter "SubRoute_HILCCtrl", m_RightSubroute, ThisMimic.ReferenceSet, ThisMimic.Region, , , , fvCenterOnRegion
+	            Call OpenMimicInCenter("SubRoute_HILCCtrl", m_RightSubroute, Getmousepointerpossition)
+	 End If
+	 
+	 Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSubRoute", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose:
+	'*  - initialises the block control mimic
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim StrBranch() As String
+	    Dim StrBranchWithoutCluster As String
+	    
+	   
+	    
+	    '* Retrieve the OPC cluster name from the branch of the mimic
+	   ' m_strClusterName = GetOPCCluster(ThisMimic.Branch)
+	    'm_strClusterName = GetOPCCluster()
+	    StrBranch = Split(ThisMimic.Branch, ":")
+	     m_strClusterName = StrBranch(0) & ":"
+	    If (UBound(StrBranch) = 0) Then
+	        StrBranchWithoutCluster = StrBranch(0)
+	    Else
+	        StrBranchWithoutCluster = StrBranch(1)
+	    End If
+	    
+	    'StrBranch = Split(StrBranchWithoutCluster, ".")
+	    'Variables.Item(ThisMimic.Branch & ".shortname%").Value = StrBranch(0)
+	    ThisMimic.Caption = "Bloque: " & StrBranch(1)
+	    
+	    '* Add variable containing the list of trackportions to the list of variables
+	    
+	    
+	    Set m_OPC_LeftSubroute = Variables.Add(ThisMimic.Branch & "." & c_LeftSubRoute, fvVariableTypeText)
+	    Set m_OPC_RightSubRoute = Variables.Add(ThisMimic.Branch & "." & c_RightSubRoute, fvVariableTypeText)
+	    Set m_OPC_LeftSubrouteStatus = Variables.Add(ThisMimic.Branch & "." & c_LeftSubrouteStatus, fvVariableTypeRegister)
+	    Set m_OPC_RightSubrouteStatus = Variables.Add(ThisMimic.Branch & "." & c_RightSubrouteStatus, fvVariableTypeRegister)
+	    
+	    Set m_OPC_LeftSubrouteSecurity = Variables.Add(ThisMimic.Branch & "." & c_LeftSubrouteStatusSecurity, fvVariableTypeRegister)
+	    Set m_OPC_RightSubrouteSecurity = Variables.Add(ThisMimic.Branch & "." & c_RightSubrouteStatusSecurity, fvVariableTypeRegister)
+	    
+	    
+	     
+	    '* Add variable containing the list of trackportions to the list of variables
+	    
+	   
+	    '* Add variable containing the list of trackportions to the list of variables
+	   
+	     
+	      
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,122,122,122,0,0,0
+	COLOR,6,0,0,0,0,35,0
+	COLOR,7,0,0,0,0,44,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,258,94,5,44,258,94,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"cmdSubRoute"
+	B,41,56,222,85,41,85,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,41,56,0,0,FONT,1,"Liberar...",37,FONT,1,"Liberar...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Liberar...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Liberar...",FONT,1,37
+			ROLE,0,"Liberar...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"= (((NOT LeftSubRouteStatus.Value.BoolValue) OR (NOT RightSubRouteStatus.Value.BoolValue))And(HMIBlockStatus.Template.Security<63))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,12,34,78,50,12,50,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,0,12,34,0,0,FONT,2,"Sub-ruta",37,FONT,2,"Sub-ruta",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sub-ruta",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sub-ruta",FONT,2,37
+			ROLE,0,"Sub-ruta",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END

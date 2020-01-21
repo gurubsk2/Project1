@@ -1,0 +1,311 @@
+ASCII32,1,2,2016,12:34,56,1.1
+W,BEGIN,"WZManagement_Menu","WZManagementMenu"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,521,975
+	SIZE,250,50,250,50,0,0,0,1280,1024,244,28
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Workzone management"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,1,6,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"WZManagement_Menu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Workzone Management contextual Menu
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of items of the menu for Workzone contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric Foissey
+	'* Date:                Jan '13
+	'* Change:              CR-333273 - All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* **********************************************************************************************
+	Option Explicit
+	
+	'* Constants
+	'* **********************************************************************************************
+	
+	'* Path and name of mimics
+	Private Const c_strWZManagementMimicName As String = "View_WZManagement"
+	Private Const c_strSessionOpenMimicName As String = "TSR_SessionOpen_HILCCtrl"
+	Private Const c_strWZInitMimicName As String = "View_WZ_InitConfig"
+	
+	
+	Private Const c_strTrafficOperation As String = "@HMI.UserRights.TrafficOperation%"
+	
+	'* Used to animate items of menu
+	Private Const c_strItem As String = "Item"
+	Private Const c_strItemVisible As String = ".ItemVisible%"
+	
+	'* Index of the 1st item
+	Private Const c_iItem1 As Integer = 1
+	'* Index of the WZ History item
+	Private Const c_iWZHistoryItem As Integer = 2
+	'* Index of the initialize Configuration item
+	Private Const c_iInitConfigItem As Integer = 3
+	'* OPC variables
+	'* ****************************************************
+	
+	     
+	Dim m_strBranch As String
+	
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose:
+	'*      - Subscribe OPC variable to the collection of variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	
+	    Dim WorkZoneManager As Iconis_CLS_WorkZones
+	    Variables.Item(c_strTrafficOperation).Value = True
+	    m_strBranch = Iconis_MOD_General.GetOPCCluster
+	    Set WorkZoneManager = Iconis_MOD_General.GetWorkzoneManager
+	    m_strBranch = m_strBranch + WorkZoneManager.Get_LCID(0)
+	
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose:
+	'*      - Close the Sectors sub menu if it is opened
+	'*      - Unsubscribes all the previously subscribed variables
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: btnOpenSession_MouseEnter
+	'* Purpose:
+	'*      - management the animation of the open session menu color
+	'* ******************************************************************************************
+	Private Sub btnOpenSession_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOpenSession_MouseEnter", "Begin Subroutine")
+	    
+	    ManageMouseEnter c_iItem1, y
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOpenSession_MouseEnter", Err.Description)
+	End Sub
+	
+	
+	'* It manages :
+	'*  - changing the background and text color of the labels
+	'*  - and opening/closing of mimics when the mouse enters on the given label
+	'* **********************************************************************************************
+	Private Sub ManageMouseEnter(ByVal Index As Integer, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ManageMouseEnter", "Begin Subroutine")
+	    
+	    Dim xPos As Integer
+	    Dim yPos As Integer
+	    Dim strMimicBranch As String
+	    Dim UnselectIndex1 As Integer
+	    Dim UnselectIndex2 As Integer
+	    
+	    
+	    UnselectIndex1 = c_iWZHistoryItem
+	    UnselectIndex2 = c_iInitConfigItem
+	    If (Index = c_iWZHistoryItem) Then
+	        UnselectIndex1 = c_iItem1
+	    ElseIf (Index = c_iInitConfigItem) Then
+	        UnselectIndex2 = c_iItem1
+	    End If
+	                
+	    '* Select the current index item
+	    If Not (Variables.Item(c_strItem & Format(Index) & c_strItemVisible) Is Nothing) Then
+	        Variables.Item(c_strItem & Format(Index) & c_strItemVisible).Value = True
+	    End If
+	     
+	    '*Unselect the other items
+	    If Not (Variables.Item(c_strItem & Format(UnselectIndex1) & c_strItemVisible) Is Nothing) Then
+	        Variables.Item(c_strItem & Format(UnselectIndex1) & c_strItemVisible).Value = False
+	    End If
+	        
+	    If Not (Variables.Item(c_strItem & Format(UnselectIndex2) & c_strItemVisible) Is Nothing) Then
+	        Variables.Item(c_strItem & Format(UnselectIndex2) & c_strItemVisible).Value = False
+	    End If
+	        
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ManageMouseEnter", Err.Description)
+	End Sub
+	
+	
+	
+	'* Subroutine: btnOpenSession_Click
+	'* Purpose:
+	'*      - check the current HILC session status, and open the open session mimic or the WZmanagement mimic
+	'* ******************************************************************************************
+	Private Sub btnOpenSession_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOpenSession_Click", "Begin Subroutine")
+	
+	    If (Variables.Item(c_strTrafficOperation).Value = True) Then
+	    
+	        '* Check if the corresponding "WZ Session Management" mimic is already opened
+	        If (Mimics.IsOpened(c_strWZManagementMimicName, m_strBranch) = False) Then
+	            '* Open the "Session Open" mimic
+	            Mimics.OpenInCenter c_strSessionOpenMimicName, m_strBranch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	                                , , , fvCenterOnRegion
+	        Else
+	            '* Navigate to the (opened) "WZ Session Management" mimic
+	            Iconis_MOD_Navigation.Navigate c_strWZManagementMimicName, m_strBranch, ThisMimic.Region, True
+	        End If
+	        
+	        ThisMimic.Close
+	    End If
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOpenSession_Click", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: btnInitWZConfig_Click
+	'* Purpose:
+	'*      - open the mimic init WZ config mimic for the current branch
+	'* ******************************************************************************************
+	Private Sub btnInitWZConfig_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnInitWZConfig_Click", "Begin Subroutine")
+	
+	    If (Variables.Item(c_strTrafficOperation).Value = True) Then
+	        '* Open the "Init WZ Config Open" mimic
+	        Mimics.OpenInCenter c_strWZInitMimicName, m_strBranch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	                                , , , fvCenterOnRegion
+	        ThisMimic.Close
+	    End If
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnInitWZConfig_Click", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,0,0,255,0,0,0
+	COLOR,4,215,215,215,0,0,0
+	COLOR,5,255,255,255,0,0,0
+COLORS,END
+O,BEGIN,T,"btnOpenSession"
+	B,5,5,240,24,5,24,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,5,0,0,FONT,1,"Aprire una sessione TSR",36,FONT,1,"Aprire una sessione TSR",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Open a session",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Item1.ItemVisible%","@HMI.UserRights.TrafficOperation%","",""
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END

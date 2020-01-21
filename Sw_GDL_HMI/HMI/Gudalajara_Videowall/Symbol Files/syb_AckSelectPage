@@ -1,0 +1,54 @@
+ASCII32,13,2,2018,7:45,14,1.1
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,172,168,153,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_Click()
+	
+	    If Variables.Item("AckSelection%").Value = False Then Exit Sub
+	    If S2KAlarmViewer1.ListItemCount = 0 Then Exit Sub
+	        
+	    Call Position
+	    Call OpenForms("frmMsgQuestion:12")
+	    
+	    If bFormMsgQuestion = False Then
+	        Exit Sub
+	    Else
+	        S2KAlarmViewer1.AckPage
+	    End If
+	End Sub
+	
+	
+	Function Position()
+	    'Posicao do MSGBOX, abrir no primeiro ou segundo monitor
+	    iPopupPosition = ThisProject.ActiveMimic.Windows(1).Left
+	End Function
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol6"
+	B,1648,1074,1892,1101,1648,1101,65535,0,6400,0,1,0,0
+	O,BEGIN,T,"txtAckpage"
+		B,1648,1074,1892,1101,1648,1101,65535,0,6400,0,2,1,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,1,1648,1074,0,0,FONT,1,"Reconocer la P gina",37,FONT,1,"Reconocer la P gina",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,0
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Reconocer la P gina",FONT,1,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

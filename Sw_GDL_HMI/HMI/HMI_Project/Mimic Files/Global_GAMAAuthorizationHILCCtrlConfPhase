@@ -1,0 +1,328 @@
+ASCII32,25,8,2016,13:31,43,1.1
+W,BEGIN,"Global_GAMAAuthorizationHILCCtrlConfPhase","Global_GAMAAuthorizationHILCCtrlConfPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,330,80,330,80,0,0,0,1280,1024,330,80
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Global GAMA authorization"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Global_GAMAAuthorizationHILCCtrlConfPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Global GAMA authorization HILC Ctrl ConfPhase
+	'* *******************************************************************************************
+	'* Purpose:     It manages the combo box containing the list of names of ZC zones
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Foissey Eric
+	'* Date:                September 2015
+	'* Change:              All
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                August 2016
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSeparator As String = "\n"
+	
+	Private Const c_strHILCType As String = "ZC"
+	Private Const c_strID As String = "ID"
+	Private Const c_strName As String = "Name"
+	
+	Private Const c_strDevicesListTag As String = "IconisHMI.ZCsList.Information.Value"
+	Private Const c_strHILCCtrlName As String = ".HILC."
+	
+	Private Const c_strZCNametag As String = ".Status.Name"
+	
+	
+	
+	
+	'* OPC variables
+	'*******************************************************
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	Dim WithEvents m_OPC_ZCName As Variable
+	Private Sub m_OPC_ZCName_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	   If (Check_Variable(m_OPC_ZCName, ThisMimic.Name)) Then
+	        Variables.Item(ThisMimic.Branch & ".QuestionText%").Value = lblQuestion.Text & " " & m_OPC_ZCName.Value & " ?"
+	   End If
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ZCName_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* SubRoutine: Mimic_Open
+	'*      Adds the OPC variable to the collection of all permanently subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	  
+	    Dim strClusterName As String
+	    Dim OPCVarNamesArray() As String
+	    Dim strOPCVarName As String
+	    
+	    Variables.Add ThisMimic.Branch & ".ListOfOPCVarNames%", fvVariableTypeText
+	    Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value = ""
+	    
+	    
+	        '* Add and init a variable containing the OPC variable name of the device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%", fvVariableTypeText
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%").Value = ""
+	    
+	    strClusterName = GetOPCCluster()
+	    Set m_OPC_DevicesNamesList = Variables.Add(strClusterName & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_DevicesNamesList.Status = fvVariableStatusGood) And (m_OPC_DevicesNamesList.EnableEvents = True)) Then
+	        m_OPC_DevicesNamesList_ValueChange
+	    Else
+	        m_OPC_DevicesNamesList.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_ZCName = Variables.Add(ThisMimic.Branch & c_strZCNametag, fvVariableTypeText)
+	    If (m_OPC_ZCName.EnableEvents = True) Then
+	        m_OPC_ZCName_ValueChange
+	    Else
+	        m_OPC_ZCName.EnableEvents = True
+	    End If
+	           
+	    '* Adding an OPC variable to the list of variables
+	        OPCVarNamesArray = Split(Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value, c_strSeparator)
+	    '  * Retrieve the OPC variable name associated to the device selected by the operator
+	        strOPCVarName = OPCVarNamesArray(0)
+	       
+	    '  * Memorize the OPC variable name of the selected device
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%").Value = strOPCVarName
+	            
+	    '  * Enable the "OK" button
+	    Variables.Item(ThisMimic.Branch & ".btnGlobalGAMA_Authorization_OkActive%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*      Unsubscribe the OPC variables previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".ListOfOPCVarNames%")
+	       
+	    If Not (m_OPC_DevicesNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_DevicesNamesList.Name)
+	        Set m_OPC_DevicesNamesList = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	
+	'* SubRoutine: m_OPC_DevicesNamesList_ValueChange
+	'*      Manages filling of the Combo box
+	'* ******************************************************************************************
+	Private Sub m_OPC_DevicesNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	    If Check_OPC_Variable(m_OPC_DevicesNamesList) Then
+	        FillComboBox
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'*  SubRoutine: FillComboBox
+	'*    Read the xml string containing the names of the devices belonging to the track plan
+	'*    Fill the combo box
+	'*    Memorizes the list of OPC variable names of each device belonging to the track plan
+	'* ******************************************************************************************
+	Public Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	    
+	    Dim oDoc As DOMDocument
+	    Dim strXML As String
+	      
+	    
+	    strXML = m_OPC_DevicesNamesList.Value
+	    If (strXML <> "") Then
+	        Set oDoc = New DOMDocument
+	        '* Open the XMl file
+	        If (oDoc.loadXML(strXML)) Then
+	            Dim FirstNodeLevel As IXMLDOMNodeList
+	            Dim oNodeClass As IXMLDOMNode
+	    
+	            Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strHILCType)
+	            If (FirstNodeLevel.length <> 0) Then
+	                For Each oNodeClass In FirstNodeLevel
+	                    Dim strName As String
+	                    Dim strVariableName As String
+	                    Dim oAttrDevice As IXMLDOMAttribute
+	                
+	                    For Each oAttrDevice In oNodeClass.Attributes
+	                        If (StrComp(oAttrDevice.nodeName, c_strName, vbTextCompare) = 0) Then
+	                            strName = oAttrDevice.nodeValue
+	                        ElseIf (StrComp(oAttrDevice.nodeName, c_strID, vbTextCompare) = 0) Then
+	                            strVariableName = oAttrDevice.nodeValue
+	                        End If
+	                    Next
+	                     If ((strName <> "") And (strVariableName <> "")) Then
+	                       ' ComboBoxDeviceNames.AddItem (strName)
+	                        Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value = Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value & _
+	                                                                                         strVariableName & c_strSeparator
+	                    End If
+	                Next
+	            End If
+	            Set FirstNodeLevel = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,305,69,15,14,305,69,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,T,"Text5"
+	B,25,6,119,22,25,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,25,6,0,0,FONT,1,"Confirmation",36,FONT,1,"Confirmation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmation",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"lblQuestion"
+	B,20,25,300,60,20,60,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20,25,0,0,FONT,2,"Confirma la inhibicion de GAMA para toda la linea",84,FONT,2,"Confirma la inhibicion de GAMA para toda la linea",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la activacion de GAMA para toda la linea",FONT,2,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,20,25,300,60,20,60,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20,25,0,0,FONT,1," ",84,FONT,1," ",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"QuestionText%"
+	A,END
+O,END

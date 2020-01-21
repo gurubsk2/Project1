@@ -1,0 +1,158 @@
+ASCII32,3,6,2015,10:35,32,1.1
+W,BEGIN,"SDD_Group_InOperation_HILC_Verification","SDD_Group_InOperation_Preparation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,294,320
+	SIZE,325,300,325,300,0,0,0,1280,1024,325,300
+	BACKCOLOR,216,216,216,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"SDD group in operation"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SDD_Group_InOperation_HILC_Verification.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2011. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SDD Group In Operation HILC Ctrl Prep Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages the preparation phase view
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Omar HAFADI
+	'* Date:                May 2015
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	'* Path of the "SDD List In Operation HILC Ctrl" mimic
+	Private Const c_strSDDListMimicName As String = "SDD_List_InOperation_HILCCtrl"
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: At the opening of the mimic, open the mimic displaying the list of SDDs
+	'*          belonging to the given SDD group
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    '* Open the "SDD List In Operation HILC Command" mimic
+	    ThisMimic.Activate
+	    Mimics.Open c_strSDDListMimicName, ThisMimic.Branch, , , "*", , , , 20, 55, True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,240,240,240,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,216,216,216,0,0,0
+	COLOR,6,128,128,128,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,255,255,255,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,328,315,-2,0,328,315,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape3"
+	B,305,255,10,15,305,255,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,25,6,100,22,25,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,25,6,0,0,FONT,1,"Preparation",36,FONT,1,"Preparation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Verification",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnClose8"
+	B,105,30,270,55,105,55,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,6,0,COLOR,6
+	PP,1,105,30,0,0,FONT,1,"  Group_01",36,FONT,1,"  Group_01",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"UEID.Name"
+	A,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,T,"btnClose1"
+	B,35,30,95,55,35,55,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,35,30,0,0,FONT,1,"SDD",38,FONT,1,"SDD",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"SDD group",FONT,1,38
+		LANG,END
+	MULTILANG,END
+O,END

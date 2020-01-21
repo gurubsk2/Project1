@@ -1,0 +1,316 @@
+ASCII32,18,12,2017,11:38,34,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,0,255,0,0,0,0
+	COLOR,5,255,0,255,0,0,0
+	COLOR,6,255,255,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 255
+	Private Const c_lScreenWidth = 1920
+	Private Enum enumMimicType
+	        c_iNoMimic = 0                      '* No mimic
+	        c_iInspectorPanelMimic = 1          '* Inspector panel
+	        c_iContextualMenuMimic = 2  '* Contextual menu
+	        c_iSleepingContextualMenuMimic = 3  '* Contextual menu for a sleeping train
+	End Enum
+	Private Const c_strInspectorPanelMimic As String = "Train_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Train_ContextualMenu"
+	Private Const c_strTrainUniqueIDTag As String = ".TrainIndicator.TrainBerth.iTrainID"
+	Private Const c_strClusterSeparator As String = ":"
+	Private Const c_strListHMITrainTag As String = "MainKernelBasic.TrainModule.HMITrainManager.bstrListHMITrain"
+	Private Const c_strTrainsSeparator As String = ";"
+	Private Const c_strTrainDataSeparator As String = ":"
+	Private WithEvents m_OPC_ListHMITrain As Variable
+	Dim WithEvents m_OPC_serviceid As Variable
+	
+	Private m_iToBeOpenedMimicType As enumMimicType
+	
+	Private Xpos As Long
+	Private Ypos As Long
+	Private Hold As POINTAPI
+	
+	Private Sub m_OPC_ListHMITrain_ValueChange()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "Begin Subroutine")
+	        
+	        Dim OPC_TrainUniqueID As Variable
+	      
+	        '* Check the status and the quality of the variable
+	        If (m_OPC_ListHMITrain.Status = fvVariableStatusWaiting) Then
+	            Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & m_OPC_ListHMITrain.Name & " is Waiting")
+	        ElseIf (m_OPC_ListHMITrain.Status = fvVariableStatusConfigError) Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & m_OPC_ListHMITrain.Name & " is Config Error")
+	        ElseIf (m_OPC_ListHMITrain.Status = fvVariableStatusNotConnected) Then
+	            Call CBTrace(CBTRACE_VAR, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & m_OPC_ListHMITrain.Name & " is Not Connected")
+	        ElseIf (m_OPC_ListHMITrain.Quality <> 192) Then
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The Quality of " & m_OPC_ListHMITrain.Name & " is not good")
+	        Else '* Status and quality are valid
+	            '* If a mimic (Inspector Panel or Contextual Menu) must be opened and
+	            '* the list of trains is not empty
+	            If ((m_iToBeOpenedMimicType <> c_iNoMimic) And (m_OPC_ListHMITrain.Value <> "")) Then
+	                Dim strBranch As String
+	                Dim strOPCClusterName As String
+	                Dim strUniqueID As String
+	                Dim strTrainOPCVarName As String
+	                Dim strTrainsList() As String
+	                Dim I As Integer
+	                Dim pos As Long
+	                Dim objMimic As Mimic
+	            
+	                '* Retrieve the UniqueID of the train
+	                Dim bFound As Boolean
+	                Dim MyParent As Object
+	           
+	                bFound = False
+	                Set MyParent = ThisSymbol.Parent
+	                While (bFound = False)
+	                    If (MyParent.LocalBranch <> "") Then
+	                        bFound = True
+	                    Else
+	                        Set MyParent = MyParent.Parent
+	                    End If
+	                Wend
+	            
+	                strBranch = GetSymbolBranch(Me) 'MyParent.LocalBranch
+	                
+	                Set OPC_TrainUniqueID = Variables.Item(strBranch & c_strTrainUniqueIDTag)
+	                
+	                '* Test the validity of the unique train ID
+	                If (OPC_TrainUniqueID.Status = fvVariableStatusWaiting) Then
+	                    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Waiting")
+	                ElseIf (OPC_TrainUniqueID.Status = fvVariableStatusConfigError) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Config Error")
+	                ElseIf (OPC_TrainUniqueID.Status = fvVariableStatusNotConnected) Then
+	                    Call CBTrace(CBTRACE_VAR, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Not Connected")
+	                ElseIf (OPC_TrainUniqueID.Quality <> 192) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The Quality of " & OPC_TrainUniqueID.Name & " is not good")
+	                Else
+	                    strUniqueID = Format(OPC_TrainUniqueID.Value)
+	                    
+	                    '* Convert the list of trains into an array
+	                    strTrainsList = Split(m_OPC_ListHMITrain.Value, c_strTrainsSeparator)
+	                    '* Retrieve data of the given train (identified by its UniqueID) in the array
+	                    For I = 0 To UBound(strTrainsList) - 1
+	                        Dim strTrainDataArray() As String
+	                        strTrainDataArray = Split(strTrainsList(I), c_strTrainDataSeparator)
+	                        If (StrComp(strTrainDataArray(0), strUniqueID, vbTextCompare) = 0) Then
+	                             strTrainOPCVarName = strTrainDataArray(1)
+	                             Exit For
+	                        End If
+	                    Next
+	                    
+	                    If (strTrainOPCVarName <> "") Then '* Train exists in the list of HMI trains
+	                        Dim strBranchMimic As String
+	                        
+	                        '* Retrieve the cluster name
+	                        pos = InStr(1, strBranch, c_strClusterSeparator, vbTextCompare)
+	                        strOPCClusterName = Left(strBranch, pos)
+	                        strBranchMimic = strOPCClusterName & strTrainOPCVarName
+	                        
+	                        If (m_iToBeOpenedMimicType = c_iInspectorPanelMimic) Then '* Inspector Panel
+	                        
+	                            If (Mimics.IsOpened(c_strInspectorPanelMimic, strBranchMimic) = True) Then
+	                                '* If the mimic is already opened, close it
+	                                Mimics.Item(c_strInspectorPanelMimic, strBranchMimic).Close (fvDoNotSaveChanges)
+	                            End If
+	                            Call OpenMimicInCenter(c_strInspectorPanelMimic, strBranchMimic, Getmousepointerpossition)
+	                            '* Open the Inspector Panel
+	'                           Set objMimic = Mimics.OpenInCenter(c_strInspectorPanelMimic, strBranchMimic, , , _
+	'                                                               "*", , , fvCenterOnParent)
+	                          'Call MOD_SP_Funcoes.OpenMimicCommand(c_strInspectorPanelMimic, strBranchMimic, 560, 372, True)
+	                           
+	
+	                        End If
+	                    Else '* Train doesn't in the list of HMI trains
+	                        Dim strMsg As String
+	                        
+	                        strMsg = "The train (value of UniqueID = " & strUniqueID & _
+	                                 ") doesn't exist in the OPC variable [" & m_OPC_ListHMITrain.Name & "]"
+	                        
+	                        Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", strMsg)
+	                    End If
+	                End If
+	            End If
+	            
+	            '* Reset the flag
+	            m_iToBeOpenedMimicType = c_iNoMimic
+	            
+	        End If
+	        
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", Err.Description)
+	
+	End Sub
+	
+	Private Sub Shape18_Click()
+	
+	End Sub
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	Private Sub TrainCommand_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Dim sOPCTrainName As String
+	
+	Dim strOPCClusterName As String
+	        Dim strBranch As String
+	       
+	        '* Set the flag to Inspector Panel
+	        m_iToBeOpenedMimicType = c_iInspectorPanelMimic
+	     
+	        '* Retrieve the cluster name
+	        'strBranch = ThisSymbol.Parent.Parent.Parent.LocalBranch
+	        strBranch = GetSymbolBranch(Me)
+	        Variables.Item(TrainstrBranch & ".blinking%").Value = True
+	        strOPCClusterName = Left(strBranch, InStr(1, strBranch, c_strClusterSeparator, vbTextCompare))
+	      
+	        '* Add the OPC variable containing the list of trains in the collection of subscribed variables
+	        '* Reset the object to ensure only one call to the ValueChange event
+	        Set m_OPC_ListHMITrain = Nothing
+	        Set m_OPC_ListHMITrain = Variables.Add(strOPCClusterName & c_strListHMITrainTag, fvVariableTypeText)
+	        If ((m_OPC_ListHMITrain.Status = fvVariableStatusGood) And (m_OPC_ListHMITrain.EnableEvents = True)) Then
+	            m_OPC_ListHMITrain_ValueChange
+	        End If
+	        m_OPC_ListHMITrain.EnableEvents = True
+	            
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_DblClickEx", Err.Description)
+	End Sub
+	    
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub TrainCommand_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_MouseUp", "Begin subroutine")
+	    Dim strBranch As String
+	    Dim strOPCClusterName As String
+	    Dim sOPCTrainName As String
+	    Dim OPC_TrainUniqueID As Variable
+	    Dim strUniqueID As String
+	    Dim strTrainsList() As String
+	    Dim I As Integer
+	    Dim strTrainOPCVarName As String
+	    
+	   strBranch = GetSymbolBranch(Me)
+	   TrainstrBranch = strBranch
+	   
+	            strOPCClusterName = Left(strBranch, InStr(1, strBranch, c_strClusterSeparator, vbTextCompare))
+	            
+	            Set OPC_TrainUniqueID = Variables.Add(strBranch & c_strTrainUniqueIDTag, fvVariableTypeRegister)
+	                
+	                '* Test the validity of the unique train ID
+	                If (OPC_TrainUniqueID.Status = fvVariableStatusWaiting) Then
+	                    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Waiting")
+	                ElseIf (OPC_TrainUniqueID.Status = fvVariableStatusConfigError) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Config Error")
+	                ElseIf (OPC_TrainUniqueID.Status = fvVariableStatusNotConnected) Then
+	                    Call CBTrace(CBTRACE_VAR, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The status of " & OPC_TrainUniqueID.Name & " is Not Connected")
+	                ElseIf (OPC_TrainUniqueID.Quality <> 192) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "m_OPC_ListHMITrain_ValueChange", "The Quality of " & OPC_TrainUniqueID.Name & " is not good")
+	                Else
+	                    strUniqueID = Format(OPC_TrainUniqueID.Value)
+	                    
+	                    Set m_OPC_ListHMITrain = Variables.Add(strOPCClusterName & c_strListHMITrainTag, fvVariableTypeText)
+	                    '* Convert the list of trains into an array
+	                    strTrainsList = Split(m_OPC_ListHMITrain.Value, c_strTrainsSeparator)
+	                    '* Retrieve data of the given train (identified by its UniqueID) in the array
+	                    For I = 0 To UBound(strTrainsList) - 1
+	                        Dim strTrainDataArray() As String
+	                        strTrainDataArray = Split(strTrainsList(I), c_strTrainDataSeparator)
+	                        If (StrComp(strTrainDataArray(0), strUniqueID, vbTextCompare) = 0) Then
+	                             sOPCTrainName = strTrainDataArray(1)
+	                             Exit For
+	                        End If
+	                    Next
+	            
+	                 End If
+	     
+	     
+	'sOPCTrainName = GetHMITrainOPCNameFromBerth(ThisSymbol.Parent.Parent.Parent.LocalBranch)
+	 
+	If sOPCTrainName = "" Then Exit Sub
+	 AddTrainVariables strOPCClusterName & sOPCTrainName
+	  If (Button = 2) Then
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	         Variables.Item(TrainstrBranch & ".blinking%").Value = True
+	        Call OpenContextualMenu(c_strContextualMenuMimic, strOPCClusterName & sOPCTrainName)
+	        'OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	    End If
+	 
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_MouseUp", Err.Description)
+	End Sub
+	
+	
+	    
+	    
+	    
+	    
+	    
+	    
+	    
+	    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol1336"
+	B,10136,362,10100,343,10100,362,65535,0,6400,0,8,0,0
+	O,BEGIN,R,"TrainCommand"
+		B,10136,362,10100,343,10136,362,65535,0,6400,0,16,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			PP,"Notused%",0,0,0,0,0.000000
+		A,END
+		A,BEGIN,CB,"Anim2",0,0,"",""
+			PP,"blinking%"
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,6,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+		A,END
+	O,END
+O,END

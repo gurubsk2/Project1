@@ -1,0 +1,541 @@
+ASCII32,19,9,2018,15:55,3,1.1
+W,BEGIN,"LineOperatingModeAutoWithTT_Ctrl","LineOperatingModeAutoWithTTCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,2,95
+	SIZE,628,390,628,390,0,0,0,1424,1034,628,390
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,2,95
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithTT_Ctrl.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto With TT Ctrl
+	'* *******************************************************************************************
+	'* Purpose:     Manages switching to Automatic with timetable mode
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '09
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                August '09
+	'* Change:              Fix the CR ALPHA 146357
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                October '09
+	'* Change:              Fix the CR ALPHA 154564
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              Fix the CR ALPHA 183404
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '10
+	'* Change:              Fix the CR ALPHA 188820
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '12
+	'* Change:              CR ALPHA 270260
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                January '13
+	'* Change:              CR ALPHA 324879
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strFileExtensionSeparator As String = "."
+	
+	'* Path of OPC variables
+	Private Const c_strAtrModeTag As String = "IconisMain.ATRModule.ATRTPMA.AtrMode"
+	Private Const c_strAtrExtendedStrategyTag As String = "IconisMain.ATRModule.ATRTPMA.AtrExtendedStrategy"
+	Private Const c_strLineOperatingModeTag As String = ".ModeVal"
+	Private Const c_strLineOperatingModeCommandTag As String = ".Mode"
+	Private Const c_strServicePatternTag As String = "IconisMain.TPMModule.ModeMgnt.Mode"
+	Private Const c_strTimetableUnloadTag As String = "IconisMain.TPMModule.TPMFilesFinder.FileToLoad"
+	Private Const c_strTPMModuleTag As String = "IconisMain.TPMModule"
+	  
+	'* File name of the "Line Operating Mode Auto With TT Regulation Mode" mimic
+	Private Const c_strRegulationModeMimicName As String = "LineOperatingModeAutoWithTT_RegulationMode"
+	'* File name of the "Line Operating Mode Auto With TT Timetable" mimic
+	Private Const c_strTimetableMimicName As String = "LineOperatingModeAutoWithTT_Timetable"
+	'* File name of the "Line Operating Mode Auto With TT Loaded Timetable" mimic
+	Private Const c_strLoadedTimetableMimicName As String = "LineOperatingModeAutoWithTT_LoadedTimetable"
+	'* File name of the "Timetable Unload Ctrl" mimic
+	Private Const c_strTimetableUnloadMimicName As String = "Timetable_UnloadCtrl"
+	'* File name of the "Line Operating Modes " mimic
+	Private Const c_strViewLineOperatingModesMimicName As String = "View_LineOperatingModes"
+	
+	'* Line operating modes
+	Private Const c_iUnknownMode As Integer = -1            '* Unknown
+	Private Const c_iManualMode As Integer = 1              '* Manual
+	Private Const c_iAutomaticWithoutTTMode As Integer = 1  '* Automatic without timetable
+	Private Const c_iAutomaticWithTTMode As Integer = 2     '* Automatic with timetable
+	
+	'* Value used to reset the service pattern
+	Private Const c_iServiceIDReset As Integer = 0
+	
+	'* Regulation mode
+	Private Const c_iUnknownRegulationMode As Integer = 0   '* Unknown
+	Private Const c_iScheduleMode As Integer = 20           '* Schedule
+	Private Const c_iScheduleAndHeadwayMode As Integer = 21 '* Schedule and headway
+	Private Const c_iNotRegulatedMode As Integer = 10       '* Not regulated
+	
+	'* OPC variables
+	'* ******************************************************
+	'* Set of OPC variables used to read data and send commands
+	Dim WithEvents m_OPCSet_DataCommand As Iconis_CLS_OPCSet
+	'* OPC variable containing the value of the current line operating mode
+	Dim m_OPCItem_LineOperatingMode As Iconis_CLS_OPCSet_Item
+	'* OPC variable containing the loaded timetable name
+	Dim m_OPCItem_TimetableUnload As Iconis_CLS_OPCSet_Item
+	'* OPC variable used to switch the line operating mode
+	Dim m_OPCItem_LineOperatingModeCmd As Iconis_CLS_OPCSet_Item
+	'* OPC variable allowing to reset the service pattern if the current operating mode
+	'* is "Automatic without timetable"
+	Dim m_OPCItem_ServicePatternCmd As Iconis_CLS_OPCSet_Item
+	'* OPC variables used to send the command of modification of regulation mode
+	Dim m_OPCItem_AtrModeCmd As Iconis_CLS_OPCSet_Item
+	Dim m_OPCItem_AtrExtendedStrategyCmd As Iconis_CLS_OPCSet_Item
+	
+	'* Module variables
+	'* ******************************************************
+	'* Flag indicating that a timetable has been loaded
+	Dim m_bTimetableAlreadyLoaded As Boolean
+	  
+	'* Name of the OPC server cluster
+	Dim m_strOPCClusterName As String
+	
+	Private Sub lblAutomaticWithTimetable_Click()
+	
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose: On opening the mimic,
+	'*          - Add and init variables
+	'*          - Add the OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    OpenMimics
+	    
+	    '* Enable the cancel button
+	    Variables.Item(ThisMimic.Branch & ".AutoWithTTButtonCancelEnabled%").Value = True
+	    
+	    '* Add a variable containing the current line operating mode and init it to an unkown value (= -1)
+	    Variables.Add "@CurrentLineOperatingMode%", fvVariableTypeRegister
+	    Variables.Item("@CurrentLineOperatingMode%").Value = c_iUnknownMode
+	    
+	     '* Add a variable containing the current regulation mode and init it to the current regulation mode
+	     Variables.Add "@CurrentRegulationMode%", fvVariableTypeRegister
+	    Variables.Add "@RegulationCommandValue%", fvVariableTypeRegister
+	    Variables.Item("@RegulationCommandValue%").Value = Variables.Item("@CurrentRegulationMode%").Value
+	    
+	    '* Add a variable indicating if a timetable is loaded during this process
+	    Variables.Add ThisMimic.Branch & ".TimetableLoaded%", fvVariableTypeBit
+	    
+	
+	    
+	'''    '* Extract the cluster name from the branch of the mimic
+	'''    m_strOPCClusterName = Left(ThisMimic.Branch, InStr(ThisMimic.Branch, c_strServerSeparator))
+	'''
+	'''    '* Connect to the OPC server variables (data and commands)
+	    Set m_OPC_CmdOperModeCarouselConfigMode = Variables.Add(c_strClusterLevel2 & c_strCmdOperModeCarouselConfigMode, fvVariableTypeRegister)
+	    Set m_OPC_CmdOperModeTPBMgrConfig = Variables.Add(c_strClusterLevel2 & c_strCmdOperModeTPBMgrConfig, fvVariableTypeText)
+	    Set m_OPC_CmdOperModeMgmtMode = Variables.Add(ThisMimic.Branch & c_strCmdOperModeMgmtMode, fvVariableTypeRegister)
+	    Set m_OPC_CmdAutoWithTTRegulation = Variables.Add(c_strClusterLevel2 & c_strCmdAutoWithTTRegulation, fvVariableTypeRegister)
+	    
+	    '''Set m_OPCSet_DataCommand = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    '''Set m_OPCItem_LineOperatingMode = m_OPCSet_DataCommand.AddItem(ThisMimic.Branch & c_strLineOperatingModeTag, fvVariableTypeRegister, c_OPCReadOnly)
+	'''    Set m_OPCItem_TimetableUnload = m_OPCSet_DataCommand.AddItem(m_strOPCClusterName & c_strTimetableUnloadTag, fvVariableTypeText, c_OPCReadOnly)
+	'''    Set m_OPCItem_LineOperatingModeCmd = m_OPCSet_DataCommand.AddItem(ThisMimic.Branch & c_strLineOperatingModeCommandTag, fvVariableTypeRegister, c_OPCWriteOnly)
+	'''    Set m_OPCItem_ServicePatternCmd = m_OPCSet_DataCommand.AddItem(m_strOPCClusterName & c_strServicePatternTag, fvVariableTypeRegister, c_OPCWriteOnly)
+	'''    Set m_OPCItem_AtrModeCmd = m_OPCSet_DataCommand.AddItem(m_strOPCClusterName & c_strAtrModeTag, fvVariableTypeRegister, c_OPCWriteOnly)
+	'''    Set m_OPCItem_AtrExtendedStrategyCmd = m_OPCSet_DataCommand.AddItem(m_strOPCClusterName & c_strAtrExtendedStrategyTag, fvVariableTypeRegister, c_OPCWriteOnly)
+	'''    '* Connect the variables
+	'''    m_OPCSet_DataCommand.DoConnect ThisMimic.Name & "_LineOperatingModeAutoWithTTDataCommand"
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the Mimic, remove variables
+	'* ************************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	'    Variables.Remove ("@RegulationCommandValue%")
+	'    Variables.Remove ("@CurrentLineOperatingMode%")
+	'    Variables.Remove (ThisMimic.Branch & ".TimetableLoaded%")
+	    
+	   
+	'    If Not (m_OPCSet_DataCommand Is Nothing) Then
+	'        m_OPCSet_DataCommand.Destroy
+	'        Set m_OPCSet_DataCommand = Nothing
+	'    End If
+	'    Set m_OPCItem_LineOperatingMode = Nothing
+	'    Set m_OPCItem_TimetableUnload = Nothing
+	'    Set m_OPCItem_LineOperatingModeCmd = Nothing
+	'    Set m_OPCItem_LineOperatingMode = Nothing
+	'    Set m_OPCItem_ServicePatternCmd = Nothing
+	'    Set m_OPCItem_AtrModeCmd = Nothing
+	'    Set m_OPCItem_AtrExtendedStrategyCmd = Nothing
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: m_OPCSet_DataCommand_OnConnection
+	'* Purpose: All the variables in the OPCSet are connected ->
+	'*          set local variable and open mimics
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_DataCommand_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_DataCommand_OnConnection", "Begin Subroutine")
+	
+	    '* Memorize the current line operating mode
+	    Variables.Item("@CurrentLineOperatingMode%").Value = arrValue(0)
+	    '* Open the mimics
+	    OpenMimics
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_DataCommand_OnConnection", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: OpenMimics
+	'*  Purpose: If no timetable is loaded,
+	'*              open the "Line Operating Mode Auto with TT - Timetable" mimic
+	'*           else
+	'*              open the "Line Operating Mode Auto with TT - Loaded Timetable" mimic and
+	'*              the "Regulation mode" mimic
+	'* ******************************************************************************************
+	Private Sub OpenMimics()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OpenMimics", "Begin Subroutine")
+	   
+	    Dim strTimetableMimicName As String
+	    Dim lLeftPos As Long
+	    Dim lTopPos As Long
+	    Dim lPos As Long
+	    
+	    lLeftPos = 8
+	       
+	    '* Check if a timetable is already loaded
+	'    If (m_OPCItem_TimetableUnload.Value = "") Then
+	        '* "Line Operating Mode Auto with TT - Timetable" mimic
+	        strTimetableMimicName = c_strTimetableMimicName
+	        m_bTimetableAlreadyLoaded = False
+	'    Else
+	'        '* "Line Operating Mode Auto with TT - Loaded Timetable" mimic
+	'        strTimetableMimicName = c_strLoadedTimetableMimicName
+	'        m_bTimetableAlreadyLoaded = True
+	'    End If
+	     
+	    '* Open the "Line Operating Mode Auto with TT - Timetable" or "Line Operating Mode Auto with TT - Loaded Timetable" mimic
+	    lTopPos = 25
+	    ThisMimic.Activate
+	    Mimics.Open strTimetableMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	                ThisMimic.FileName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, lLeftPos, lTopPos, True
+	        
+	'    If (m_bTimetableAlreadyLoaded = True) Then
+	'        '* Display the file name of the loaded timetable (without extension) in the opened mimic
+	'        lPos = InStr(1, m_OPCItem_TimetableUnload.Value, c_strFileExtensionSeparator)
+	'        If (lPos > 0) Then
+	'            '* Remove the extension
+	'            Variables.Item(ThisMimic.Branch & ".Timetable%").Value = Left(m_OPCItem_TimetableUnload.Value, lPos - 1)
+	'        Else
+	'            Variables.Item(ThisMimic.Branch & ".Timetable%").Value = m_OPCItem_TimetableUnload.Value
+	'        End If
+	'
+	'        '* Open the "Regulation Mode" mimic
+	'        lTopPos = 100
+	'        ThisMimic.Activate
+	'        Mimics.Open c_strRegulationModeMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	'                    ThisMimic.FileName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, lLeftPos, lTopPos, True
+	'
+	'        If ((m_OPCItem_LineOperatingMode.Value <> c_iAutomaticWithTTMode) And _
+	'            (Variables.Item("@CurrentRegulationMode%").Value <> c_iUnknownRegulationMode)) Then
+	'            '* Enable the "OK" button
+	'            Variables.Item("@AutoWithTTButtonOKEnabled%").Value = True
+	'        End If
+	'
+	'    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OpenMimics", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: SendRegulationMode
+	'*  Purpose: Send the AtrMode command and the AtrExtendedStrategy command
+	'* ******************************************************************************************
+	Private Sub SendRegulationMode(ByVal iMode As Integer, ByVal bExtendedStrategy As Boolean)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendRegulationMode", "Begin Subroutine")
+	    
+	    '* Check if the status are valid
+	    If ((m_OPCItem_AtrModeCmd.Status = fvVariableStatusGood) And (m_OPCItem_AtrExtendedStrategyCmd.Status = fvVariableStatusGood)) Then
+	        '* AtrMode
+	        m_OPCItem_AtrModeCmd.Value = iMode
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has been sent - OPC variable : " & m_OPCItem_AtrModeCmd.strPath & _
+	                     " - Value : " & Format(iMode))
+	        '* AtrExtended strategy
+	        m_OPCItem_AtrExtendedStrategyCmd.Value = bExtendedStrategy
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has been sent - OPC variable : " & m_OPCItem_AtrExtendedStrategyCmd.strPath & _
+	                     " - Value : " & Format(bExtendedStrategy))
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has not been sent - OPC variable : " & m_OPCItem_AtrModeCmd.strPath & _
+	                     " - Value : " & Format(iMode))
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", _
+	                     "The command has not been sent - OPC variable : " & m_OPCItem_AtrExtendedStrategyCmd.strPath & _
+	                     " - Value : " & Format(bExtendedStrategy))
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendRegulationMode", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: btnCancel_Click
+	'*  Purpose: It manages the "Cancel" button
+	'* ******************************************************************************************
+	Private Sub btnCancel_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnCancel_Click", "Begin Subroutine")
+	    Dim bTTUnloadMimicOpened As Boolean
+	     
+	'    '* Check if the "Cancel" button is enabled
+	'    If (CBool(Variables.Item(ThisMimic.Branch & ".AutoWithTTButtonCancelEnabled%").Value) = False) Then Exit Sub
+	'
+	'    If (Variables.Item(ThisMimic.Branch & ".TimetableLoaded%").Value = True) Then
+	'        '* A timetable has been loaded during this process
+	'        bTTUnloadMimicOpened = True
+	'        '* Open the mimic to unload the timetable
+	'        Mimics.OpenInCenter c_strTimetableUnloadMimicName, m_strOPCClusterName & c_strTPMModuleTag, _
+	'                            ThisMimic.ReferenceSet, ThisMimic.Region
+	'    End If
+	    
+	'    If (bTTUnloadMimicOpened = False) Then
+	        '* Close the "Line operating mode" parent mimic
+	        Mimics.Item(c_strViewLineOperatingModesMimicName, ThisMimic.Branch).Close
+	'    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnCancel_Click", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: btnOK_Click
+	'*  Purpose: It manages the "OK" button
+	'* ******************************************************************************************
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnOK_Click", "Begin Subroutine")
+	    
+	    '* Check if the "OK" button is enabled
+	    If (CBool(Variables.Item("@AutoWithTTButtonOKEnabled%").Value) = False) Then Exit Sub
+	    
+	    '* If the regulation mode has been modified by the operator, send the new one
+	    If (Variables.Item("@RegulationCommandValue%").Value = c_iScheduleMode) Then '* Schedule
+	        If (Variables.Item("@CurrentRegulationMode%").Value <> c_iScheduleMode) Then
+	            SendRegulationMode 2, False
+	        End If
+	    ElseIf (Variables.Item("@RegulationCommandValue%").Value = c_iScheduleAndHeadwayMode) Then '* Schedule and headway
+	        If (Variables.Item("@CurrentRegulationMode%").Value <> c_iScheduleAndHeadwayMode) Then
+	            SendRegulationMode 2, True
+	        End If
+	    ElseIf (Variables.Item("@RegulationCommandValue%").Value = c_iNotRegulatedMode) Then '* Not regulated
+	        If (Variables.Item("@CurrentRegulationMode%").Value <> c_iNotRegulatedMode) Then
+	            SendRegulationMode 1, False
+	        End If
+	    End If
+	    
+	    '* If the line operating mode is not already in "Automatic with timetable",
+	    '* switch to the "Automatic with timetable" mode
+	    If (Variables.Item("@CurrentLineOperatingMode%").Value <> c_iAutomaticWithTTMode) Then
+	        '* Send command of modification of line operating mode
+	       ''m_OPCItem_LineOperatingModeCmd.Value = c_iAutomaticWithTTMode
+	        
+	        
+	        If Check_OPC_Variable(m_OPC_CmdOperModeCarouselConfigMode) Then m_OPC_CmdOperModeCarouselConfigMode.Value = 0
+	        If Check_OPC_Variable(m_OPC_CmdOperModeTPBMgrConfig) Then m_OPC_CmdOperModeTPBMgrConfig.Value = "<Parameters><Path Mode=" & Chr(34) & "0" & Chr(34) & "/><Path Mode=" & Chr(34) & "1" & Chr(34) & " TPBPatternID=" & Chr(34) & "DeducedFromTimetable" & Chr(34) & "/></Parameters>"
+	        If Check_OPC_Variable(m_OPC_CmdOperModeMgmtMode) Then m_OPC_CmdOperModeMgmtMode.Value = c_iAutomaticWithTTMode
+	        If Check_OPC_Variable(m_OPC_CmdAutoWithTTRegulation) Then m_OPC_CmdAutoWithTTRegulation.Value = 0
+	        
+	        
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	                     "The command has been sent - OPC variable : " & m_OPCItem_LineOperatingModeCmd.strPath & _
+	                     " - Value : " & Format(c_iAutomaticWithTTMode))
+	            
+	        '* If the current line operating mode is "Automatic without timetable",
+	        '* reset the Service Pattern
+	        If (Variables.Item("@CurrentLineOperatingMode%").Value = c_iAutomaticWithoutTTMode) Then
+	            '* Send the value 0 in the service pattern
+	            m_OPCItem_ServicePatternCmd.Value = c_iServiceIDReset
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", _
+	                         "The command has been sent - OPC variable : " & m_OPCItem_ServicePatternCmd.strPath & _
+	                         " - Value : " & Format(c_iServiceIDReset))
+	        
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnOK_Click", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,172,168,153,0,0,0
+	COLOR,5,215,215,215,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,623,387,4,3,623,387,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"lblAutomaticWithTimetable"
+	B,114,4,514,28,114,28,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,114,4,0,0,FONT,1,"AUTOMATIC WITH TIMETABLE",37,FONT,1,"AUTOMATIC WITH TIMETABLE",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"AUTOMATICO CON HORARIO",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,394,319,473,348,394,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,394,319,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"AutoWithTTButtonCancelEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,5,COLOR,5
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,138,319,217,348,138,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,138,319,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"@AutoWithTTButtonOKEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,5,COLOR,5
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"View_LineOperatingModes","*"
+		AUTH,"@AutoWithTTButtonOKEnabled%",1,0,0
+	A,END
+O,END

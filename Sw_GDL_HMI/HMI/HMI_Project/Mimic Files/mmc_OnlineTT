@@ -1,0 +1,365 @@
+ASCII32,19,9,2018,21:57,27,1.1
+W,BEGIN,"mmc_OnlineTT","mmc_OnlineTT"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1524,279
+	SIZE,210,175,210,175,0,0,0,1366,768,210,175
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Online Timetable"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	GRID,1,1,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,4,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTT.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View Line Operating Modes
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of line operating modes
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Wagner QUEIROZ
+	'* Date:                April '16
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Architecture Description SyAD Urban Operation (T-221 E120190)
+	'* *******************************************************************************************
+	
+	Private Const c_strChargedTTName                    As String = "MainKernelExtended.TTCModule.DBLoader.TimetableName"
+	Private Const c_strChargedTTLocalTag                As String = "@ChargedTT%"
+	Dim WithEvents m_OPC_ChargedTTName                  As Variable
+	
+	
+	
+	Private Sub btnOTMDetailed_Click()
+	On Error GoTo ErrorHandler
+	    If Variables.Item(c_strChargedTTLocalTag) = True Then
+	        Call mod_UO_ManageCommand.ButtonCommand("btnOTMDetailed", ThisMimic.Branch)
+	    End If
+	    ThisMimic.Close
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnOTMDetailed_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	''
+	Private Sub btnOTMGeneral_Click()
+	On Error GoTo ErrorHandler
+	If Variables.Item(c_strChargedTTLocalTag) = True Then
+	    Call mod_UO_ManageCommand.ButtonCommand("btnOTMGeneral", ThisMimic.Branch)
+	End If
+	ThisMimic.Close
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnOTMGeneral_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub btnOTMStationTT_Click()
+	On Error GoTo ErrorHandler
+	
+	    Call mod_UO_ManageCommand.ButtonCommand("btnOTMStationTT", ThisMimic.Branch)
+	ThisMimic.Close
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnOTMStationTT_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: AddSetVariables
+	'* Open mimic and operating mode modification
+	'*      - reset the mimic information
+	'* ************************************************************************************************
+	Private Sub AddSetVariables()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddSetVariables", "Begin Subroutine")
+	
+	    
+	    Set m_OPC_ChargedTTName = Variables.Add(c_strClusterLevel2 & c_strChargedTTName, fvVariableTypeText)
+	    If ((m_OPC_ChargedTTName.Status = fvVariableStatusGood) And (m_OPC_ChargedTTName.EnableEvents = True)) Then
+	        m_OPC_ChargedTTName_ValueChange
+	    Else
+	        m_OPC_ChargedTTName.EnableEvents = True
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "AddSetVariables", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub CancelButton7_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ChargedTTName_ValueChange", "Begin Subroutine")
+	    If Variables.Item(c_strChargedTTLocalTag).Value = False Then
+	        Call OpenMimicInCenter("mmc_OnlineTTLoading", "OPCClusterATSLV2:MainKernelExtended.TTCModule", GetmousepointerPossition)
+	   End If
+	     ThisMimic.Close
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CancelButton7_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub CancelButton8_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ChargedTTName_ValueChange", "Begin Subroutine")
+	    If Variables.Item(c_strChargedTTLocalTag) = True Then
+	        Call OpenMimicInCenter("mmc_OnlineTTUnLoading", "OPCClusterATSLV2:MainKernelExtended.TTCModule", GetmousepointerPossition)
+	   End If
+	   ThisMimic.Close
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CancelButton8_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_ChargedTTName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ChargedTTName_ValueChange", "Begin Subroutine")
+	 
+	    If m_OPC_ChargedTTName.Value <> "" Then
+	    
+	        Variables.Item(c_strChargedTTLocalTag).Value = True
+	        
+	    Else
+	        
+	        Variables.Item(c_strChargedTTLocalTag).Value = False
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_ChargedTTName_ValueChange", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	    
+	
+	    If Not (m_OPC_ChargedTTName Is Nothing) Then
+	        Variables.Remove (m_OPC_ChargedTTName.Name)
+	        Set m_OPC_ChargedTTName = Nothing
+	    End If
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_BeforeClose", "EXCEPTION: " & Err.Description)
+	End Function
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	
+	    
+	   Call Variables.Add("OPCClusterATSLV2:MainKernelExtended.TTCModule" & c_strChargedTTLocalTag, fvVariableTypeBit)
+	    Call AddSetVariables
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,160,160,160,0,0,0
+	COLOR,4,238,238,238,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,T,"btnOTMGeneral"
+	B,13,115,134,140,13,140,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,13,115,0,0,FONT,1,"PCD...",36,FONT,1,"PCD...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"PCD...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= (@ChargedTT%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnOTMDetailed"
+	B,13,143,134,168,13,168,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,13,143,0,0,FONT,1,"PCD detallado",36,FONT,1,"PCD detallado",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"PCD detallado",FONT,1,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= (@ChargedTT%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"CancelButton7"
+	B,13,36,199,61,13,61,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,13,36,0,0,FONT,1,"Carga del PCD....",36,FONT,1,"Carga del PCD....",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Carga del PCD....",FONT,1,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= (Not @ChargedTT%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"CancelButton8"
+	B,13,67,207,92,13,92,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,13,67,0,0,FONT,1,"Descarga del PCD....",36,FONT,1,"Descarga del PCD....",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descarga del PCD....",FONT,1,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= (@ChargedTT%)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,-6,21,274,22,-6,22,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,-6,22,274,22,-6,22,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,-6,22,274,22
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,-6,21,274,21,-6,21,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,-6,21,274,21
+	O,END
+O,END
+O,BEGIN,GRP,"Group1"
+	B,0,103,280,104,0,104,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,104,280,104,0,104,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,104,280,104
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,103,280,103,0,103,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,103,280,103
+	O,END
+O,END
+O,BEGIN,T,"CancelButton1"
+	B,14,8,135,33,14,33,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,14,8,0,0,FONT,1,"Gestion PCD....",36,FONT,1,"Gestion PCD....",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Gestion PCD....",FONT,1,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,2,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END

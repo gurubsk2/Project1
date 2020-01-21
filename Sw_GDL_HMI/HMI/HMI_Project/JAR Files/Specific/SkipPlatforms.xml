@@ -1,0 +1,6 @@
+<SkipPlatform>
+	<IniPlat>Plataforma Inicial</IniPlat>
+	<FinPlat>Plataforma Final</FinPlat> <!--Opcional-->
+	<!--Não existe necessidade de colocar as plataformas em ordem topologica-->
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</SkipPlatform>

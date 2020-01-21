@@ -1,0 +1,17 @@
+ASCII32,9,4,2015,7:5,54,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,""
+	B,264,198,320,241,264,241,1,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,S,"Symbol6"
+		B,264,198,320,241,264,241,65535,0,6400,0,2,1,0
+		PP,"Subsymbol_NoChildren","",264,198,320,241,1,0, 1, 1
+		SUB
+		A,BEGIN,OR,"Anim1",0,0,"",""
+			PP,"register%","branch",264,198,320,241,21,1,"Subsymbol_AnimationSymbolsRegisterBit_Off",1,"Subsymbol_AnimationSymbolsRegisterBit_On",1,"Subsymbol_AnimationSymbolsRegisterBit_Unavailable"
+		A,END
+	O,END
+O,END

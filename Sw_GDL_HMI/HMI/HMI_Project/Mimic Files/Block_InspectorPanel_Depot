@@ -1,0 +1,355 @@
+ASCII32,29,6,2017,8:13,41,1.1
+W,BEGIN,"Block_InspectorPanel_Depot","Block_InspectorPanel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,2447,554
+	SIZE,305,240,305,240,0,0,0,1920,1080,297,216
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque: B_391"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE_DEFAULT,0
+			ROLE,-1,"Bloque: B_391"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,1,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Block_InspectorPanel_Depot.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	    '* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Block Inspector Panel
+	'* *******************************************************************************************
+	'* Purpose:      It manages display of the device type and name on the title bar of the mimic
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Venkateshwar Vivek
+	'* Date:                December 2013
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	Private Const m_strDeviceNameTag As String = ".HMIBlockStatus.Template.Name"
+	Private Const c_strOPCClusterSplitter As String = ":"
+	Private Const c_strBlockInfoTabMimicName As String = "GDL_Block_Information_Tab_Depot"
+	Private Const c_strBlockCtrlTabMimicName As String = "Block_InspectorPanel_Control_Depot"
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	Variables.Item(ThisMimic.Branch & ".blinking%").Value = False
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: Mimic_Open
+	'* - If the inspector panel is already opened for another block, then close that
+	'* - Update the text in the title bar of the mimic
+	'* - Open the Information Tab mimic
+	'* *****************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim objMimic As Mimic
+	    Dim temp_arr() As String
+	    Dim x As Integer
+	    Dim y As Integer
+	    
+	    'Add eGAMAStatus local variable
+	    If Variables(Me.Branch & ".eGAMAStatus%") Is Nothing Then Variables.Add Me.Branch & ".eGAMAStatus%", fvVariableTypeBit
+	    
+	     
+	    '* If the Inspector Panel mimic is opened for another block, then close that
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If (objMimic.FileName Like ThisMimic.FileName) Then
+	            If Not (objMimic.Branch = ThisMimic.Branch) Then
+	                objMimic.Close
+	            End If
+	        End If
+	    Next
+	    
+	    '* Update the text in the title bar of the mimic
+	    If InStr(1, ThisMimic.Branch, c_strOPCClusterSplitter) Then
+	        temp_arr() = Split(ThisMimic.Branch, c_strOPCClusterSplitter)
+	        ThisMimic.Caption = "Bloque:" & " " & temp_arr(UBound(temp_arr))
+	    End If
+	    
+	    '* Open the Information Tab mimic
+	    x = 11
+	    y = 38
+	    ThisMimic.Activate
+	    Mimics.Open c_strBlockCtrlTabMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "*", , , , x, y, True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,0,0,0,0,32,0
+	COLOR,6,0,0,0,0,35,0
+	COLOR,7,0,0,0,0,44,0
+	COLOR,8,0,0,0,0,46,0
+	COLOR,9,113,111,100,0,0,0
+	COLOR,10,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,P,"Poly1"
+	B,6,36,284,202,43,43,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,6,40,112,39,283,36,284,202,6,202
+O,END
+O,BEGIN,P,"Poly2"
+	B,10,6,114,37,18,6,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,18,6,106,6,114,14,114,37,10,37
+	PP,10,14
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"Block_InspectorPanel_Control_Depot","*"
+	A,END
+O,END
+O,BEGIN,T,"Text5"
+	B,20,14,105,30,20,30,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,20,14,0,0,FONT,1,"Control",37,FONT,1,"Control",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informaci¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informaci¢n",FONT,1,37
+			ROLE,0,"Informaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,P,"Poly3"
+	B,114,6,220,37,122,6,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,122,6,210,6,220,15,220,37,114,37
+	PP,114,14
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		PP,"Block_InspectorPanel_Control_Depot","*",0,11,0,38,"*","",0
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"GDL_Block_Information_Tab_Depot","*"
+	A,END
+O,END
+O,BEGIN,T,"Text12"
+	B,122,14,207,30,122,30,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,122,14,0,0,FONT,1,"Control",37,FONT,1,"Control",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control",FONT,1,37
+			ROLE,0,"Control",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,271,100,18,52,271,100,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,26,42,83,58,26,58,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,0,26,42,0,0,FONT,2,"Bloque",37,FONT,2,"Bloque",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque",FONT,2,37
+			ROLE,0,"Bloque",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,118,58,254,82,118,82,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,6,COLOR,8,0,COLOR,3,0,COLOR,3,0,COLOR,9,0,COLOR,9
+	PP,1,118,58,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMIBlockStatus.Template.iEqpState",""
+		ADVFORMAT,2,"[<1]\'Si\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';\'No\'"
+				ROLE,0,"[<1]\'Si\';\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,29,62,109,78,29,78,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,29,62,0,0,FONT,1,"Ocupaci¢n",38,FONT,1,"Ocupaci¢n",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,1,37
+			ROLE,0,"Ocupaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtGamaZoneValue"
+	B,353,58,680,82,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"GAMAZone%",-517, 8, 1, "Text"
+	A,END
+O,END
+O,BEGIN,R,"Shape4"
+	B,270,174,17,122,270,174,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text4"
+	B,25,112,170,128,25,128,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,0,25,112,0,0,FONT,2,"Detecci¢n secundaria",37,FONT,2,"Detecci¢n secundaria",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detecci¢n secundaria",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detecci¢n secundaria",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text28"
+	B,116,135,252,159,116,159,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,6,COLOR,8,0,COLOR,3,0,COLOR,3,0,COLOR,9,0,COLOR,9
+	PP,1,116,135,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMISDOccupancyStatus.Template.iEqpState",""
+		ADVFORMAT,2,"[<1]\'Si\';[<2]\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';[<2]\'No\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';[<2]\'No\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,28,140,108,156,28,156,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,28,140,0,0,FONT,1,"Ocupaci¢n",38,FONT,1,"Ocupaci¢n",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

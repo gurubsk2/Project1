@@ -1,0 +1,47 @@
+ASCII32,16,9,2018,15:24,45,1.1
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Lucida Console",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,0,149,37,0,0,0
+	COLOR,5,255,128,0,0,0,0
+COLORS,END
+O,BEGIN,GRP,"Symbol1"
+	B,896,216,927,229,896,229,65535,0,6400,0,1,0,0
+	O,BEGIN,T,"Text9"
+		B,896,216,927,229,896,229,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+		PP,1,896,216,0,0,FONT,1,"X00",37,FONT,1,"X00",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"X00",FONT,1,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,DT,"Anim3",0,0,"",""
+			PP,"OPCCluster:TI_B_370.TrainIndicator.TrainBerth.bstrDisplayName"
+		A,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=((TrainIndicator.HMITETrain.boolPlug_1==1 and (TrainIndicator.HMITETrain.bstrPlug_1 > 899)) and (TrainIndicator.HMITETrain.boolPlug_5==1))"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,3,COLOR,3
+		A,END
+		A,BEGIN,CB,"Anim2",0,0,"",""
+			PP,"=((TrainIndicator.HMITETrain.boolPlug_1==1 and (TrainIndicator.HMITETrain.bstrPlug_1 > 899)) and (TrainIndicator.HMITETrain.boolPlug_5==0))"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+O,END

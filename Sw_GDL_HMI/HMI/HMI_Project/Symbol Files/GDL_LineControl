@@ -1,0 +1,42 @@
+ASCII32,18,10,2019,10:23,24,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 219
+	Private Const c_lContextualMenuHeight As Long = 87
+	
+	'Private Const c_strInspectorPanelMimic As String = "Point_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "LineControl_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	Private Sub Symbol_Click()
+	On Error GoTo ErrorHandler
+	GetCursorpos Hold
+	
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	     
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol27"
+	B,1375,468,1420,512,1375,512,65535,0,6400,0,1,0,0
+	O,BEGIN,S,"Symbol25"
+		B,1375,468,1420,512,1375,512,65535,0,6400,0,2,0,0
+		PP,"GDL_LineControl_CATS","",1375,468,1420,512,1,0, 0, 1
+		SUB
+		A,BEGIN,OB,"Anim1",0,0,"",""
+			PP,"@bLATSMachine%","",1375,468,1420,512,1,"GDL_LineControl_CATS",1,"GDL_LineControl_LATS",1,"GDL_LineControl_CATS"
+		A,END
+	O,END
+O,END

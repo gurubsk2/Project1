@@ -1,0 +1,32 @@
+; This file should reside in the Client Builder "%project%\Config Files" directory.
+
+; This section defines the default values to use for the Cluster Manager 
+; should the individual ActiveX control not override them.
+[GlobalSettings]
+
+; Will turn on or off Cluster Manager's ping status call to the server.
+EnablePing=1
+
+; Number of fail pings before the Cluster Manager 
+; will switch to a lower priority server
+FailedSwitchPingCount=0
+
+; Number of successfull pings before the Cluster Manager 
+; will switch back to a higher priority server.
+MonitorCount=1
+
+; How often to check status of servers, in ms.
+PingInterval=5000
+
+; Specifies what type of failover to do.
+;   0 - UpgradeToNone    : This is like a round robin or a queue.  
+;                          When a sever fails it goes to the end of 
+;                          the line.  No servers are monitored except 
+;                          the active connection.  If a connection 
+;                          is active, no action is taken when other
+;                          servers are restored.
+;   1 - UpgradeToHiger   : Will switch to any available higher 
+;                          priority server when it becomes available.
+;   2 - UpgradeToPrimary : Will only switch when the priority one 
+;                          server is back online.
+UpgradeType=0

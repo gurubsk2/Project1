@@ -1,0 +1,1337 @@
+ASCII32,8,8,2019,3:0,19,1.1
+W,BEGIN,"NoVGAMAZone_Generic_Grant_HILCCtrl","NoVGAMAZone_Generic_Grant_HILCCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1084,213
+	SIZE,555,440,555,440,0,0,0,1280,1024,549,416
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA Authorization"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,1,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,2,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"NoVGAMAZone_Generic_Grant_HILCCtrl.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  NoV GAMAZone Generic Grant HILC Ctrl
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*              - opening of the "Prep. Phase - HILC Command" mimic
+	'*              - opening of the "Conf. Phase - HILC Command" mimic
+	'*              - Grant the GAMAZone for the new interface ( for generic gamaZone )
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                February '13
+	'* Change:              CR ALPHA 338077
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                June '13
+	'* Change:              CR ALPHA 338077 : Complement 1 : variable path
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                November '13
+	'* Change:              atvcm00486859 : modification of command status management
+	
+	'* Author:              Venkateshwar Vivek
+	'* Date:                June 2014
+	'* Change:              atvcm00541517  : change in architecture from simplified HILC to normal HILC
+	
+	'* Author:              Omar Hafadi
+	'* Description:
+	'* Date:                January 2014
+	'* Change:              atvcm00597407 : Redesign to remove forbidden instruction "EnableEvent = False"
+	
+	'* Author:              Vasanth
+	'* Date:                May '16
+	'* Change:              atvcm00704998 : modification for retry
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Encoding format management : AsciiChar
+	Private Declare Function EncodingAsciiChar _
+	                Lib "D:\IconisHMI\Product\Bin\HILCPreparationPhase.dll" _
+	                Alias "_EncodingAsciiChar@0" () As Long
+	                    
+	'* HILC Enter Session Message
+	Private Declare Function IconisHILCEnterSession _
+	                Lib "D:\IconisHMI\Product\Bin\HILCPreparationPhase.dll" _
+	                Alias "_IconisHILCEnterSession@12" (pwszMessage As String, _
+	                                                    pwszOperatorName As String, _
+	                                                    pwszWorkStationName As String) As Long
+	    
+	'* HILC Preparation Message
+	Private Declare Function IconisHILCPreparation _
+	                Lib "D:\IconisHMI\Product\Bin\HILCPreparationPhase.dll" _
+	                Alias "_IconisCBIHILCPreparation@8" (ByVal CommandType As Long, _
+	                                                           pwszMessage As String) As Long
+	    
+	'* Preparation Message Format
+	Private Declare Function SetPrepEncodingFormat _
+	                Lib "D:\IconisHMI\Product\Bin\HILCPreparationPhase.dll" _
+	                Alias "_SetEncodingFormat@4" (ByVal EncodingFormat As Long) As Long
+	    
+	'* HILC Confirmation Message
+	Private Declare Function IconisHILCConfirmation _
+	                Lib "D:\IconisHMI\Product\Bin\HILCConfirmationPhase.dll" _
+	                Alias "_IconisCBIHILCConfirmation@8" (ByVal CommandType As Long, _
+	                                                            pwszMessage As String) As Long
+	    
+	'* Confirmation Message Format
+	Private Declare Function SetConfEncodingFormat _
+	                Lib "D:\IconisHMI\Product\Bin\HILCConfirmationPhase.dll" _
+	                Alias "_SetEncodingFormat@4" (ByVal EncodingFormat As Long) As Long
+	                
+	'* Enumerated type
+	'* ***********************************************
+	Private Enum Egama_BlockedStatus
+	    c_iBlocked = 0 '* Not Authorized
+	    c_iNotBlocked = 1 '* Authorized
+	End Enum
+	            
+	                
+	'* Constants
+	'* ***********************************************
+	Private Const c_strSessionStarted As String = "Session started"
+	Private Const c_strSessionStateSeparator As String = ";"
+	
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSectorSeparator As String = ";"
+	Private Const c_strDeviceSeparator As String = ","
+	
+	Private Const c_strPrepPhaseMimicName As String = "NoVGAMAZone_Generic_Grant_HILCCtrlPrepPhase"
+	Private Const c_strConfPhaseMimicName As String = "NoVGAMAZone_Generic_Grant_HILCCtrlConfPhase"
+	
+	Private Const c_strCBISectorsListTag As String = "IconisHMI.CBIsList.Information.Value"
+	Private Const c_strDevicesListTag As String = ".ElementaryGamaList.Value"
+	Private Const c_strDeviceBlockingStatusTag As String = ".EGAMAStatus.Value"
+	
+	Private Const c_strHILCSessionStateValueTag As String = ".HILCSessionStateValue.Value.bstrValue"
+	Private Const c_strHILCSessionStateTag As String = ".HILCSessionState.Value.bstrValue"
+	Private Const c_strHILCCurrentStepValueTag As String = ".HILCCurrentStepValue.Value.bstrValue"
+	Private Const c_strHILCEnterSessionTag As String = ".HILCEnterSession.Value.bstrValue"
+	Private Const c_strHILCPreparationTag As String = ".HILCPreparation.Value.bstrValue"
+	Private Const c_strHILCConfirmationTag As String = ".HILCConfirmation.Value.bstrValue"
+	Private Const c_strEGamaListTag As String = ".ElementaryGamaList.Value"
+	Private Const c_strGAMAZoneHILCCtrlName As String = ".HILC"
+	
+	Private Const c_iNotInProgress As Integer = 0
+	Private Const c_iPrepPhaseInProgress As Integer = 1
+	Private Const c_iConfPhaseInProgress As Integer = 2
+	    
+	Private Const c_lngCommandType As Long = 1   '* Command Type for UnBlock device
+	Private Const c_lngAuthorizeStatus As Long = 0 '* Value of "Authorized" status
+	
+	'* Used to display the status report of the HILC command applied on a device
+	Private Const c_iInProgressStatus As Integer = 1
+	Private Const c_iCompletedStatus As Integer = 2
+	Private Const c_iFailedStatus As Integer = 3
+	
+	'* OPC variables
+	'*******************************************************
+	Dim WithEvents m_OPC_SectorsNamesList As Variable
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	
+	Dim WithEvents m_OPC_HILCCurrentStepValue As Variable
+	Dim WithEvents m_OPC_HILCSessionStateValue As Variable
+	Dim WithEvents m_OPC_HILCSessionState As Variable
+	    
+	Dim WithEvents m_OPC_HILCEnterSession As Variable
+	Dim WithEvents m_OPC_HILCPreparation As Variable
+	Dim WithEvents m_OPC_HILCConfirmation As Variable
+	Dim m_bCmdFailed As Boolean
+	Dim m_iCmdRepeatCount As Integer
+	
+	'* Module  variables
+	'*******************************************************
+	'* Flags
+	Dim m_bSectorsInit As Boolean
+	Dim m_bDevicesInit As Boolean
+	Dim m_bSessionStateValueInit As Boolean
+	Dim m_bSessionStateInit As Boolean
+	Dim m_bCurrentStepValueInit As Boolean
+	Dim m_bEnterSessionInit As Boolean
+	Dim m_bPreparationInit As Boolean
+	Dim m_bConfirmationInit As Boolean
+	
+	Dim m_OPCEgamaAuthorizedState As Variable
+	'* OPC cluster name
+	Dim m_strClusterName As String
+	
+	'* Flag indicating that a HILC command is (or not) in progress (prep. phase or conf. phase)
+	Dim m_iHILCCommandInProgress As Integer
+	   
+	'* Index of the current device to be unblocked in the array containing the list of devices
+	Dim m_lCurrentIndex As Long
+	
+	'* Name of the current device to be unblocked
+	Dim m_strCurrentOPCDevName As String
+	
+	'* List of Egama
+	Dim WithEvents m_OPC_EGAMAList As Variable
+	Dim m_StrGamaList() As String
+	
+	'* manager of the gama definition
+	Dim m_GamaManager As Iconis_CLS_Gama
+	Dim m_strCurrentOPC_EGAMAName As String
+	'* SubRoutine: Mimic_Open
+	'*      - Init variables
+	'*      - Add OPC variables to the collection of subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	  '
+	    '* Init flags
+	    m_bSectorsInit = False
+	    m_bDevicesInit = False
+	    m_bCmdFailed = False
+	    m_iCmdRepeatCount = 0
+	    
+	    '* Init index of the current device
+	    m_lCurrentIndex = -1
+	    
+	    '* Disable the "OK" Button
+	    Variables.Item("@ButtonOKDisabled%").Value = True
+	    
+	    '* Enable the "Cancel" Button
+	    Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = 0
+	    
+	    '* Set invisible the "Close" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonCloseVisible%").Value = 0
+	    
+	    '* Add and init a variable containing the list of names of sectors
+	    Variables.Add "@ListOfSectors%", fvVariableTypeText
+	    Variables.Item("@ListOfSectors%").Value = ""
+	    
+	    '* Add and init a variable containing the list of OPC variables associated to each sector
+	    Variables.Add "@ListOfSectorOPCVar%", fvVariableTypeText
+	    Variables.Item("@ListOfSectorOPCVar%").Value = ""
+	   
+	    '* Add and init a variable containing the OPC variables associated to each device for each sector
+	    Variables.Add "@ListOfEGamaOPCVar%", fvVariableTypeText
+	    Variables.Item("@ListOfEGamaOPCVar%").Value = ""
+	    
+	    '* Add and init a variable containing the list of devices belonging to the given sector
+	    Variables.Add "@DevicesOfSector%", fvVariableTypeText
+	    Variables.Item("@DevicesOfSector%").Value = ""
+	    
+	    '* Add and init a variable containing the OPC variable associated to the sector selected in the confirmation pahse
+	    Variables.Add "@ConfPhaseSectorOPCVar%", fvVariableTypeText
+	    Variables.Item("@ConfPhaseSectorOPCVar%").Value = ""
+	    
+	    '* Extract the cluster name from the branch of the mimic
+	    m_strClusterName = GetOPccluster
+	    
+	
+	    Set m_OPC_DevicesNamesList = Variables.Add(ThisMimic.Branch & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_DevicesNamesList.Status = fvVariableStatusGood) And (m_OPC_DevicesNamesList.EnableEvents = True)) Then
+	        m_OPC_DevicesNamesList_ValueChange
+	    Else
+	        m_OPC_DevicesNamesList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*      Before closing the mimic, unsubscribe all the previously subscribed variables
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    Variables.Remove ("@ListOfSectors%")
+	    Variables.Remove ("@ListOfSectorOPCVar%")
+	    Variables.Remove ("@ListOfEGamaOPCVar%")
+	    Variables.Remove ("@DevicesOfSector%")
+	    Variables.Remove ("@ConfPhaseSectorOPCVar%")
+	     
+	    If Not (m_OPC_SectorsNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_SectorsNamesList.Name)
+	        Set m_OPC_SectorsNamesList = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DevicesNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_DevicesNamesList.Name)
+	        Set m_OPC_DevicesNamesList = Nothing
+	    End If
+	    
+	    '* Remove OPC variables related to the HILC command
+	    RemoveOPCVariables
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* SubRoutine: DisableComboBox
+	'*      Disable the combo box of the "HILC Ctrl Conf Phase" mimic
+	'* ******************************************************************************************
+	Private Sub DisableComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "DisableComboBox", "Begin Subroutine")
+	
+	    Dim objMimic As Mimic
+	    Dim iCount As Integer
+	    Dim bFound As Boolean
+	    
+	    bFound = False
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If ((StrComp(objMimic.FileName, c_strConfPhaseMimicName, vbTextCompare) = 0) And _
+	            (StrComp(objMimic.Branch, ThisMimic.Branch, vbTextCompare) = 0)) Then
+	            For iCount = 1 To objMimic.Graphics.Count
+	                If (StrComp(objMimic.Graphics.Item(iCount).Name, "ComboBoxSectorNames", vbTextCompare) = 0) Then
+	                    objMimic.Graphics.Item(iCount).Enabled = False
+	                    bFound = True
+	                    Exit For
+	                End If
+	            Next
+	        End If
+	        If (bFound = True) Then Exit For
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "DisableComboBox", Err.Description)
+	End Sub
+	
+	'* SubRoutine: EnableScrollBar
+	'*      Enable the scroll bar of the "HILC Ctrl Conf Phase" mimic
+	'* ******************************************************************************************
+	Private Sub EnableScrollBar()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "EnableScrollBar", "Begin Subroutine")
+	
+	    Dim objMimic As Mimic
+	    Dim iCount As Integer
+	    Dim bFound As Boolean
+	    
+	    bFound = False
+	    For Each objMimic In Application.ActiveProject.Mimics
+	        If ((StrComp(objMimic.FileName, c_strConfPhaseMimicName, vbTextCompare) = 0) And _
+	            (StrComp(objMimic.Branch, ThisMimic.Branch, vbTextCompare) = 0)) Then
+	            For iCount = 1 To objMimic.Graphics.Count
+	                If (StrComp(objMimic.Graphics.Item(iCount).Name, "ctrlScrollBar", vbTextCompare) = 0) Then
+	                    objMimic.Graphics.Item(iCount).Enabled = True
+	                    bFound = True
+	                    Exit For
+	                End If
+	            Next
+	        End If
+	        If (bFound = True) Then Exit For
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableScrollBar", Err.Description)
+	End Sub
+	
+	'* SubRoutine: RemoveOPCVariables
+	'*      Remove the OPC variables associated to the HILC command from the collection of
+	'*      subscribed variables
+	'* ******************************************************************************************
+	Private Sub RemoveOPCVariables()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "RemoveOPCVariables", "Begin Subroutine")
+	
+	    If Not (m_OPC_HILCSessionStateValue Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCSessionStateValue.Name)
+	        Set m_OPC_HILCSessionStateValue = Nothing
+	    End If
+	    
+	    If Not (m_OPC_HILCSessionState Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCSessionState.Name)
+	        Set m_OPC_HILCSessionState = Nothing
+	    End If
+	    
+	    If Not (m_OPC_HILCCurrentStepValue Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCCurrentStepValue.Name)
+	        Set m_OPC_HILCCurrentStepValue = Nothing
+	    End If
+	    
+	    If Not (m_OPC_HILCEnterSession Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCEnterSession.Name)
+	        Set m_OPC_HILCEnterSession = Nothing
+	    End If
+	    
+	    If Not (m_OPC_HILCPreparation Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCPreparation.Name)
+	        Set m_OPC_HILCPreparation = Nothing
+	    End If
+	    
+	    If Not (m_OPC_HILCConfirmation Is Nothing) Then
+	        Variables.Remove (m_OPC_HILCConfirmation.Name)
+	        Set m_OPC_HILCConfirmation = Nothing
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "RemoveOPCVariables", Err.Description)
+	End Sub
+	 
+	'* SubRoutine: StartProcess
+	'*      Start the process of unblocking of all blocked devices
+	'* ******************************************************************************************
+	Private Sub StartProcess()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "StartProcess", "Begin Subroutine")
+	   
+	    Dim iCounter As Long
+	    Dim bFound As Boolean
+	    Dim ArrayDevices() As String
+	    Dim bReptCmd As Boolean
+	    Dim BlockID As String
+	    
+	StartProcess:
+	    '* Set to "NotInprogress" the flag
+	    m_iHILCCommandInProgress = c_iNotInProgress
+	    
+	    '* Init flags indicating if the value of the OPC variables has been received
+	    m_bSessionStateValueInit = False
+	    m_bSessionStateInit = False
+	    m_bCurrentStepValueInit = False
+	    m_bEnterSessionInit = False
+	    m_bPreparationInit = False
+	    m_bConfirmationInit = False
+	    
+	    '* Remove OPC variables associated to the HILC command
+	    RemoveOPCVariables
+	    
+	    '* Split the list of devices of the given sector into an array
+	    ArrayDevices = Split(Variables.Item("@DevicesOfSector%").Value, c_strDeviceSeparator, -1, vbTextCompare)
+	    bFound = False
+	    For iCounter = m_lCurrentIndex + 1 To UBound(ArrayDevices) - 1
+	        '* Retrive the Egama Associated block
+	        BlockID = m_GamaManager.Get_EGamaBlockID(ArrayDevices(iCounter))
+	        '* Check if the device is blocked
+	        Set m_OPCEgamaAuthorizedState = Variables.Add(m_strClusterName & BlockID & "." & ArrayDevices(iCounter) & c_strDeviceBlockingStatusTag, fvVariableTypeRegister)
+	        m_OPCEgamaAuthorizedState.Value = Variables.Item(m_strClusterName & BlockID & "." & ArrayDevices(iCounter) & c_strDeviceBlockingStatusTag).Value
+	       
+	        If (Check_opc_Variable(m_OPCEgamaAuthorizedState) And m_OPCEgamaAuthorizedState.Value = c_lngAuthorizeStatus) Then
+	            bFound = True
+	            Exit For
+	        End If
+	    Next
+	    
+	    If (bFound = False) Then
+	    
+	        '* Set invisible the "Cancel" Button
+	        Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = 2
+	        '* Set visible the "Close" button
+	        Variables.Item(ThisMimic.Branch & ".ButtonCloseVisible%").Value = 1
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "StartProcess", "Device: " & ArrayDevices(iCounter) & " Index: " & Format(iCounter))
+	        
+	        '* Set the current index associated to device to be unblocked
+	        m_lCurrentIndex = iCounter
+	    
+	       
+	        '* Memorize the OPC variable of the Elementary GAMA authorized
+	        m_strCurrentOPC_EGAMAName = BlockID & "." & ArrayDevices(iCounter)
+	        '* Add OPC variables related to the HILC command
+	        AddOPCVariables
+	    End If
+	    
+	    bReptCmd = ((iCounter >= UBound(ArrayDevices)) And (m_bCmdFailed) And (m_iCmdRepeatCount < 3)) ' CR atvcm00666816
+	            
+	    If (bReptCmd) Then
+	        m_iCmdRepeatCount = m_iCmdRepeatCount + 1
+	        m_lCurrentIndex = -1
+	        Variables.Item(ThisMimic.Branch & ".ButtonCloseVisible%").Value = 0
+	        '* Disable the "Cancel" button (As per comments frm SPL Enable the "Cancel" button)
+	        Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = 0
+	        'Repeating cmd for failed signals
+	        GoTo StartProcess
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "StartProcess", Err.Description)
+	End Sub
+	   
+	'* SubRoutine: CancelProcess
+	'*
+	'* ******************************************************************************************
+	Private Sub CancelProcess()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "CancelProcess", "Begin Subroutine")
+	    
+	    Dim i As Long
+	    Dim ArrayDevices() As String
+	    Dim BlockID As String
+	    
+	    '* Split the list of devices of the sector (selected in the confirmation phase)into an array
+	    ArrayDevices = Split(Variables.Item("@DevicesOfSector%").Value, c_strDeviceSeparator, -1, vbTextCompare)
+	    For i = 0 To UBound(ArrayDevices) - 1
+	        '* Check if the device is blocked
+	        BlockID = m_GamaManager.Get_EGamaBlockID(ArrayDevices(i))
+	        Call Variables.Add(m_strClusterName & BlockID & "." & ArrayDevices(i) & c_strDeviceBlockingStatusTag, fvVariableTypeRegister)
+	        If (Variables.Item(m_strClusterName & BlockID & "." & ArrayDevices(i) & c_strDeviceBlockingStatusTag).Value = c_lngAuthorizeStatus) Then
+	            '* Display the status report: Failed
+	            Variables.Item(m_strClusterName & BlockID & "." & ArrayDevices(i) & ".Status%").Value = c_iFailedStatus
+	        End If
+	    Next
+	    
+	    '* Set invisible the "Cancel" Button
+	    Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = 2
+	    '* Set visible the "Close" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonCloseVisible%").Value = 1
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "CancelProcess", Err.Description)
+	End Sub
+	
+	'* SubRoutine: AddOPCVariables
+	'*      Add the variables (related to the HILC command) to the collection of subscribed variables
+	'* ******************************************************************************************
+	Private Sub AddOPCVariables()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddOPCVariables", "Begin Subroutine")
+	    
+	    Dim strOPCTreePath As String
+	    
+	    '* Remove OPC variables associated to the HILC command
+	    RemoveOPCVariables
+	    
+	    '* Build the path of OPC variables
+	    strOPCTreePath = m_strClusterName & m_strCurrentOPC_EGAMAName & c_strGAMAZoneHILCCtrlName
+	    
+	    Set m_OPC_HILCSessionStateValue = Variables.Add(strOPCTreePath & c_strHILCSessionStateValueTag, fvVariableTypeRegister)
+	    If ((m_OPC_HILCSessionStateValue.Status = fvVariableStatusGood) And (m_OPC_HILCSessionStateValue.EnableEvents = True)) Then
+	        m_OPC_HILCSessionStateValue_ValueChange
+	    Else
+	        m_OPC_HILCSessionStateValue.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_HILCSessionState = Variables.Add(strOPCTreePath & c_strHILCSessionStateTag, fvVariableTypeText)
+	    If ((m_OPC_HILCSessionState.Status = fvVariableStatusGood) And (m_OPC_HILCSessionState.EnableEvents = True)) Then
+	        m_OPC_HILCSessionState_ValueChange
+	    Else
+	        m_OPC_HILCSessionState.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_HILCCurrentStepValue = Variables.Add(strOPCTreePath & c_strHILCCurrentStepValueTag, fvVariableTypeRegister)
+	    If ((m_OPC_HILCCurrentStepValue.Status = fvVariableStatusGood) And (m_OPC_HILCCurrentStepValue.EnableEvents = True)) Then
+	        m_OPC_HILCCurrentStepValue_ValueChange
+	    Else
+	        m_OPC_HILCCurrentStepValue.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_HILCEnterSession = Variables.Add(strOPCTreePath & c_strHILCEnterSessionTag, fvVariableTypeText)
+	    If ((m_OPC_HILCEnterSession.Status = fvVariableStatusGood) And (m_OPC_HILCEnterSession.EnableEvents = True)) Then
+	        m_OPC_HILCEnterSession_ValueChange
+	    Else
+	        m_OPC_HILCEnterSession.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_HILCPreparation = Variables.Add(strOPCTreePath & c_strHILCPreparationTag, fvVariableTypeText)
+	    If ((m_OPC_HILCPreparation.Status = fvVariableStatusGood) And (m_OPC_HILCPreparation.EnableEvents = True)) Then
+	        m_OPC_HILCPreparation_ValueChange
+	    Else
+	        m_OPC_HILCPreparation.EnableEvents = True
+	    End If
+	    
+	    Set m_OPC_HILCConfirmation = Variables.Add(strOPCTreePath & c_strHILCConfirmationTag, fvVariableTypeText)
+	    If ((m_OPC_HILCConfirmation.Status = fvVariableStatusGood) And (m_OPC_HILCConfirmation.EnableEvents = True)) Then
+	        m_OPC_HILCConfirmation_ValueChange
+	    Else
+	        m_OPC_HILCConfirmation.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "AddOPCVariables", Err.Description)
+	End Sub
+	      
+	'* SubRoutine:  UnblockDevice
+	'*      Unblock a device
+	'* *****************************************************************************
+	Private Sub UnblockDevice()
+	Dim BlockID As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "UnblockDevice" & m_OPC_HILCSessionStateValue.Name, "Begin Subroutine")
+	    
+	    If ((m_bSessionStateValueInit = True) And (m_bSessionStateInit = True) And (m_bCurrentStepValueInit = True) And _
+	        (m_bEnterSessionInit = True) And (m_bPreparationInit = True) And (m_bConfirmationInit = True)) Then
+	        
+	        If (m_OPC_HILCSessionStateValue.Value = 1) Then       '* Session Started
+	            '* Stop the process
+	            DisplayStatusReport (c_iFailedStatus)
+	        ElseIf (m_OPC_HILCSessionStateValue.Value = 0) Then   '* No session
+	            '* Set the flag to PrepPhaseInProgress
+	            m_iHILCCommandInProgress = c_iPrepPhaseInProgress
+	            '* Display the status report (HILC in progress)
+	            Dim Egamaname() As String
+	            Egamaname = Split(m_strCurrentOPC_EGAMAName, ".")
+	            If Egamaname(1) <> "" Then
+	                BlockID = m_GamaManager.Get_EGamaBlockID(Egamaname(1))
+	                Call Variables.Add(m_strClusterName & BlockID & "." & Egamaname(1) & ".Status%", fvVariableTypeRegister)
+	                Variables.Item(m_strClusterName & BlockID & "." & Egamaname(1) & ".Status%").Value = c_iInProgressStatus
+	            End If
+	            '* Send the Enter Session message
+	            If (SendHILCEnterSessionMessage = False) Then
+	                '* Stop the process
+	                DisplayStatusReport (c_iFailedStatus)
+	            End If
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "UnblockDevice", Err.Description)
+	End Sub
+	
+	'* SubRoutine:  ButtonOK_Click
+	'*      Manage the "OK" button
+	'* *****************************************************************************
+	Private Sub ButtonOK_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonOK_Click", "Begin Subroutine")
+	    
+	    If (CBool(Variables.Item("@ButtonOKDisabled%").Value) = True) Then Exit Sub
+	    
+	    '* Disable the "OK" Button
+	    Variables.Item("@ButtonOKDisabled%").Value = True
+	    
+	    If (Mimics.IsOpened(c_strPrepPhaseMimicName, ThisMimic.Branch) = True) Then '* Preparation phase
+	        '* Close the "Prep. Phase - HILC Command" mimic
+	        Mimics.Item(c_strPrepPhaseMimicName, ThisMimic.Branch).Close
+	    
+	        '* Open the "Conf. Phase - HILC Command" mimic
+	        ThisMimic.Activate
+	        Mimics.Open c_strConfPhaseMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "*", , , , 0, 0, True
+	        
+	    ElseIf (Mimics.IsOpened(c_strConfPhaseMimicName, ThisMimic.Branch) = True) Then '* Confirmation phase
+	        Dim strPrepPhaseSectorOPCVar As String
+	        
+	        '* Disable the "Cancel" button (As per comments frm SPL Enable the "Cancel" button)
+	        Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%").Value = 0
+	    
+	        '* Disable the combo box of the "Conf. Phase - HILC Command" mimic
+	        DisableComboBox
+	        
+	        '* Extract the current sector (OPC variable name) from the branch of this mimic
+	        strPrepPhaseSectorOPCVar = Mid(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare) + 1)
+	        '* Check if the sector of the confirmation phase is identical to the sector of the preparation phase
+	        If (StrComp(Variables.Item("@ConfPhaseSectorOPCVar%").Value, strPrepPhaseSectorOPCVar, vbTextCompare) = 0) Then
+	            '* Start the process
+	            StartProcess
+	        Else
+	            '* Cancel the process
+	            CancelProcess
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonOK_Click", Err.Description)
+	End Sub
+	
+	'* SubRoutine: OpenPrepPhaseMimic
+	'*      - Read the XML string containing the list of sectors and the XML string
+	'*      containing the list of devices belonging to the track plan
+	'*      - Open the "Prep. Phase - HILC Command" mimic
+	'* *****************************************************************************
+	Public Sub OpenPrepPhaseMimic()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OpenPrepPhaseMimic", "Begin Subroutine")
+	 
+	    'If ((m_bSectorsInit = True) And (m_bDevicesInit = True)) Then
+	    If (m_bDevicesInit = True) Then
+	        ReadSectors
+	    
+	        ThisMimic.Activate
+	        Mimics.Open c_strPrepPhaseMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "*", _
+	               , , , 0, 0, True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OpenPrepPhaseMimic", Err.Description)
+	End Sub
+	            
+	'* SubRoutine: ReadSectors
+	'*    Read the XML string containing the list of sectors
+	'* *****************************************************************************
+	Public Sub ReadSectors()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadSectors", "Begin Subroutine")
+	    
+	
+	   Dim strVariableName As String
+	   Dim gamaNames() As String
+	   Dim i As Integer
+	   Dim m_OPCClusterName As String
+	
+	       m_OPCClusterName = MOD_Deployment.CBTCLevel1Cluster
+	       Set m_GamaManager = Iconis_MOD_General.GetGamaManager
+	                    
+	       gamaNames = m_GamaManager.Get_GamaNames
+	                    
+	       For i = 0 To UBound(gamaNames)
+	           strVariableName = gamaNames(i)
+	            If ((strVariableName <> "")) Then
+	            Variables.Item("@ListOfSectors%").Value = Variables.Item("@ListOfSectors%").Value & _
+	                                                                           strVariableName & c_strSectorSeparator
+	            Variables.Item("@ListOfSectorOPCVar%").Value = Variables.Item("@ListOfSectorOPCVar%").Value & _
+	                                                                                   strVariableName & c_strSectorSeparator
+	            '* Read the XML string containing the list of devices belonging to the track plan
+	            ReadDevices (strVariableName)
+	            End If
+	       Next i
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadSectors", Err.Description)
+	End Sub
+	
+	'* SubRoutine: ReadDevices
+	'*      Read the XML string the list of devices belonging to the track plan
+	'*      and filter for the given sector
+	'* *****************************************************************************
+	Public Sub ReadDevices(ByVal strCBI As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadDevices", "Begin Subroutine")
+	    
+	    Dim i As Integer
+	    Dim GamaManager As Iconis_CLS_Gama
+	    Dim BlockID As String
+	    Dim CommandStatusVar As Variable
+	    ReDim m_StrGamaList(0)
+	    Dim m_OPCClusterName As String
+	    Dim strVariableName As String
+	
+	
+	          m_OPCClusterName = MOD_Deployment.CBTCLevel1Cluster
+	
+	           Set m_OPC_EGAMAList = Variables.Add(m_OPCClusterName & strCBI & c_strEGamaListTag, fvVariableTypeText)
+	
+	
+	            If Check_opc_Variable(m_OPC_EGAMAList) <> True Then
+	                Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is not Good")
+	            Else
+	            Set GamaManager = Iconis_MOD_General.GetGamaManager
+	            m_StrGamaList = GamaManager.ReadGamaListFromXML(m_OPC_EGAMAList)
+	            
+	                For i = 0 To UBound(m_StrGamaList)
+	                     strVariableName = m_StrGamaList(i)
+	                     If strCBI <> "" Then
+	                        Variables.Item("@ListOfEGamaOPCVar%").Value = Variables.Item("@ListOfEGamaOPCVar%").Value & _
+	                                                                                         strVariableName & ":" & strCBI & c_strDeviceSeparator
+	    
+	                     End If
+	                Next i
+	            End If
+	               
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadDevices", Err.Description)
+	End Sub
+	
+	'* Function: SendHILCEnterSessionMessage
+	'* Purpose:
+	'*      - Build the "Enter Session" message
+	'*      - Set the result in the associated OPC variable
+	'* *****************************************************************************
+	Private Function SendHILCEnterSessionMessage() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendHILCEnterSessionMessage", "Begin Function")
+	    
+	    Dim lngResult As Long
+	        
+	    '* Set the Encoding Format AsciiChar
+	    lngResult = SetPrepEncodingFormat(EncodingAsciiChar)
+	    If (lngResult = -1) Then '* Fail
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendHILCEnterSessionMessage", _
+	                     "Setting of the AsciiChar encoding format has failed")
+	        SendHILCEnterSessionMessage = False
+	        Exit Function
+	    Else
+	        Dim strEnterSessionMessage As String
+	        Dim strOperatorName As String
+	        Dim strWorkStationName As String
+	    
+	        '* Build the Enter Session Message
+	        lngResult = IconisHILCEnterSession(strEnterSessionMessage, strOperatorName, strWorkStationName)
+	        If (lngResult = -1) Then '* Fail
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCEnterSession.Name, "SendHILCEnterSessionMessage", _
+	                         "Building of the EnterSession message has failed")
+	            SendHILCEnterSessionMessage = False
+	            Exit Function
+	        Else
+	            '* Check if the status and quality of the OPC variable are good
+	            If (m_OPC_HILCEnterSession.Status <> fvVariableStatusGood) Then
+	                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCEnterSession.Name, "SendHILCEnterSessionMessage", _
+	                             "The status of " & m_OPC_HILCEnterSession.Name & " is not good")
+	                SendHILCEnterSessionMessage = False
+	                Exit Function
+	            ElseIf (m_OPC_HILCEnterSession.Quality <> 192) Then
+	                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCEnterSession.Name, "SendHILCEnterSessionMessage", _
+	                             "The quality of " & m_OPC_HILCEnterSession.Name & " is not good")
+	                SendHILCEnterSessionMessage = False
+	                Exit Function
+	            Else
+	                '* Send the message in the OPC variable
+	                
+	                m_OPC_HILCEnterSession.Value = strEnterSessionMessage
+	                Call CBTrace(CBTRACE_VBA, ThisMimic.Name & m_OPC_HILCEnterSession.Name, "SendHILCEnterSessionMessage", _
+	                             "The EnterSession message has been sent")
+	                SendHILCEnterSessionMessage = True
+	                Exit Function
+	            End If
+	        End If
+	    End If
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendHILCEnterSessionMessage", Err.Description)
+	End Function
+	    
+	'* Function: SendHILCPreparationMessage
+	'*      - Build the "Preparation" message
+	'*      - Set the result in the associated OPC variable
+	'* *****************************************************************************
+	Private Function SendHILCPreparationMessage() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendHILCPreparationMessage", "Begin Function")
+	    
+	    Dim lngResult As Long
+	    
+	    '* Set the encoding format : AsciiChar
+	    lngResult = SetPrepEncodingFormat(EncodingAsciiChar)
+	    If (lngResult = -1) Then '* Fail
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendHILCPreparationMessage", _
+	                     "Setting of the AsciiChar encoding format has failed")
+	        SendHILCPreparationMessage = False
+	        Exit Function
+	    Else
+	        Dim strPreparationMessage As String
+	        
+	        '* Build the "Preparation" message
+	        
+	        lngResult = IconisHILCPreparation(c_lngCommandType, strPreparationMessage)
+	        If (lngResult = -1) Then '* Fail
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCPreparation.Name, "SendHILCPreparationMessage", _
+	                         "Building of the Preparation message has failed")
+	            SendHILCPreparationMessage = False
+	            Exit Function
+	        Else
+	            '* Check if the status and quality of the OPC variable are good
+	            If (m_OPC_HILCPreparation.Status <> fvVariableStatusGood) Then
+	                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCPreparation.Name, "SendHILCPreparationMessage", _
+	                             "The status of " & m_OPC_HILCPreparation.Name & " is not good")
+	                SendHILCPreparationMessage = False
+	                Exit Function
+	            Else
+	                If (m_OPC_HILCPreparation.Quality <> 192) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCPreparation.Name, "SendHILCPreparationMessage", _
+	                                 "The quality of " & m_OPC_HILCPreparation.Name & " is not good")
+	                    SendHILCPreparationMessage = False
+	                    Exit Function
+	                Else
+	                    '* Send the message in the OPC variable
+	                    
+	                    m_OPC_HILCPreparation.Value = strPreparationMessage
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCPreparation.Name, "SendHILCPreparationMessage", _
+	                                 "The Preparation message has been sent" & strPreparationMessage)
+	                    SendHILCPreparationMessage = True
+	                    Exit Function
+	                End If
+	            End If
+	        End If
+	    End If
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendHILCPreparationMessage", Err.Description)
+	End Function
+	    
+	'* Function: SendHILCConfirmationMessage
+	'*      - Build the confirmation Message
+	'*      - Set the result in the associated OPC variable
+	'* *****************************************************************************
+	Private Function SendHILCConfirmationMessage() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendHILCConfirmationMessage", "Begin Function")
+	    
+	    Dim lngResult As Long
+	    
+	    '* Set to ConfPhaseInProgress the flag
+	    m_iHILCCommandInProgress = c_iConfPhaseInProgress
+	                
+	    '* Set the encoding format : AsciiChar
+	    lngResult = SetConfEncodingFormat(EncodingAsciiChar)
+	    If (lngResult = -1) Then    '* Fail
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCConfirmation.Name, "SendHILCConfirmationMessage", _
+	                     "Setting of the AsciiChar encoding format has failed")
+	        SendHILCConfirmationMessage = False
+	        Exit Function
+	    Else
+	        Dim strConfirmationMessage As String
+	        
+	        '* Build the confirmation message
+	        lngResult = IconisHILCConfirmation(c_lngCommandType, strConfirmationMessage)
+	        If (lngResult = -1) Then '* Fail
+	            Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCConfirmation.Name, "SendHILCConfirmationMessage", _
+	                         "Building of the Confirmation message has failed")
+	            SendHILCConfirmationMessage = False
+	            Exit Function
+	        Else
+	            '* Check if the status and quality of the OPC variable are good
+	            If (m_OPC_HILCConfirmation.Status <> fvVariableStatusGood) Then
+	                Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCConfirmation.Name, "SendHILCConfirmationMessage", _
+	                             "HILCConfirmation OPC variable status is not good")
+	                SendHILCConfirmationMessage = False
+	                Exit Function
+	            Else
+	                If (m_OPC_HILCConfirmation.Quality <> 192) Then
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCConfirmation.Name, "SendHILCConfirmationMessage", _
+	                                 "HILCConfirmation OPC variable quality is not good")
+	                    SendHILCConfirmationMessage = False
+	                    Exit Function
+	                Else
+	                    '* Send the message in the OPC variable
+	                    m_OPC_HILCConfirmation.Value = strConfirmationMessage
+	                    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & m_OPC_HILCConfirmation.Name, "SendHILCConfirmationMessage", _
+	                                 "The Confirmation message has been sent")
+	                    SendHILCConfirmationMessage = True
+	                    Exit Function
+	                End If
+	            End If
+	        End If
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendHILCConfirmationMessage", Err.Description)
+	End Function
+	    
+	'* SubRoutine: DisplayStatusReport
+	'*      Display the status report and continue the process
+	'* *****************************************************************************
+	Private Sub DisplayStatusReport(ByVal StateValue As Integer)
+	Dim BlockID As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "DisplayStatusReport", "Begin Subroutine")
+	    
+	    '* Display the status report - CR atvcm00666816
+	    If (StateValue = c_iFailedStatus) Then
+	    
+	           m_bCmdFailed = True
+	    End If
+	             
+	    If (m_OPCEgamaAuthorizedState.Value = c_iBlocked) Then
+	        m_bCmdFailed = True
+	    End If
+	         
+	    '* Display the status report
+	    
+	    Dim Egamaname() As String
+	    Egamaname = Split(m_strCurrentOPC_EGAMAName, ".")
+	    If Egamaname(1) <> "" Then
+	        BlockID = m_GamaManager.Get_EGamaBlockID(Egamaname(1))
+	        Call Variables.Add(m_strClusterName & BlockID & "." & Egamaname(1) & ".Status%", fvVariableTypeRegister)
+	        
+	        Variables.Item(m_strClusterName & BlockID & "." & Egamaname(1) & ".Status%").Value = StateValue
+	    End If
+	    
+	    '* Continue the process
+	    StartProcess
+	     
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "DisplayStatusReport", Err.Description)
+	End Sub
+	      
+	'* SubRoutine: m_OPC_HILCCurrentStepValue_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCCurrentStepValue.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCCurrentStepValue_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCCurrentStepValue_ValueChange", "Begin Subroutine")
+	       
+	If Check_opc_Variable(m_OPC_HILCCurrentStepValue) Then
+	        Dim strTraceMsg As String
+	        
+	        strTraceMsg = "HILC current step value : " & Format(m_OPC_HILCCurrentStepValue.Value)
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCCurrentStepValue_ValueChange", strTraceMsg)
+	        
+	        If (m_bCurrentStepValueInit = False) Then
+	            m_bCurrentStepValueInit = True
+	            UnblockDevice
+	        Else
+	            If ((m_OPC_HILCCurrentStepValue.Value = 0) Or _
+	                (m_OPC_HILCCurrentStepValue.Value = 4) Or _
+	                (m_OPC_HILCCurrentStepValue.Value = 7)) Then
+	                
+	                '* 0 : "No HILC in progress" or
+	                '* 4 : "Preparation message sent" or
+	                '* 7 : "Confirmation message sent"
+	                '*  -> Nothing to do
+	            ElseIf (m_OPC_HILCCurrentStepValue.Value = 1) Then
+	                '* 1 : "Init"
+	                '* -> Send the Preparation message
+	                
+	                If (SendHILCPreparationMessage = False) Then
+	                    '* Stop the process
+	                    DisplayStatusReport (c_iFailedStatus)
+	                End If
+	            ElseIf ((m_OPC_HILCCurrentStepValue.Value = 2) Or _
+	                    (m_OPC_HILCCurrentStepValue.Value = 3) Or _
+	                    (m_OPC_HILCCurrentStepValue.Value = 6) Or _
+	                    (m_OPC_HILCCurrentStepValue.Value = 8) Or _
+	                    (m_OPC_HILCCurrentStepValue.Value = 10)) Then
+	                '* 2 : "Init failed" or
+	                '* 3 : "Preparation message timeout"
+	                '* 6 : "Preparation message acknowledgement timeout"
+	                '* 8 : "Confirmation message timeout"
+	                '* 10 : "Confirmation message acknowledgement timeout"
+	                '* -> Stop the process
+	                DisplayStatusReport (c_iFailedStatus)
+	            ElseIf ((m_OPC_HILCCurrentStepValue.Value = 5) Or _
+	                    (m_OPC_HILCCurrentStepValue.Value = 12)) Then
+	                '* 5 : "Preparation message acknowledged" (case of standard HILC command)
+	                '* 12 : "Preparation received" (case of simplified HILC command)
+	                '* -> Send the Confirmation message
+	                
+	                If (SendHILCConfirmationMessage = False) Then
+	                    '* Stop the process
+	                    DisplayStatusReport (c_iFailedStatus)
+	                End If
+	            ElseIf (m_OPC_HILCCurrentStepValue.Value = 9) Then
+	                '* 9 : "Confirmation message acknowledged"
+	                '* -> The command HILC process for the current device is finished,
+	                '*    go to the next blocked device
+	                DisplayStatusReport (c_iCompletedStatus)
+	            Else
+	                '* Invalid current step value
+	                '* -> Stop the process
+	                DisplayStatusReport (c_iFailedStatus)
+	            End If
+	        End If
+	End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCCurrentStepValue_ValueChange", Err.Description)
+	End Sub
+	    
+	'* SubRoutine: m_OPC_HILCSessionStateValue_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCSessionStateValue.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCSessionStateValue_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCSessionStateValue_ValueChange", "Begin Subroutine")
+	        
+	    If Check_opc_Variable(m_OPC_HILCSessionStateValue) Then
+	        If (m_bSessionStateValueInit = False) Then
+	            m_bSessionStateValueInit = True
+	            UnblockDevice
+	        End If
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCSessionStateValue_ValueChange", Err.Description)
+	End Sub
+	    
+	'* SubRoutine: m_OPC_HILCSessionState_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCSessionState.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCSessionState_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCSessionState_ValueChange", "Begin Subroutine")
+	
+	If Check_opc_Variable(m_OPC_HILCSessionState) Then
+	        If (m_bSessionStateInit = False) Then
+	            m_bSessionStateInit = True
+	            UnblockDevice
+	        Else
+	            If (m_iHILCCommandInProgress = c_iPrepPhaseInProgress) Then '* Preparation phase
+	                Dim strValue() As String
+	                
+	                '* Retrieve the session state, session workstation name and operator name
+	                strValue = Split(m_OPC_HILCSessionState.Value, c_strSessionStateSeparator)
+	                '* If (the current session state is equal to "Session started") and
+	                '*    ((workstation name is not equal to the current workstation name) or
+	                '*     (operator name is not equal to the operator name currently logged))
+	                If ((StrComp(strValue(0), c_strSessionStarted, vbTextCompare) = 0) And _
+	                    ((StrComp(strValue(1), ThisSystem.ComputerName, vbTextCompare) <> 0) Or _
+	                     (StrComp(strValue(2), ThisProject.UserName, vbTextCompare) <> 0))) Then
+	                    '* Stop the process
+	                    DisplayStatusReport (c_iFailedStatus)
+	                End If
+	            End If
+	        End If
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCSessionState_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_HILCEnterSession_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCEnterSession.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCEnterSession_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCEnterSession_ValueChange", "Begin Subroutine")
+	            
+	    '* Check the status and the quality of the variable
+	    If Check_opc_Variable(m_OPC_HILCEnterSession) Then
+	        If (m_bEnterSessionInit = False) Then
+	            m_bEnterSessionInit = True
+	            UnblockDevice
+	        End If
+	    End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCEnterSession_ValueChange", Err.Description)
+	End Sub
+	    
+	'* SubRoutine: m_OPC_HILCPreparation_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCPreparation.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCPreparation_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCPreparation_ValueChange", "Begin Subroutine")
+	    '* Check the status and the quality of the variable
+	    If Check_opc_Variable(m_OPC_HILCPreparation) Then
+	        If (m_bPreparationInit = False) Then
+	            m_bPreparationInit = True
+	            UnblockDevice
+	        End If
+	    End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCPreparation_ValueChange", Err.Description)
+	End Sub
+	    
+	'* SubRoutine: m_OPC_HILCConfirmation_ValueChange
+	'*      For the variable associated to the OPC variable HILC.HILCConfirmation.Value
+	'* *********************************************************************************
+	Private Sub m_OPC_HILCConfirmation_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_HILCConfirmation_ValueChange", "Begin Subroutine")
+	
+	    If Check_opc_Variable(m_OPC_HILCConfirmation) Then
+	        If (m_bConfirmationInit = False) Then
+	            m_bConfirmationInit = True
+	            UnblockDevice
+	        End If
+	    End If
+	            
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HILCConfirmation_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_SectorsNamesList_ValueChange
+	'*      Manage the OPC variable containing the list of sectors
+	'* ******************************************************************************************
+	Private Sub m_OPC_SectorsNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SectorsNamesList_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	      If Check_opc_Variable(m_OPC_SectorsNamesList) Then
+	        If ((m_bSectorsInit = False) And (m_OPC_SectorsNamesList.Value <> "")) Then
+	            m_bSectorsInit = True
+	            OpenPrepPhaseMimic
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SectorsNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: m_OPC_DevicesNamesList_ValueChange
+	'*      Manage the OPC variable containing the list of devices
+	'* ******************************************************************************************
+	Private Sub m_OPC_DevicesNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "Begin Subroutine")
+	        
+	    '* Check the status and the Quality of the Variable
+	   If Check_opc_Variable(m_OPC_DevicesNamesList) Then
+	        If ((m_bDevicesInit = False) And (m_OPC_DevicesNamesList.Value <> "")) Then
+	            m_bDevicesInit = True
+	            OpenPrepPhaseMimic
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-11,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,172,168,153,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,0,255,0,0,0,0
+	COLOR,7,255,0,255,0,0,0
+	COLOR,8,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,T,"ButtonOK"
+	B,150,368,224,391,150,391,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,150,368,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"OK",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"OK",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"@ButtonOKDisabled%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,7,COLOR,7
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,8,COLOR,8
+		COL,0,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group1"
+	B,341,368,412,391,341,391,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape1"
+		B,412,391,341,368,412,391,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		A,BEGIN,LC,"Anim1",0,0,"",""
+			PP,"*","*"
+			AUTH,"= (ButtonCancelDisabled% == 1)",0,0,0
+		A,END
+	O,END
+	O,BEGIN,T,"Text3"
+		B,360,373,401,386,360,386,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,0,360,373,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Cancel",FONT,2,37
+			LANG,END
+			LANG,BEGIN,1043
+				ROLE_DEFAULT,0
+				ROLE,0,"Annuleer",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"ButtonCancelDisabled%"
+			COL,0,COLOR,1,COLOR,1,1.000000
+			COL,0,COLOR,1,COLOR,1,2.000000
+			COL,0,COLOR,1,COLOR,1,3.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,8,COLOR,8,0.000000
+			COL,1,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,1,COLOR,1,0.000000
+		A,END
+	O,END
+	O,BEGIN,T,"Text4"
+		B,363,373,398,386,363,386,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,0,363,373,0,0,FONT,1,"Close",37,FONT,1,"Close",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Close",FONT,2,37
+			LANG,END
+			LANG,BEGIN,1043
+				ROLE_DEFAULT,0
+				ROLE,0,"Sluiten",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"ButtonCloseVisible%"
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,6,COLOR,6
+			COL,0,COLOR,7,COLOR,7
+			COL,1,COLOR,2,COLOR,2
+			COL,1,COLOR,1,COLOR,1
+			COL,0,COLOR,7,COLOR,7
+		A,END
+	O,END
+O,END

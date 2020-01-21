@@ -1,0 +1,554 @@
+ASCII32,21,10,2019,12:42,3,1.1
+W,BEGIN,"Point_InspectorPanel_Control","Point_InspectorPanel_Control"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,300,310,300,310,0,0,0,1920,1080,300,310
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"CDV "
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Point_InspectorPanel_Control.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	    '* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	    '* The software is to be treated as confidential and it may not be copied, used or disclosed
+	    '* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	    '* *******************************************************************************************
+	    '* Mimic Name:  Switch Inspector Panel
+	    '* *******************************************************************************************
+	    '* Modification History:
+	    '* Author:
+	    '* Date:                april '15
+	    
+	    '* Author:              Chaitra Purohit
+	    '* Date:                july '16
+	    '* Change:              All
+	    
+	    '* *******************************************************************************************
+	    
+	    '* *******************************************************************************************
+	    '* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	    '*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	    '* *******************************************************************************************
+	    
+	    '* Declarations
+	       '* ******************************************************
+	Option Explicit
+	
+	Private Const c_strcommandTag As String = ".HMI.Template.iCommand"
+	Private Const c_strSecurityTag As String = ".HMIBlocking.Template.Security"
+	Private Const c_HMIBlockingTag As String = ".HMIBlocking.Template.iEqpState"
+	
+	'* Path of mimics
+	  Private Const c_Point_Block_HILCCtrl As String = "Point_Block_HILCCtrl"
+	  Private Const c_Point_Unblock_HILCCtrl As String = "Point_Unblock_HILCCtrl"
+	
+	Dim m_OPC_Command As Variable
+	Dim m_OPC_Security As Variable
+	Dim m_OPC_HMIBlockingTag As Variable
+	
+	Private Sub cmdBlock_Click()
+	On Error GoTo ErrorHandler
+	
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdBlock_Click", "Begin Subroutine")
+	            If (Check_Variable(m_OPC_HMIBlockingTag)) Then
+	                If (m_OPC_Security < 63) And (m_OPC_HMIBlockingTag = 0) Then
+	                'If (m_OPC_HMIBlockingTag = 0) Then
+	                    ThisMimic.Activate
+	                    'Mimics.OpenInCenter c_Point_Block_HILCCtrl, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	                    Call OpenMimicInCenter(c_Point_Block_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	                    'ThisMimic.Close
+	                End If
+	            End If
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdBlock_Click", Err.Description)
+	    End Sub
+	
+	
+	Private Sub cmdInverted_Click()
+	On Error GoTo ErrorHandler
+	 
+	        If (Check_Variable(m_OPC_Command)) Then
+	            If (m_OPC_Security < 63) Then
+	                m_OPC_Command.Value = 1
+	           End If
+	        End If
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdInverted_Click", Err.Description)
+	End Sub
+	
+	Private Sub cmdMaintenance_Click()
+	    On Error GoTo ErrorHandler
+	    
+	    'Exit if no TAS
+	    If (Variables(Me.Branch & ".Detection.Template.Security").Value = 63) Then Exit Sub
+	    
+	    If ((Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0)) Then
+	        If ModalQuestion("¨Confirma que desea poner" & Chr(10) & "la aguja en mantenimiento?", "Aguja " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 1
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMI.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIControl.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILocal.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILocked.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMINormal.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIReverse.Template.bIsOn").Value = 0
+	        End If
+	    Else
+	        If ModalQuestion("¨Confirma que desea retirar" & Chr(10) & "la aguja del mantenimiento?", "Aguja " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMI.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIControl.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILocal.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILocked.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMINormal.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIReverse.Template.bIsOn").Value = 1
+	        End If
+	    End If
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cmdMaintenance_Click", Err.Description)
+	
+	End Sub
+	Private Sub cmdNormal_Click()
+	On Error GoTo ErrorHandler
+	   
+	        If (Check_Variable(m_OPC_Command)) And (Check_Variable(m_OPC_Security)) Then
+	            'If (m_OPC_Security < 63) Then
+	            'If (Check_Variable(m_OPC_Command)) Then
+	                m_OPC_Command.Value = 0
+	            'End If
+	        End If
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdNormal_Click", Err.Description)
+	End Sub
+	
+	Private Sub cmdUnBlock_Click()
+	On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdUnBlock_Click", "Begin Subroutine")
+	            If (Check_Variable(m_OPC_HMIBlockingTag)) Then
+	                If (m_OPC_Security < 63) And (m_OPC_HMIBlockingTag = 1) Then
+	                'If (m_OPC_HMIBlockingTag = 1) Then
+	                    ThisMimic.Activate
+	                    'Mimics.OpenInCenter c_Point_Unblock_HILCCtrl, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	                    Call OpenMimicInCenter(c_Point_Unblock_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	                    'ThisMimic.Close
+	                End If
+	            End If
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdUnBlock_Click", Err.Description)
+	End Sub
+	'
+	'Private Sub grpInsp_Click()
+	'On Error GoTo ErrorHandler
+	'
+	'    Mimics.OpenInCenter "Point_InspectorPanel", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	'    ThisMimic.Activate
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	'End Sub
+	
+	'* SubRoutine: Mimic_Open
+	    '* ******************************************************************************************
+	    Private Sub Mimic_Open()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	        Dim objMimic As Mimic
+	        '* Close any other Inspector Panel mimic opened for another switch
+	        For Each objMimic In Application.ActiveProject.Mimics
+	            If (objMimic.FileName Like ThisMimic.FileName) Then
+	                If Not (objMimic.Branch = ThisMimic.Branch) Then
+	                    objMimic.Close
+	                End If
+	            End If
+	        Next
+	       
+	        Set m_OPC_Command = Variables.Add(ThisMimic.Branch & c_strcommandTag, fvVariableTypeRegister)
+	        Set m_OPC_Security = Variables.Add(ThisMimic.Branch & c_strSecurityTag, fvVariableTypeRegister)
+	        Set m_OPC_HMIBlockingTag = Variables.Add(ThisMimic.Branch & c_HMIBlockingTag, fvVariableTypeRegister)
+	
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,0,0,0,0,32,0
+	COLOR,6,96,96,96,0,0,0
+	COLOR,7,0,0,0,0,35,0
+	COLOR,8,0,0,0,0,44,0
+	COLOR,9,0,0,255,0,0,0
+	COLOR,10,122,122,122,0,0,0
+COLORS,END
+O,BEGIN,P,"Poly1"
+	B,10,10,285,330,181,25,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,122,10,212,10,218,18,218,41,285,41
+	PP,285,330,10,330,10,41,114,41,114,18
+O,END
+O,BEGIN,R,"Shape2"
+	B,275,139,22,63,275,139,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape3"
+	B,275,229,22,151,275,229,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,122,18,207,34,122,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,122,18,0,0,FONT,1,"Comandos",37,FONT,1,"Comandos",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Control",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Control",FONT,1,37
+			ROLE,0,"Control",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"grpInsp"
+	B,10,10,114,41,10,41,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,10,10,114,41,18,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,18,10,106,10,114,18,114,41,10,41
+		PP,10,18
+	O,END
+	O,BEGIN,T,"Text4"
+		B,18,18,103,34,18,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,18,18,0,0,FONT,1,"Inspe‡Ýo",37,FONT,1,"Inspe‡Ýo",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Informati¢n",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Informaci¢n",FONT,1,37
+				ROLE,0,"Informaci¢n",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"Point_InspectorPanel_Control","*"
+	A,END
+O,END
+O,BEGIN,T,"cmdBlock"
+	B,46,176,131,205,46,205,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,6,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,46,176,0,0,FONT,1,"?",37,FONT,1,"?",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Apply...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Aplicar...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((HMIBlocking.Template.iEqpState==0) And(HMIBlocking.Template.Security<63))"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"cmdUnBlock"
+	B,166,176,251,205,166,205,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,6,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,166,176,0,0,FONT,1,"Hor rio de partida (HMA)...",37,FONT,1,"Hor rio de partida (HMA)...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remove...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Retirar...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((HMIBlocking.Template.iEqpState==1) And(HMIBlocking.Template.Security<63))"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,29,141,98,157,29,157,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,29,141,0,0,FONT,2,"Bloque",37,FONT,2,"Bloque",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloquear",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Bloquear",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,30,53,108,69,30,69,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,30,53,0,0,FONT,2,"Bloque",37,FONT,2,"Bloque",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Position",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Posicionar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"cmdInverted"
+	B,166,87,251,116,166,116,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,166,87,0,0,FONT,1,"Avisa partida iminente (Sin. Son.)",37,FONT,1,"Avisa partida iminente (Sin. Son.)",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"reverse",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"a desv¡o",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(Detection.Template.Security<63)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Reverse%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdNormal"
+	B,46,87,131,116,46,116,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,46,87,0,0,FONT,1,"VUT...",37,FONT,1,"VUT...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"normal",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"a normal",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(Detection.Template.Security<63)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Normal%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,275,319,22,241,275,319,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"cmdMaintenance"
+	B,106,266,191,295,106,295,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,106,266,0,0,FONT,1,"Aplicar...",37,FONT,1,"Aplicar...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Poner...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Poner...",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,DR,"Anim3",0,0,"",""
+		PP,"INHIBIT.Status.Value",""
+		ADVFORMAT,2,"[=0]\'Poner...\';\'Retirar...\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'Poner...\';\'Retirar...\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=0]\'Poner...\';\'Retirar...\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(Detection.Template.Security<63)"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,10,COLOR,10
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,10,COLOR,10
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,29,231,135,247,29,247,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,0,29,231,0,0,FONT,2,"Bloquear",37,FONT,2,"Bloquear",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mantenimiento",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Mantenimiento",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,P,"Poly2"
+	B,114,9,217,40,182,43,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,215,39,114,40,114,19,122,9,208,9
+	PP,217,20,216,37
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"TabSelected%",0,"",0,0,3,1,0,0,2.000000,0,0,0
+		ADVSENDVALUE,2,2
+	A,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,209,39,124,16,209,39,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	A,BEGIN,CRL,"Anim1",0,0,"",""
+		PP,"TabSelected%"
+		COL,0,COLOR,1,COLOR,1,2.000000
+		COL,0,COLOR,1,COLOR,1,3.000000
+		COL,0,COLOR,1,COLOR,1,4.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,1,COLOR,1,0.000000
+	A,END
+O,END

@@ -1,0 +1,95 @@
+ASCII32,18,9,2018,20:42,2,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,34,0
+	COLOR,6,255,0,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	''Private Sub Shape16_Click()
+	''On Error GoTo ErrorHandler
+	''
+	''Mimics.Open "CST_ContextualMenu", , , , , "*", , , 1582, 188, True
+	''
+	''
+	''
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, "Display_FilterControls", "Shape16_Click", Err.Description)
+	''End Sub
+	''
+	''Private Sub Symbol_Click()
+	''On Error GoTo ErrorHandler
+	''
+	''Mimics.Open "mmc_OnlineTT", , , , , "*", , , 1699, 190, True
+	''
+	''
+	''
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, "Display_FilterControls", "Symbol_Click", Err.Description)
+	''End Sub
+	
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 262
+	
+	'Private Const c_strInspectorPanelMimic As String = ""
+	Private Const c_strContextualMenuMimic As String = "CST_ContextualMenu"
+	Private Hold As POINTAPI
+	Private Sub Shape16_Click()
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "PlatformCmd_MouseUp", "Begin subroutine")
+	       
+	    GetCursorpos Hold
+	        'Get the actual possition of Mouse pointer
+	        GetCursorpos Hold
+	        Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	             
+	Exit Sub
+	ErrorHandler:
+	 Call CBTrace(CBTRACEF_ALWAYS, "Global_Controls_Contextual_Menu", "Symbol_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol10"
+	B,1583,150,1622,189,1583,189,65535,0,6400,0,1,0,0
+	O,BEGIN,GRP,"Group1"
+		B,1583,150,1622,189,1583,189,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,R,"Shape16"
+			B,1622,189,1583,150,1622,189,65535,0,6400,0,4,1,1
+			ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+			AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		O,END
+		O,BEGIN,BM,"Bitmap9"
+			B,1588,155,1618,184,1588,184,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,"bt04-ListaObjetos.bmp",0,COLOR,6
+		O,END
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,2058
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Secuencia de comandos"
+				LANG,END
+				LANG,BEGIN,2058
+					ROLE_DEFAULT,0
+					ROLE,0,"@Secuencia de comandos"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

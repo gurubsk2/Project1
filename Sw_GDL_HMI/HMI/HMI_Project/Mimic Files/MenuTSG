@@ -1,0 +1,174 @@
+ASCII32,4,2,2016,16:50,34,1.1
+W,BEGIN,"MenuTSG","NOTT_Annotation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,828,436
+	SIZE,300,344,300,344,0,0,0,1920,1080,292,320
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Annotation - MAR"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,1,1,1,0,1,0,0,1,0,1
+	GRID,0,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,1,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"MenuTSG.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Dim SIG_Annotation As String
+	
+	Private Sub cmdCancel_Click()
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub Mimic_Open()
+	     On Error Resume Next
+	    txtAnnotation.Text = ""
+	    
+	    'Caption
+	'    Name_sig = Mid(StrObjectName, 12)
+	    Name_sig = Variables.Item(StrObjectName & ".Comment.name").Value
+	    
+	    ThisMimic.Caption = "Annotation" & " - " & "MAR"
+	    
+	'    'Text
+	'    txtAnnotation.Text = Variables.Item(StrObjectName & ".Comment.Value").Value
+	'
+	'    If (sProfile(0) = "Trainee" Or sProfile(0) = "Administrator") Or _
+	'        [Machine_Playback%].Value = [Machine_Name%].Value Or _
+	'        (ThisProject.UserDescription = "Playback User" Or ThisProject.UserDescription = "Playback Administrator") Then
+	'        txtAnnotation.Enabled = False
+	'    Else
+	'        txtAnnotation.Enabled = True
+	'    End If
+	
+	
+	End Sub
+	
+	
+	
+	Private Sub cmdLogin_OK_Click()
+	    On Error Resume Next
+	    
+	    Variables.Item(StrObjectName & ".Comment.Value").Value = txtAnnotation.Value
+	    
+	    ThisMimic.Close
+	     
+	    
+	    End Sub
+	    
+	Private Sub Mimic_Run()
+	    If KeyAscii = 27 Then
+	        Unload Me
+	    End If
+	End Sub
+	
+	Private Sub txtAnnotation_Change()
+	    If KeyAscii = 27 Then
+	        Unload Me
+	    End If
+	End Sub
+	
+	Private Sub txtAnnotation_KeyPress(ByVal KeyAscii As MSForms.ReturnInteger)
+	
+	    If KeyAscii = 9 Then
+	        'MsgBox "esc"
+	    ThisMimic.Close
+	    End If
+	
+	End Sub
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,224,224,224,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,255,255,255,0,0,0
+COLORS,END
+O,BEGIN,I,"Poly3"
+	B,8,16,282,274,109,-13,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,100,17,282,17,282,274,8,274,8,16
+	PP,19,16
+O,END
+O,BEGIN,OCX,"txtAnnotation"
+	B,17,36,278,264,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,3,6,104,30,3,30,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,3,6,0,0,FONT,1,"Descrici¢n",37,FONT,1,"Descrici¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descrici¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,I,"Poly1"
+	B,9,15,283,273,110,-14,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,101,16,283,16,283,273,9,273,9,15
+	PP,20,15
+O,END
+O,BEGIN,T,"Text4"
+	B,53,282,118,309,53,309,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,6,0,COLOR,6
+	PP,1,53,282,0,0,FONT,1,"Apagar",37,FONT,1,"Apagar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,173,282,238,309,173,309,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,6,0,COLOR,6
+	PP,1,173,282,0,0,FONT,1,"Aceptar",37,FONT,1,"Aceptar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"MenuTSG",""
+	A,END
+O,END

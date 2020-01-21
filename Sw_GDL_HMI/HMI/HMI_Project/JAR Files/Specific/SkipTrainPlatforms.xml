@@ -1,0 +1,7 @@
+<SkipTrainPlatform>
+	<IniPlat>Plataforma Inicial</IniPlat>
+	<FinPlat>Plataforma Final</FinPlat> <!--Opcional-->
+	<!--Não existe necessidade de colocar as plataformas em ordem topologica-->
+	<Train>Identificador único do trem (UniqueID)</Train>
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</SkipTrainPlatform>

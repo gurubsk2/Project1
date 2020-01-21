@@ -1,0 +1,814 @@
+ASCII32,11,5,2016,5:14,10,1.1
+W,BEGIN,"NoVGAMAZone_Generic_Grant_HILCCtrlPrepPhase","NoVGAMAZone_Generic_Grant_HILCCtrlPrepPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,564,360,564,360,0,0,0,1280,1024,564,360
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,1,1,224,192,192,0,35,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"NoVGAMAZone_Generic_Grant_HILCCtrlPrepPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Nov GAMA Zone Generic Grant HILC Ctrl Prep Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of data (current GAMA name, EGAMA status, EGAMA Name )
+	'*              for the preparation phase of the Generic Grant HILC command
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                February '13
+	'* Change:              All - CR ALPHA 338077
+	
+	'* Author:              Eric FOISSEY
+	'* Date:                June '13
+	'* Change:              All - CR ALPHA 338077 : complement 1 : XML + variable path
+	'* Author:              Venkateshwar Vivek
+	'* Date:                June 2014
+	'* Change:              atvcm00541517  : change in architecture from simplified HILC to normal HILC
+	    
+	'* Author:              Abhishek patil
+	'* Date:                Oct 2015
+	'* Change:              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	
+	'* Author:              Vasanth
+	'* Date:                Nov 2015
+	'* Change:              655759
+	
+	'* Author:              Vasanth
+	'* Date:                May '16
+	'* Change:              atvcm00704998 : modification for retry
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strEGamaSeparator As String = ";"
+	
+	Private Const c_lEGamaNameLeft As Long = 86
+	Private Const c_lEGamaStatusLeft As Long = 50
+	Private Const c_lEGamaCmdStatusLeft As Long = 392
+	
+	'* To manage the list of devices
+	Private Const c_lLineMaxCount As Long = 10
+	
+	Private Const c_iInvalidStatus As Integer = 0
+	
+	Private Const m_strDeviceNameTag As String = ".Status.Name"
+	
+	Private Const c_strColumnEGamaName As String = "EGAMAName"
+	Private Const c_strColumnEGamaStatus As String = "GamaStatus"
+	Private Const c_strColumnEGamaCmdStatus As String = "Command"
+	
+	Private Const c_strValue As String = ".Value"
+	
+	Private Const c_strEGamaListTag As String = ".ElementaryGamaList.Value"
+	Private Const c_strEGamaCmdStatus As String = ".Value%"
+	Private Const c_strEGamaCmdStatusPrefix As String = ".CommandStatus"
+	
+	Private Const c_strEGamaNameTag As String = ".Name.Value"
+	Private Const c_strEGamaStatusTag As String = ".EGAMAStatus.Value"
+	Private Const c_strAssociatedGamaName As String = ".UEID.name"
+	
+	
+	'* Module Variables
+	'* ***********************************************
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	Dim WithEvents m_OPCSet_EGAMA_Definitions As Iconis_CLS_OPCSet
+	Dim WithEvents m_OPC_EGAMAList As Variable
+	Dim WithEvents m_OPC_GAMAName As Variable
+	
+	Dim m_StrGamaList() As String
+	Dim m_iStatusGamaList() As Integer
+	Dim m_OPCClusterName As String
+	
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: Init and display data for each device managed by the current sector
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim GamaID As String
+	
+	    Dim objMimic As Mimic
+	    Dim objVariable As Variable
+	    
+	    '* extraction of the gama ID to display
+	    m_OPCClusterName = MOD_Deployment.CBTCLevel1Cluster
+	   
+	    GamaID = Replace(ThisMimic.Branch, m_OPCClusterName, "")
+	        
+	    ReDim m_StrGamaList(0)
+	    ReDim m_iStatusGamaList(0)
+	    '* Create and initialize the list
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    
+	    'initialisation of the grid animation
+	    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	    
+	    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar
+	    m_List.NewColumn c_strColumnEGamaName, fvVariableTypeText, c_lEGamaNameLeft
+	    m_List.NewColumn c_strColumnEGamaStatus, fvVariableTypeRegister, c_lEGamaStatusLeft, c_strValue
+	    'm_List.NewColumn c_strColumnEGamaCmdStatus, fvVariableTypeRegister, c_lEGamaCmdStatusLeft, c_strValue
+	    
+	    Set m_OPC_GAMAName = Variables.Add(ThisMimic.Branch & c_strAssociatedGamaName, fvVariableTypeText)
+	    If (m_OPC_GAMAName.Status = fvVariableStatusGood And m_OPC_GAMAName.EnableEvents = True) Then
+	        m_OPC_GAMAName_ValueChange
+	    Else
+	        m_OPC_GAMAName.EnableEvents = True
+	    End If
+	            
+	    '* Enable the OK button of the parent mimic
+	    Variables.Item("@ButtonOKDisabled%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Design
+	'* Purpose: Restore the position of the controls
+	'* ******************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	        
+	    If Not (m_List Is Nothing) Then
+	        m_List.ShowAllControls
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, destroy the list object
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	        
+	    If Not (m_OPC_EGAMAList Is Nothing) Then
+	        Variables.Remove (m_OPC_EGAMAList.Name)
+	        Set m_OPC_EGAMAList = Nothing
+	    End If
+	    
+	    If Not (m_OPC_GAMAName Is Nothing) Then
+	        Variables.Remove (m_OPC_GAMAName.Name)
+	        Set m_OPC_GAMAName = Nothing
+	    End If
+	    If Not (m_OPCSet_EGAMA_Definitions Is Nothing) Then
+	        m_OPCSet_EGAMA_Definitions.Destroy
+	        Set m_OPCSet_EGAMA_Definitions = Nothing
+	    End If
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	
+	'* Subroutine: m_OPC_GAMAName_ValueChange
+	'* update list list of data followed according the definition of the gama list
+	'* ************************************************************************************************
+	Private Sub m_OPC_GAMAName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "Begin Subroutine")
+	       
+	    ' Check the plug is OK for reading
+	    If (m_OPC_GAMAName.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Waiting")
+	    ElseIf (m_OPC_GAMAName.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Config Error")
+	    ElseIf (m_OPC_GAMAName.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is Not Connected")
+	    Else
+	        If m_OPC_GAMAName.Status <> fvVariableStatusGood Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", "The status of " & m_OPC_GAMAName.Name & " is not Good")
+	        Else
+	        'Stop
+	            '* follow the current Elementary Gama List
+	            Set m_OPC_EGAMAList = Variables.Add(m_OPCClusterName & m_OPC_GAMAName & c_strEGamaListTag, fvVariableTypeText)
+	            If (m_OPC_EGAMAList.Status = fvVariableStatusGood And m_OPC_EGAMAList.EnableEvents = True) Then
+	                m_OPC_EGAMAList_ValueChange
+	            End If
+	            m_OPC_EGAMAList.EnableEvents = True
+	
+	        End If
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_GAMAName_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* Subroutine: m_OPC_EGAMAList_ValueChange
+	'* update list list of data followed according the definition of the gama list
+	'* ************************************************************************************************
+	Private Sub m_OPC_EGAMAList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "Begin Subroutine")
+	        
+	    Dim i As Integer
+	    Dim GamaManager As Iconis_CLS_Gama
+	    Dim BlockID As String
+	    Dim CommandStatusVar As Variable
+	    
+	    If Not (m_OPCSet_EGAMA_Definitions Is Nothing) Then
+	        m_OPCSet_EGAMA_Definitions.Destroy
+	        Set m_OPCSet_EGAMA_Definitions = Nothing
+	    End If
+	    
+	    'Stop
+	    ' Check the plug is OK for reading
+	    If (m_OPC_EGAMAList.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Waiting")
+	    ElseIf (m_OPC_EGAMAList.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Config Error")
+	    ElseIf (m_OPC_EGAMAList.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is Not Connected")
+	    Else
+	        If m_OPC_EGAMAList.Status <> fvVariableStatusGood Then
+	            Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", "The status of " & m_OPC_EGAMAList.Name & " is not Good")
+	        Else
+	
+	            Set GamaManager = Iconis_MOD_General.GetGamaManager
+	            m_StrGamaList = GamaManager.ReadGamaListFromXML(m_OPC_EGAMAList.Value)
+	            Set m_OPCSet_EGAMA_Definitions = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	            
+	            For i = 0 To UBound(m_StrGamaList)
+	                BlockID = GamaManager.Get_EGamaBlockID(m_StrGamaList(i))
+	                m_OPCSet_EGAMA_Definitions.AddItem m_OPCClusterName & BlockID & "." & m_StrGamaList(i) & c_strEGamaStatusTag, fvVariableTypeRegister, c_OPCReadOnly
+	                'Set CommandStatusVar = Variables.Add(Branch & c_strEGamaCmdStatusPrefix & i & c_strEGamaCmdStatus, fvVariableTypeRegister)
+	                'CommandStatusVar.Value = c_iInvalidStatus
+	                m_OPCSet_EGAMA_Definitions.AddItem Branch & c_strEGamaCmdStatusPrefix & i & c_strEGamaCmdStatus, fvVariableTypeRegister, c_OPCReadAll
+	            Next i
+	            
+	            m_OPCSet_EGAMA_Definitions.DoConnect "CurrentEGamaDefinitions"
+	        End If
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGAMAList_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_EGAMA_Definitions_OnRefresh
+	'* update the display of the list of elementary gama
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_EGAMA_Definitions_OnRefresh(lIndex As Long, Value As Variant, Status As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnRefresh", "Begin Subroutine")
+	       
+	    Dim i As Long
+	    Dim iEGamaName As String
+	    Dim iEGamaStatus As Integer
+	    Dim iEGamaCmdStatus As Integer
+	    
+	    Dim GamaManager As Iconis_CLS_Gama
+	    
+	    Set GamaManager = Iconis_MOD_General.GetGamaManager
+	    
+	    Dim Arr_strEGamaName() As Variant
+	    Dim Arr_iEGamaStatus() As Variant
+	    Dim Arr_iEGamaCmdStatus() As Variant
+	
+	    
+	    If (m_OPCSet_EGAMA_Definitions.IsAllGood) Then
+	    
+	        ReDim Arr_strEGamaName(UBound(m_StrGamaList))
+	        ReDim Arr_iEGamaStatus(UBound(m_StrGamaList))
+	        ReDim m_iStatusGamaList(UBound(m_StrGamaList))
+	        ReDim Arr_iEGamaCmdStatus(UBound(m_StrGamaList))
+	     'Stop
+	        For i = 0 To UBound(m_StrGamaList)
+	            iEGamaName = GamaManager.Get_EGamaName(m_StrGamaList(i))
+	            iEGamaStatus = m_OPCSet_EGAMA_Definitions.Item((2 * i)).Value
+	            'iEGamaCmdStatus = m_OPCSet_EGAMA_Definitions.Item((2 * i) + 1).Value
+	
+	            Arr_strEGamaName(i) = iEGamaName
+	            Arr_iEGamaStatus(i) = iEGamaStatus
+	            'm_iStatusGamaList(i) = iEGamaStatus
+	            'Arr_iEGamaCmdStatus(i) = iEGamaCmdStatus
+	        Next i
+	              
+	        m_List.FillColumn c_strColumnEGamaName, Arr_strEGamaName
+	        m_List.FillColumn c_strColumnEGamaStatus, Arr_iEGamaStatus, c_strValue
+	        'm_List.FillColumn c_strColumnEGamaCmdStatus, Arr_iEGamaCmdStatus, c_strValue
+	        m_List.Display
+	        If ((lIndex \ 2) < c_lLineMaxCount) Then
+	            ScrollBar.Value = 0
+	        Else
+	            ScrollBar.Value = ((lIndex \ 2) - c_lLineMaxCount) + 1
+	        End If
+	        
+	        If Not (m_OPC_EGAMAList Is Nothing) Then
+	            Variables.Remove (m_OPC_EGAMAList.Name)
+	            Set m_OPC_EGAMAList = Nothing
+	        End If
+	        
+	        If Not (m_OPC_GAMAName Is Nothing) Then
+	            Variables.Remove (m_OPC_GAMAName.Name)
+	            Set m_OPC_GAMAName = Nothing
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnRefresh", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPCSet_EGAMA_Definitions_OnConnection
+	'* update the array display for the first connection
+	'* ************************************************************************************************
+	Private Sub m_OPCSet_EGAMA_Definitions_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnConnection", "Begin Subroutine")
+	    
+	    Dim i As Long
+	    
+	    For i = 0 To (UBound(arrValue))
+	        m_OPCSet_EGAMA_Definitions_OnRefresh i, arrValue(i), arrStatus(i)
+	    Next i
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPCSet_EGAMA_Definitions_OnConnection", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,400,0,0,"Tahoma",0,0
+	FONT,2,-11,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,128,128,128,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,215,215,215,0,0,0
+	COLOR,5,113,111,100,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,136,141,155,0,0,0
+	COLOR,8,179,179,179,0,0,0
+	COLOR,9,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"shpRectangle"
+	B,546,359,6,6,546,359,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtCBISector"
+	B,16,30,81,43,16,43,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,16,30,0,0,FONT,1,"GAMA Zone",37,FONT,1,"GAMA Zone",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA Zone",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"GAMA zone",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtCBISectorName"
+	B,106,25,285,49,106,49,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,4,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,106,25,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"UEID.name"
+	A,END
+O,END
+O,BEGIN,R,"shpArray"
+	B,519,352,24,87,519,352,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,521,92,540,352,10,60,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,25
+		Size,"450;6826"
+		MousePointer,0
+		Min,0
+		Max,32767
+		Position,0
+		PrevEnabled,0
+		NextEnabled,0
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END
+O,BEGIN,L,"HorLine1"
+	B,24,116,521,116,24,116,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,116,521,116
+O,END
+O,BEGIN,L,"HorLine2"
+	B,24,141,521,141,24,141,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,141,521,141
+O,END
+O,BEGIN,L,"HorLine3"
+	B,24,166,521,166,24,166,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,166,521,166
+O,END
+O,BEGIN,L,"HorLine4"
+	B,24,191,521,191,24,191,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,191,521,191
+O,END
+O,BEGIN,T,"txtBlockedStatus"
+	B,86,67,520,91,86,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,86,67,0,0,FONT,2,"Elementary GAMA Name",37,FONT,2,"Elementary GAMA Name",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Elementary GAMA Name",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," Elementaire GAMA naam ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtSwitch"
+	B,25,67,84,91,25,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,25,67,0,0,FONT,2,"Status",37,FONT,2,"Status",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," Status",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"HeaderHorLine1"
+	B,23,67,520,67,1140,67,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,520,67,23,67
+O,END
+O,BEGIN,L,"HeaderVerLine1"
+	B,24,91,24,67,24,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,91,24,67
+O,END
+O,BEGIN,L,"HeaderVerLine2"
+	B,85,91,85,67,85,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,85,91,85,67
+O,END
+O,BEGIN,L,"VerLine1"
+	B,85,351,85,92,85,275,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,85,351,85,92
+O,END
+O,BEGIN,T,"EGAMAName0"
+	B,86,95,516,118,86,118,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,86,95,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName0%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName1"
+	B,86,117,516,140,86,140,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,86,117,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName1%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName2"
+	B,86,142,516,165,86,165,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,86,142,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName2%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName3"
+	B,86,167,516,190,86,190,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,86,167,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName3%"
+	A,END
+O,END
+O,BEGIN,S,"GamaStatus0"
+	B,59,109,50,100,50,109,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus0",59,109,50,100,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus1"
+	B,59,133,50,124,50,133,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus1",59,133,50,124,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus2"
+	B,59,158,50,149,50,158,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus2",59,158,50,149,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus3"
+	B,59,182,50,173,50,182,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus3",59,182,50,173,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus4"
+	B,59,207,50,198,50,207,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",59,207,50,198,0,0, 0, 1
+O,END
+O,BEGIN,T,"EGAMAName4"
+	B,86,192,516,215,86,215,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,86,192,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,T,"txtPreparation"
+	B,15,0,80,13,15,13,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,15,0,0,0,FONT,1,"Preparation",36,FONT,1,"Preparation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Preparation",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Voorbereiding",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"HeaderVerLine5"
+	B,520,91,520,67,520,91,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,520,91,520,67
+O,END
+O,BEGIN,L,"HorLine5"
+	B,24,215,521,215,24,215,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,215,521,215
+O,END
+O,BEGIN,T,"EGAMAName5"
+	B,20000,218,20430,241,20000,241,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20000,218,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,L,"HorLine6"
+	B,24,241,521,241,24,241,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,241,521,241
+O,END
+O,BEGIN,L,"HorLine7"
+	B,24,268,521,268,24,268,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,268,521,268
+O,END
+O,BEGIN,L,"HorLine8"
+	B,24,296,521,296,24,296,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,296,521,296
+O,END
+O,BEGIN,L,"HorLine9"
+	B,24,324,521,324,24,324,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,24,324,521,324
+O,END
+O,BEGIN,T,"EGAMAName6"
+	B,20000,245,20430,268,20000,268,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20000,245,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName7"
+	B,20000,272,20430,295,20000,295,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20000,272,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName8"
+	B,20000,298,20430,321,20000,321,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20000,298,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,T,"EGAMAName9"
+	B,20000,326,20430,349,20000,349,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,20000,326,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"EGAMAName4%"
+	A,END
+O,END
+O,BEGIN,S,"GamaStatus5"
+	B,20009,232,20000,223,20000,232,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",20009,232,20000,223,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus6"
+	B,20009,259,20000,250,20000,259,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",20009,259,20000,250,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus7"
+	B,20009,285,20000,276,20000,285,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",20009,285,20000,276,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus8"
+	B,20009,315,20000,306,20000,315,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",20009,315,20000,306,0,0, 0, 1
+O,END
+O,BEGIN,S,"GamaStatus9"
+	B,20009,343,20000,334,20000,343,65535,0,6400,0,1,0,0
+	PP,"GamaStatus","GamaStatus4",20009,343,20000,334,0,0, 0, 1
+O,END

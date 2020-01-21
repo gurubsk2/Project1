@@ -1,0 +1,295 @@
+ASCII32,19,9,2018,17:48,32,1.1
+W,BEGIN,"Train_Lanzadera","Train_Lanzadera"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,839,508
+	SIZE,242,185,242,185,0,0,0,1280,1024,236,163
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Lanzadera 2"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"   Lanzadera 2"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,7,1,500,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Train_Lanzadera.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	Private Sub btnOK_Click()
+	        
+	'    If Not IsNumeric(txtNewTime) And Not optRetirar Then Exit Sub
+	'
+	''    If optRetirar Then
+	'        'Retirar
+	'        Variables(Me.Branch & ".RegPoint.DwellTimeImposed%").Value = -1
+	'        Variables(Me.Branch & ".RegPoint.DwellTimeApply%").Value = 0
+	'    Else
+	'        'Aplicar
+	'        Variables(Me.Branch & ".RegPoint.DwellTimeImposed%").Value = txtNewTime
+	'        Variables(Me.Branch & ".RegPoint.DwellTimeApply%").Value = 1
+	'    End If
+	    Me.Close fvDoNotSaveChanges
+	    
+	End Sub
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : Mimic_Open
+	'Type       : Procedure
+	'Objective  : Manages the initial values of the variables
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub Mimic_Open()
+	    Dim iPlatform As Integer
+	    Dim sPlatformList As String
+	    Dim sOPCCluster As String
+	    
+	    On Error GoTo ErrorHandler
+	    
+	'    If Variables.Item("@MinimumDwellTime%") Is Nothing Then _
+	'        Variables.Add "@MinimumDwellTime%", fvVariableTypeRegister
+	'    If Variables.Item("@MaximumDwellTime%") Is Nothing Then _
+	'        Variables.Add "@MaximumDwellTime%", fvVariableTypeRegister
+	'
+	'    'Update mimic title
+	'    ThisMimic.Caption = "   Plataforma "
+	'
+	'    'Verify the variables
+	'    If Not VerifyVariable(Variables.Item(ThisMimic.Branch & ".Point.Name")) Then Exit Sub
+	'    If Not VerifyVariable(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed")) Then Exit Sub
+	'
+	    Me.Caption = "   Lanzadera " & Variables(ThisMimic.Branch & ".Attributes.HMITETrain.bstrPlug_5").Value
+	
+	'    'Update local variables
+	'    If CInt(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed").Value) >= 0 Then
+	'        Variables.Item(ThisMimic.Branch & ".DwellTimeValue%").Value = CInt(Variables.Item(ThisMimic.Branch & ".RegPoint.DwellTimeImposed").Value)
+	'    Else
+	'        Variables.Item(ThisMimic.Branch & ".DwellTimeValue%").Value = 0
+	'    End If
+	'
+	'    Variables.Item(ThisMimic.Branch & ".CommandValue%").Value = 0
+	    optAplicar = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    
+	End Sub
+	
+	'Private Sub optAplicar_Click()
+	'    With txtNewTime
+	'        .ForeColor = 12632256
+	'        .Value = "(" & Str(Variables.Item(Me.Branch & ".Point.DefaultMinimumDwellTime%").Value) & " - " & _
+	'            Str(Variables.Item(Me.Branch & ".Point.DefaultMaximumDwellTime%").Value) & ")"
+	'        .Enabled = True
+	'    End With
+	'
+	'End Sub
+	
+	'Private Sub optRetirar_Click()
+	'    txtNewTime.Enabled = False
+	'
+	'End Sub
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : txtNewTime_Change
+	'Type       : Sub
+	'Objective  : To validate the dwell time value before to send the command
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2010/11/18     Artur Valverde    Creation
+	'=======================================================================================
+	'Private Sub txtNewTime_Change()
+	'    On Error GoTo ErrorHandler
+	'
+	'    If txtNewTime.ForeColor = 12632256 Then Exit Sub
+	'
+	'    If Not IsNumeric(txtNewTime) And txtNewTime <> "" Or InStr(txtNewTime, ".") > 0 Or InStr(txtNewTime, ",") > 0 Or _
+	'        Val(txtNewTime.Value) > Str(Variables.Item(ThisMimic.Branch & ".Point.DefaultMaximumDwellTime%").Value) Then txtNewTime = Left(txtNewTime, Len(txtNewTime) - 1)
+	'
+	'    Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "txtNewTime_Change", Err.Description)
+	'
+	'End Sub
+	'
+	''
+	'Private Sub txtNewTime_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal X As Single, ByVal Y As Single)
+	'    If txtNewTime.ForeColor = 12632256 Then
+	'        txtNewTime = ""
+	'        txtNewTime.ForeColor = 0
+	'    End If
+	'End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,0,0,0,0,44,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,172,168,153,0,0,0
+	COLOR,7,96,96,96,0,0,0
+	COLOR,8,0,0,0,0,35,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,224,112,8,32,213,112,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text7"
+	B,83,80,141,104,83,104,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,83,80,0,0,FONT,1,"Impose dwell time",36,FONT,1,"Impose dwell time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Retornos",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Retornos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtNewTime"
+	B,146,80,194,104,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,27,8,115,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,129,8,217,32,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,40,41,98,65,40,65,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,40,41,0,0,FONT,1,"Retornos",36,FONT,1,"Retornos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destino:",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Destino:",FONT,1,36
+			ROLE,0,"Destino:",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBox1"
+	B,98,41,194,65,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnOK"
+	B,21,120,100,149,21,149,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,21,120,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Ejecutar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"= ((CommandValue% > 0) AND (DwellTimeValue%>=Point.DefaultMinimumDwellTime)  or (DwellTimeValue%==0)) and (@UserAccessCommand%)"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,133,120,212,149,133,149,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,133,120,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END

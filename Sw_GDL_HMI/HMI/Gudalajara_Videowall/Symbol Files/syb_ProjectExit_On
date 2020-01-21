@@ -1,0 +1,65 @@
+ASCII32,3,11,2016,12:28,8,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,171,0,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_Click()
+	'    If Variables.Item("ProjectExit%").Value = False Then Exit Sub
+	''    iPopupPosition = ThisProject.ActiveMimic.Windows(1).Left
+	    Call ExitProjectAltF4
+	
+	
+	
+	'''                Shell "C:\Program Files\USDATA\Tools\RestoreWindowsRightAfterBrokenByCB.exe", vbHide
+	'                ReleaseAll
+	'                ThisProject.Quit fvDoNotSaveChanges, False
+	'            'Event log off
+	'            sServerNum = Variables.Item("OPCCluster:IconisS2K.Core.ServerState.Core.ServerState.Core.ServerID").Value
+	'            Variables.Item("OPCCluster:HMIEvents.Write_Event.Value").Value = "User """ & ThisProject.UserName & """ logged off " & _
+	'            "from Server " & sServerNum & " and MMI " & ThisSystem.ComputerName
+	'
+	'
+	'On Error Resume Next
+	'                Unload Me
+	                
+	End Sub
+	''
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Group177"
+	B,1868,98,1909,140,1868,140,61432,0,6400,0,1,1,1
+	O,BEGIN,BM,"Bitmap3"
+		B,1871,101,1906,137,1871,137,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,"closef.bmp",1,COLOR,3
+	O,END
+	O,BEGIN,R,"Shape4"
+		B,1909,140,1868,98,1909,140,61432,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Salir de la aplicaci¢n de la"
+				LANG,END
+				LANG,BEGIN,1036
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Impression ‚cran"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

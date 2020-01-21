@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISD", "ISD", "{7A89C605-C5CD-4D07-AA84-F779DF5DDBBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMI_GDLAnalyser", "HMI\HMI_GDLAnalyser\HMI_GDLAnalyser.csproj", "{242EE537-0766-4BBC-9999-E1014C8C0EB4}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "SetupHMI_GDL", "HMI\SetupHMI_GDL\SetupHMI_GDL.vdproj", "{574DBC11-58DE-4536-9AF5-FF754F2BFC40}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Unicode Release|Win32 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{242EE537-0766-4BBC-9999-E1014C8C0EB4}.Unicode Release|Win32.ActiveCfg = Unicode Release|Any CPU
+		{242EE537-0766-4BBC-9999-E1014C8C0EB4}.Unicode Release|Win32.Build.0 = Unicode Release|Any CPU
+		{574DBC11-58DE-4536-9AF5-FF754F2BFC40}.Unicode Release|Win32.ActiveCfg = Unicode Release
+		{574DBC11-58DE-4536-9AF5-FF754F2BFC40}.Unicode Release|Win32.Build.0 = Unicode Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{242EE537-0766-4BBC-9999-E1014C8C0EB4} = {7A89C605-C5CD-4D07-AA84-F779DF5DDBBE}
+		{574DBC11-58DE-4536-9AF5-FF754F2BFC40} = {7A89C605-C5CD-4D07-AA84-F779DF5DDBBE}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		EnterpriseLibraryConfigurationToolBinariesPath = packages\Unity.2.1.505.2\lib\NET35
+	EndGlobalSection
+EndGlobal

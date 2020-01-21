@@ -1,0 +1,170 @@
+ASCII32,15,4,2016,19:18,51,1.1
+W,BEGIN,"GUA_nota_TSG","NOTT_Annotation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,699,441
+	SIZE,465,344,465,344,0,0,0,1920,1080,459,320
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Solicitude del TTR para asistencia de riesgo de seguridad"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,0,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,1,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GUA_nota_TSG.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Dim SIG_Annotation As String
+	
+	Private Sub cmdCancel_Click()
+	    ThisMimic.Close
+	End Sub
+	
+	
+	Private Sub cmdGravar_Click()
+	    
+	    [UserNoteMsgTSG%] = txtAnnotation
+	    [bUserNoteTSG%] = ([UserNoteMsgTSG%] <> "")
+	
+	    Me.Close fvDoNotSaveChanges
+	    
+	End Sub
+	
+	Private Sub Mimic_Open()
+	     On Error Resume Next
+	    
+	    txtAnnotation = [UserNoteMsgTSG%]
+	    
+	
+	End Sub
+	
+	
+	    
+	Private Sub Mimic_Run()
+	    If KeyAscii = 27 Then
+	        Unload Me
+	    End If
+	End Sub
+	
+	Private Sub Text1_Click()
+	
+	End Sub
+	
+	Private Sub txtAnnotation_Change()
+	    If KeyAscii = 27 Then
+	        Unload Me
+	    End If
+	            
+	End Sub
+	
+	Private Sub txtAnnotation_KeyPress(ByVal KeyAscii As MSForms.ReturnInteger)
+	
+	    If KeyAscii = 9 Then
+	        'MsgBox "esc"
+	    ThisMimic.Close
+	    End If
+	
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,105,105,105,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,0,0,0,0,44,0
+	COLOR,7,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,444,274,12,24,444,274,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"txtAnnotation"
+	B,19,34,438,269,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,24,15,110,31,24,31,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,24,15,0,0,FONT,1,"Descrici¢n",37,FONT,1,"Descrici¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"cmdGravar"
+	B,110,284,184,311,110,311,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,6,0,COLOR,1,0,COLOR,1,0,COLOR,5,0,COLOR,5
+	PP,1,110,284,0,0,FONT,1,"Gravar",37,FONT,1,"Gravar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdApagar"
+	B,273,284,347,311,273,311,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,7,0,COLOR,1,0,COLOR,1,0,COLOR,5,0,COLOR,5
+	PP,1,273,284,0,0,FONT,1,"Apagar",37,FONT,1,"Apagar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END

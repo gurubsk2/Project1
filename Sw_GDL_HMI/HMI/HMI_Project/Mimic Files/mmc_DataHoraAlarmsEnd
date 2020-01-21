@@ -1,0 +1,227 @@
+ASCII32,21,10,2019,11:39,25,1.1
+W,BEGIN,"mmc_DataHoraAlarmsEnd","mmc_DataHoraAlarmsFim"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1573,391
+	SIZE,254,159,254,159,0,0,0,2048,768,234,117
+	BACKCOLOR,212,208,200,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora (Final)"
+			ROLE,1,"Data/Hora Inicial"
+		LANG,END
+		LANG,BEGIN,1034
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Data/Hora Inicial"
+			ROLE,2,"Data/Hora Inicial"
+		LANG,END
+		LANG,BEGIN,1036
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Date/Heure Fin"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Selecione Data/Hora Final"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,0,1,0,1,0,1,0,0,0,0,1,0,1
+	GRID,1,1,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,4,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_DataHoraAlarmsEnd.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Private Sub cmdCancel_Click()
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub cmdOK_Click()
+	    
+	    Dim sData As String
+	    Dim sHora As String
+	    
+	    sData = dtpData.Day & "/" & dtpData.Month & "/" & dtpData.Year
+	    sHora = dtpHora.Hour & ":" & dtpHora.Minute & ":" & dtpHora.Second
+	
+	    Variables.Item("txtDataFimAlarmes%").Value = Format(dtpData, "dd/mm/YY")
+	    Variables.Item("txtHoraFimAlarmes%").Value = Format(sHora, "HH:mm:ss")
+	    [sS2KDataFimAlarmes%] = Format(dtpData, "MM/DD/YY") & " " & Format(sHora, "HH:mm:ss:000")
+	    ThisMimic.Close
+	
+	End Sub
+	
+	Private Sub cmdRetira_Click()
+	    Variables.Item("txtDataFimAlarmes%").Value = "__/__/__"
+	    Variables.Item("txtHoraFimAlarmes%").Value = "__:__:__"
+	    [sS2KDataFimAlarmes%] = ""
+	    ThisMimic.Close
+	End Sub
+	
+	Private Sub dtpData_Change()
+	    dtpHora.Value = dtpData.Value
+	
+	End Sub
+	
+	Private Sub Mimic_Run()
+	''    Dim strDateTime As String
+	''
+	''    'Valores Iniciais para o CampoData/Hora
+	''    If InStr([txtDataIniAlarmes%], "_") = 0 Then
+	''        dtpData.MinDate = DateAdd("s", 1, FormatDateTime([txtDataIniAlarmes%] & " " & [txtHoraIniAlarmes%]))
+	''        dtpHora.MinDate = dtpData.MinDate
+	''    End If
+	''
+	    
+	'''    Else
+	        dtpData.Value = Now
+	        dtpHora.Value = Now
+	'''    End If
+	'''
+	'''    dtpData.Value = dtpData.MaxDate
+	'''    dtpHora.Value = dtpHora.MaxDate
+	    
+	    
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-16,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,32,32,32,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,64,64,64,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,172,168,153,0,0,0
+	COLOR,8,212,208,200,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,232,81,9,9,232,81,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"dtpData"
+	B,92,17,220,39,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"dtpHora"
+	B,91,48,222,72,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,31,15,71,39,31,39,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,31,15,0,0,FONT,1,"Date",37,FONT,1,"Date",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"cmdOK"
+	B,10,88,83,112,10,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,5,0,COLOR,5
+	PP,1,10,88,0,0,FONT,1,"Ok",37,FONT,1,"Ok",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡Ýo%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdCancel"
+	B,85,88,158,112,85,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,8,0,COLOR,7,0,COLOR,7,0,COLOR,5,0,COLOR,5
+	PP,1,85,88,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡Ýo%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdRetira"
+	B,160,88,233,112,160,112,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,5,0,COLOR,5
+	PP,1,160,88,0,0,FONT,1,"Remove",37,FONT,1,"Remove",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remover",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remover",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"anima‡Ýo%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,31,48,71,72,31,72,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,31,48,0,0,FONT,1,"Time",37,FONT,1,"Time",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END

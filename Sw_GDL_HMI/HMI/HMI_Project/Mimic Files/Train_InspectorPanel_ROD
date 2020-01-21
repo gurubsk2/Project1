@@ -1,0 +1,292 @@
+ASCII32,18,10,2019,13:32,20,1.1
+W,BEGIN,"Train_InspectorPanel_ROD","Train_InspectorPanel_ROD"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,11,38
+	SIZE,530,290,530,290,0,0,0,1920,1080,530,290
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"CDV "
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Train_InspectorPanel_ROD.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name: Train Inspector Panel Control
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector Panel Control Tab
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov '16
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	'* *******************************************************************************************
+	'
+	Option Explicit
+	Private Sub AckAlarms_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AckAlarms_Click", "Begin subroutine")
+	S2KAlarmViewer1.AckSelection
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "AckAlarms_Click", Err.Description)
+	End Sub
+	
+	Private Sub AckAll_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AckAll_Click", "Begin subroutine")
+	S2KAlarmViewer1.AckAll
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "AckAll_Click", Err.Description)
+	End Sub
+	
+	Private Sub AckPage_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AckPage_Click", "Begin subroutine")
+	S2KAlarmViewer1.AckPage
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "AckAlarms_Click", Err.Description)
+	End Sub
+	
+	Private Sub grpCommandos_Click()
+	 Dim sInspPanelName As String
+	Dim oMimic As Mimic
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpCommandos_Click", "Begin subroutine")
+	    
+	    Me.Windows(1).Top = 0
+	    Me.Windows(1).Left = 545
+	'    If (Mimics.IsOpened("Train_InspectorPanel_Control", ThisMimic.Branch) = True) Then
+	'        Mimics("Train_InspectorPanel_Control", ThisMimic.Branch).Activate
+	'    Else
+	        oMimic = Mimics.Open("Train_InspectorPanel_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True)
+	        oMimic.Activate
+	    ''End If
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "grpInsp_Click", Err.Description)
+	End Sub
+	
+	Private Sub grpInsp_Click()
+	    Dim sInspPanelName As String
+	
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpInsp_Click", "Begin subroutine")
+	    Me.Windows(1).Top = 0
+	    Me.Windows(1).Left = 545
+	    sInspPanelName = Replace(ThisMimic.FileName, "_ROD", "")
+	     If (Mimics.IsOpened(sInspPanelName, ThisMimic.Branch) = True) Then
+	        Mimics(sInspPanelName, ThisMimic.Branch).Activate
+	    Else
+	        Mimics.Open sInspPanelName, ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    End If
+	   ' Mimics(sInspPanelName, ThisMimic.Branch).Activate
+	    'ThisMimic.Close fvDoNotSaveChanges
+	  
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "grpInsp_Click", Err.Description)
+	End Sub
+	Private Sub Mimic_Open()
+	    Dim sTrainID As String
+	    
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpInsp_Click", "Begin subroutine")
+	    Variables.Item(ThisMimic.Branch & ".Btn3Click%") = True
+	
+	    sTrainID = Replace(Me.Branch, "OPCCluster:Train", "Train_")
+	    S2KAlarmViewer1.SetGroups "Area/Trains/" & sTrainID
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Open", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,238,238,238,0,0,0
+	COLOR,5,255,255,255,0,0,0
+COLORS,END
+O,BEGIN,OCX,"S2KAlarmViewer1"
+	B,8,9,524,245,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,GRP,"AckAlarms"
+	B,42,257,167,283,42,283,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape1"
+		B,167,283,42,257,167,283,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,T,"Text3"
+		B,44,258,165,282,44,282,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,44,258,0,0,FONT,1,"",37,FONT,1,"",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Acknowledge",FONT,2,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"Reconocer",FONT,2,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,GRP,"AckPage"
+	B,199,257,334,283,199,283,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape3"
+		B,334,283,199,257,334,283,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,T,"Text4"
+		B,201,258,332,282,201,282,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,201,258,0,0,FONT,2,"Reconocer",37,FONT,2,"Reconocer",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Acknowledge Page",FONT,2,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"Reconocer Pagina",FONT,2,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,GRP,"AckAll"
+	B,365,257,491,283,365,283,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape4"
+		B,490,283,365,257,490,283,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,T,"Text5"
+		B,365,258,491,282,365,282,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,365,258,0,0,FONT,2,"Reconocer Pagina",37,FONT,2,"Reconocer Pagina",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Acknowledge All",FONT,2,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"Reconocer Todas",FONT,2,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,L,"Poly1"
+	B,0,1,206,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	PP,0,1,206,1
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Btn3Click%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,309,1,528,1,309,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	PP,309,1,528,1
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Btn3Click%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,I,"Poly4"
+	B,311,2,527,2,422,23,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,311,2,423,2,527,2
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Btn3Click%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,I,"Poly3"
+	B,0,2,199,287,-1,23,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,0,287,0,2,199,2
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"Btn3Click%"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END

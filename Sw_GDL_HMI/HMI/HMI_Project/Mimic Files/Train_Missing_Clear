@@ -1,0 +1,483 @@
+ASCII32,7,10,2019,10:3,15,1.1
+W,BEGIN,"Train_Missing_Clear","Confirmation_dialog_Train_Missing_Clearing"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,794,503
+	SIZE,330,190,330,190,0,0,0,1680,1050,324,166
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Missing train clearing"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tren Perdido Eliminar"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,1,612,400
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Train_Missing_Clear.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	
+	' OPC tags used for retrieving data
+	Private Const c_strTrainUniqueIDTag As String = ".HMITrain.iTrainID"
+	Private Const c_strTrainHMITrainIDTag As String = ".Attributes.HMITETrain.bstrPlug_6"
+	
+	' OPC tag used for command sending
+	Private Const c_strTrainInterposeCmdTag As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeBerth"
+	'* *******************************************************************************************
+	'* Variables
+	'* *******************************************************************************************
+	' OPC variables
+	Dim WithEvents m_OPC_UniqueID As Variable
+	Dim WithEvents m_OPC_HMITrainID As Variable
+	Dim WithEvents m_OPC_TrainInterposeCmd As Variable
+	
+	' Variables
+	Dim m_iUniqueID As Integer
+	Dim m_strHMITrainID As String
+	Dim m_strTrainInterposeCmd As String
+	Dim m_strClusterName As String
+	
+	'* *******************************************************************************************
+	'* Mimic_Open
+	'* *******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_Open", "Begin Subroutine")
+	
+	   
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	    ' Enable the cancellation button
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Active%").Value = True
+	    
+	    ' Extract the cluster name from the branch of the mimic
+	    m_strClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    
+	    Set m_OPC_UniqueID = Variables.Add(ThisMimic.Branch & c_strTrainUniqueIDTag, fvVariableTypeRegister)
+	    Set m_OPC_HMITrainID = Variables.Add(ThisMimic.Branch & c_strTrainHMITrainIDTag, fvVariableTypeText)
+	    Set m_OPC_TrainInterposeCmd = Variables.Add(c_strClusterLevel1 & c_strTrainInterposeCmdTag, fvVariableTypeText)
+	    
+	    ' Subscribes all the OPC variables
+	    If (m_OPC_HMITrainID.EnableEvents = True) Then
+	        m_OPC_HMITrainID_ValueChange
+	    Else
+	        m_OPC_HMITrainID.EnableEvents = True
+	    End If
+	    
+	    
+	    If (m_OPC_UniqueID.EnableEvents = True) Then
+	        m_OPC_UniqueID_ValueChange
+	    Else
+	        m_OPC_UniqueID.EnableEvents = True
+	    End If
+	    
+	    If (m_OPC_TrainInterposeCmd.EnableEvents = True) Then
+	        m_OPC_TrainInterposeCmd_ValueChange
+	    Else
+	        m_OPC_TrainInterposeCmd.EnableEvents = True
+	    End If
+	    
+	
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Mimic_BeforeClose
+	'* *******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	
+	    ' Unsubscribe the OPC variables previously subscribed
+	    If Not m_OPC_UniqueID Is Nothing Then
+	        Variables.Remove (m_OPC_UniqueID.Name)
+	        Set m_OPC_UniqueID = Nothing
+	    End If
+	    
+	    If Not m_OPC_HMITrainID Is Nothing Then
+	        Variables.Remove (m_OPC_HMITrainID.Name)
+	        Set m_OPC_HMITrainID = Nothing
+	    End If
+	    
+	    If Not m_OPC_TrainInterposeCmd Is Nothing Then
+	        Variables.Remove (m_OPC_TrainInterposeCmd.Name)
+	        Set m_OPC_TrainInterposeCmd = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	    
+	'* *******************************************************************************************
+	'* ManageConfirmationButton
+	'* *******************************************************************************************
+	Private Sub ManageConfirmationButton()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "ManageConfirmationButton", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = (m_iUniqueID <> 0)
+	    
+	    ' Set the title label with the HMITrainID
+	    If m_strHMITrainID <> "" Then SetHMITrainID (m_strHMITrainID)
+	
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageConfirmationButton", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Manage the click on OK button
+	'* *******************************************************************************************
+	Private Sub Button_1_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_1_Click", "Begin Subroutine")
+	
+	    If Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value Then
+	    
+	        ' Build string corresponding to the command to be sent
+	        m_strTrainInterposeCmd = "%UniqueID%|" & m_iUniqueID & "|ClearMissing"
+	        m_OPC_TrainInterposeCmd_ValueChange
+	        'MsgBox m_strTrainInterposeCmd
+	        Me.Close
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_Click", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPC_UniqueID_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_UniqueID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_UniqueID_ValueChange", "Begin Subroutine")
+	    
+	    If Check_OPC_Variable(m_OPC_UniqueID) Then
+	        m_iUniqueID = m_OPC_UniqueID.Value
+	    End If
+	    
+	    ManageConfirmationButton
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_UniqueID_ValueChange", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* m_OPC_TrainInterposeCmd_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_TrainInterposeCmd_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_TrainInterposeCmd_ValueChange", "Begin Subroutine")
+	    
+	    If (Check_OPC_Variable(m_OPC_TrainInterposeCmd)) And (m_strTrainInterposeCmd <> "") Then
+	        m_OPC_TrainInterposeCmd.Value = m_strTrainInterposeCmd
+	    End If
+	    
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_TrainInterposeCmd_ValueChange", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPC_HMITrainID_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_HMITrainID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_HMITrainID_ValueChange", "Begin Subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_HMITrainID) Then
+	        m_strHMITrainID = m_OPC_HMITrainID.Value
+	    End If
+	    
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	'* *******************************************************************************************
+	'* SetHMITrainID
+	'* *******************************************************************************************
+	Private Sub SetHMITrainID(strHMITrainID As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "SetHMITrainID", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Title%").Value = Replace(Label_1.Text, "[ID]", strHMITrainID)
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "SetHMITrainID", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_1_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub Button_1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_1_MouseLeave", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = False
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub Button_2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_2_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_2_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub Button_2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, Me.Name, "Button_2_MouseLeave", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = False
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_2_MouseLeave", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,191,191,191,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,64,64,64,0,0,0
+	COLOR,7,0,0,0,0,0,1
+COLORS,END
+O,BEGIN,T,"Button_1"
+	B,136,125,216,150,136,150,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,136,125,0,0,FONT,1,"Si",37,FONT,1,"Si",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"YES",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Si",FONT,1,37
+			ROLE,0,"Si",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim3",0,0,"",""
+		PP,"Button_1_Hover%","Button_1_Active%","",""
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,4,COLOR,4
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Button_2"
+	B,226,125,306,150,226,150,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,226,125,0,0,FONT,1,"No",37,FONT,1,"No",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"NO",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"No",FONT,1,37
+			ROLE,0,"No",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"Train_Missing_Clear","*"
+	A,END
+	A,BEGIN,CBG,"Anim3",0,0,"",""
+		PP,"Button_2_Hover%","Button_2_Active%","",""
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,4,COLOR,4
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+		COL,0,COLOR,1,COLOR,1
+	A,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,380,119,1,40,380,119,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,GRP,"Group1"
+	B,0,303,439,304,0,304,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,303,439,303,0,303,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,303,439,303
+	O,END
+	O,BEGIN,L,"Poly3"
+		B,0,304,439,304,0,304,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,0,304,439,304
+	O,END
+O,END
+O,BEGIN,T,"Text2"
+	B,20,62,295,82,20,82,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,20,62,0,0,FONT,1,"求esea borrar la indicaci▋ del tren?",84,FONT,1,"求esea borrar la indicaci▋ del tren?",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Do you want to clear the missing Train?",FONT,1,84
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"求esea borrar la indicaci▋ del tren?",FONT,1,84
+			ROLE,0,"求esea borrar la indicaci▋ del tren?",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Label_1"
+	B,15,1,130,26,15,26,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,15,1,0,0,FONT,1,"Tren [ID]",37,FONT,1,"Tren [ID]",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Train [ID]",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Tren [ID]",FONT,1,37
+			ROLE,0,"Tren [ID]",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Title%"
+	A,END
+O,END

@@ -1,0 +1,93 @@
+ASCII32,20,9,2018,19:59,38,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: B WZ Command Active
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the Workzone Block Consultation mimic
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Nicole FLORIAN
+	'* Date:                Feburary '13
+	'* Change:              All - CR ALPHA 336470
+	'*
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	           
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	           
+	'* Constants
+	'* ******************************************************
+	'* File name of the "Workzone consultation" mimic
+	Private Const c_strWZBlockConsultMimicName As String = "WZ_BlockConsult"
+	
+	'* Position (Left and Top) of the "Workzone consultation" mimic to be opened
+	Private Const c_lLeftPos As Integer = 1458
+	Private Const c_lTopPos As Integer = 389
+	    
+	'* Variable containing the branch of the block for which the "Workzone consultation" mimic has been opened
+	Private Const c_strWZBlockConsultTag As String = "@WZSelectedBlockConsult%"
+	
+	Private Sub WZCmd_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name & " : " & ThisSymbol.LocalBranch, "WZCmd_MouseUp", "Begin subroutine")
+	    Dim strSelectedBlockBranch As String
+	    Dim strCurrentBlockBranch As String
+	    
+	    '* Only if mouse is right clicked
+	    If (Button = 2) Then
+	        '* Retrieve the branch of the selected block
+	        strSelectedBlockBranch = GetSymbolBranch(ThisSymbol)
+	        
+	        If ((strSelectedBlockBranch <> "") And (Not Variables.Item(c_strWZBlockConsultTag) Is Nothing)) Then
+	            '* Retrieve the branch of the previously selected block
+	            strCurrentBlockBranch = Variables.Item(c_strWZBlockConsultTag).Value
+	            '* If the "WZ consultation" mimic is already opened for another block , close it
+	            If (StrComp(strSelectedBlockBranch, strCurrentBlockBranch, vbTextCompare) <> 0) Then
+	                If (Mimics.IsOpened(c_strWZBlockConsultMimicName, strCurrentBlockBranch) = True) Then
+	                    Mimics.Item(c_strWZBlockConsultMimicName, strCurrentBlockBranch).Close
+	                End If
+	                '* Memorize the branch of the selected block
+	                Variables.Item(c_strWZBlockConsultTag).Value = strSelectedBlockBranch
+	                '* Open the "Workzone consultation" mimic
+	                Mimics.Open c_strWZBlockConsultMimicName, strSelectedBlockBranch, , , , , , , c_lLeftPos, c_lTopPos, True
+	            End If
+	        End If
+	   End If
+	
+	Exit Sub
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name & " : " & ThisSymbol.LocalBranch, "WZCmd_MouseUp", Err.Description)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"WZCmd84"
+	B,502,314,579,391,502,391,65535,0,6400,0,2,0,0
+	O,BEGIN,R,"WZCmd"
+		B,579,314,502,391,579,383,65535,0,6400,0,4,1,1
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		A,BEGIN,ST,"Anim1",0,0,"",""
+			PP,"@BlockWorkZoneList%",0,2,1,0,0,0
+			ADVSENDVALUE,4,WZSessionListOfIDs.Value.bstrValue
+		A,END
+	O,END
+O,END

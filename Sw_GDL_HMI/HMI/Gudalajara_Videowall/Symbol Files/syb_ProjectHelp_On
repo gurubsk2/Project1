@@ -1,0 +1,57 @@
+ASCII32,3,2,2017,14:51,45,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,171,0,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_Click()
+	
+	''Rename
+	
+	iPopupPosition = ThisProject.ActiveMimic.Windows(1).Left
+	
+	    If iPopupPosition > 0 Then
+	        Mimics.Open "Help", "Help", , , , , , , 1680
+	    Else
+	        Mimics.Open "Help", "Help", , , , , , , 0
+	    End If
+	
+	'    Unload Me
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Group176"
+	B,1816,108,1857,150,1816,148,65535,0,6400,0,1,1,1
+	O,BEGIN,BM,"Bitmap3"
+		B,1818,113,1852,146,1818,146,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,"Help button.bmp",1,COLOR,3
+	O,END
+	O,BEGIN,R,"Shape4"
+		B,1857,150,1816,108,1857,150,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,4,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Ayuda"
+				LANG,END
+				LANG,BEGIN,1036
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Impression ‚cran"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

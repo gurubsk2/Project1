@@ -1,0 +1,4 @@
+<SkipTrain>
+	<Train>Identificador único do trem (UniqueID)</Train>
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</SkipTrain>

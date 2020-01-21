@@ -1,0 +1,413 @@
+ASCII32,7,2,2017,1:45,37,1.1
+W,BEGIN,"GDL_Block_Information_Tab","GDL_Block_Information_Tab"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,11,38
+	SIZE,272,258,272,258,0,0,0,1366,768,272,258
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,""
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_Block_Information_Tab.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Block_InformationTab
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of values in the "Block_InformationTab"
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                June 2013
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose: On opening the mimic, add OPC variable to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	''Private Sub Mimic_Open()
+	''On Error GoTo ErrorHandler
+	''    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	''    Dim strOPCClusterName As String
+	''
+	''    '* Retrieve the OPC Cluster name from the mimic branch
+	''    strOPCClusterName = Iconis_MOD_General.GetOPCCluster
+	''
+	''
+	''Exit Sub
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	''End Sub
+	''
+	'''* Function: Mimic_BeforeClose
+	'''* Purpose: Before closing the mimic, remove OPC variables previously subscribed
+	'''* ************************************************************************************************
+	''Private Function Mimic_BeforeClose() As Boolean
+	''On Error GoTo ErrorHandler
+	''    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	''
+	''
+	''Exit Function
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	''End Function
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,255,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,0,0,0,0,35,0
+	COLOR,5,0,0,0,0,44,0
+	COLOR,6,0,0,0,0,46,0
+	COLOR,7,113,111,100,0,0,0
+	COLOR,8,255,255,255,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape4"
+	B,257,177,4,125,257,177,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text6"
+	B,12,115,157,131,12,131,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,12,115,0,0,FONT,1,"Detecci¢n secundaria",37,FONT,1,"Detecci¢n secundaria",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Detecci¢n secundaria",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text28"
+	B,103,138,239,162,103,162,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,4,COLOR,6,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+	PP,1,103,138,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMISDOccupancyStatus.Template.iEqpState",""
+		ADVFORMAT,2,"[<1]\'Si\';[<2]\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';[<2]\'No\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,257,108,4,16,257,108,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text1"
+	B,12,6,69,22,12,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,12,6,0,0,FONT,1,"Bloque",37,FONT,1,"Bloque",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,105,22,241,46,105,46,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,4,COLOR,6,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+	PP,1,105,22,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMIBlockStatus.Template.iEqpState",""
+		ADVFORMAT,2,"[<1]\'Si\';\'No\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Si\';\'No\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,15,26,95,42,15,42,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,15,26,0,0,FONT,2,"Ocupaci¢n",38,FONT,2,"Ocupaci¢n",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,2,38
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,105,50,241,74,105,74,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,4,COLOR,6,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+	PP,1,105,50,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"= (GlobalGAMAStatus.Value AND eGAMAStatus%)",""
+		ADVFORMAT,2,"[=1]\'Activado\';\'Inhibido\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=1]\'Activado\';\'Inhibido\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,44,54,95,70,44,70,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,44,54,0,0,FONT,2,"GAMA",38,FONT,2,"GAMA",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"GAMA",FONT,2,38
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,105,78,241,102,105,102,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,4,COLOR,6,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+	PP,1,105,78,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HasTSRApplied.Value",""
+		ADVFORMAT,2,"[<1]\'On\';\'Off\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'On\';\'Off\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text9"
+	B,57,82,95,98,57,98,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,57,82,0,0,FONT,2,"RTV",38,FONT,2,"RTV",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"RTV",FONT,2,38
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text11"
+	B,15,143,95,159,15,159,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,15,143,0,0,FONT,2,"Ocupaci¢n",38,FONT,2,"Ocupaci¢n",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ocupaci¢n",FONT,2,38
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,257,246,4,194,257,246,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text15"
+	B,12,184,129,200,12,200,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,0,12,184,0,0,FONT,1,"Bloque en Buffer",37,FONT,1,"Bloque en Buffer",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloque en Buffer",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text16"
+	B,105,208,241,232,105,232,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,4,COLOR,6,0,COLOR,8,0,COLOR,8,0,COLOR,7,0,COLOR,7
+	PP,1,105,208,0,0,FONT,2," ",37,FONT,2," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"HMIBufferStatus.Template.iEqpState",""
+		ADVFORMAT,2,"[<1]\'Arriba\';[<2]\'Abajo\';[<3]\'Ambos\';[<4]\'Ninguno\';\'?\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'Arriba\';[<2]\'Abajo\';[<3]\'Ambos\';[<4]\'Ninguno\';\'?\'"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<2]\'-\';[<3]\'M¡nimo\';[<4]\'Nominal\';[<5]\'M ximo\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text17"
+	B,15,212,95,228,15,228,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,15,212,0,0,FONT,2,"Aplicaci¢n",38,FONT,2,"Aplicaci¢n",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicaci¢n",FONT,2,38
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tempo de percurso imposto",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

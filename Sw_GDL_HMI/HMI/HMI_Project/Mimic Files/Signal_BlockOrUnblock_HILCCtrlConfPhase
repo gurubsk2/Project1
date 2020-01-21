@@ -1,0 +1,370 @@
+ASCII32,11,10,2019,8:42,38,1.1
+W,BEGIN,"/Signal_BlockOrUnblock_HILCCtrlConfPhase","SignalBlockOrUnblockHILCCtrlConfPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,275,100,275,100,0,0,0,1280,1024,275,100
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Signal_BlockOrUnblock_HILCCtrlConfPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Signal Block HILC Ctrl Conf Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*              - the combo box containing the list of names of Signals belonging to the track plan
+	'*              - the name of the OPC variable associated to the signal selected(or entered) by the
+	'*                operator in the combobox
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                July '08
+	'* Change:              All
+	
+	'* Author:              Danish Draboo
+	'* Date:                Oct '08
+	'* Change:              Updated as per RSAD release 5
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Nov '08
+	'* Change:              Fix anomalies
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              CR ALPHA 118291
+	'*                      Modify FillComboBox subroutine
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              CR ALPHA 119218
+	'*                      Remove OPC_HILCConfirmation variable
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '10
+	'* Change:              CR ALPHA 185097
+	
+	'* Author:              Olivier TAYEG
+	'* Date:                March '11
+	'* Change:              CR ALPHA 218696
+	'*                      Display only the Signals declared as blockable
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '11
+	'* Change:              CR ALPHA 236912
+	'*                      Add the following HILC commands:
+	'*                      "Block as destination" and "Un-block as destination"
+	
+	'* Author:              Vinay C.R
+	'* Date:                Feb '15
+	'* Change:              CR 00602340
+	'*                      HILC command with Preparation phase and Conformation phase
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	    
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSeparator As String = "\n"
+	
+	'* Used to read the XML format string
+	Private Const c_strHILCType As String = "Signal"
+	Private Const c_strIDAttr As String = "ID"
+	Private Const c_strNameAttr As String = "Name"
+	Private Const c_strAreaAttr As String = "Area"
+	Private Const c_strOriginBlockableAttr As String = "Blockable"
+	Private Const c_strDestinationBlockableAttr As String = "DestinationBlockable"
+	
+	'* Path of the OPC variable containing the list of devices belonging to the track plan
+	Private Const c_strDevicesListTag As String = "IconisHMI.SignalsList.Information.Value"
+	
+	'* OPC variable
+	'*******************************************************
+	'* OPC variable containing the list of devices belonging to the track plan
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: Adds the OPC variable to the collection of all permanently subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	  
+	    Dim strClusterName As String
+	  
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    '* Add a variable containing the OPC variable name of the device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%", fvVariableTypeText
+	    
+	    '* Add a variable containing the OPC variable names of each device
+	    '* belonging to the track plan
+	    Variables.Add ThisMimic.Branch & ".ListOfOPCVarNames%", fvVariableTypeText
+	   
+	    '* Add variable containing the list of devices to the list of variables
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    Set m_OPC_DevicesNamesList = Variables.Add(strClusterName & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_DevicesNamesList.Status = fvVariableStatusGood) And (m_OPC_DevicesNamesList.EnableEvents = True)) Then
+	        m_OPC_DevicesNamesList_ValueChange
+	    Else
+	        m_OPC_DevicesNamesList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Unsubscribe the OPC variables previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%")
+	    Variables.Remove (ThisMimic.Branch & ".ListOfOPCVarNames%")
+	       
+	    If Not (m_OPC_DevicesNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_DevicesNamesList.Name)
+	        Set m_OPC_DevicesNamesList = Nothing
+	    End If
+	   
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* SubRoutine: m_OPC_DevicesNamesList_ValueChange
+	'* Purpose: Manages filling of the Combo box
+	'* ******************************************************************************************
+	Private Sub m_OPC_DevicesNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	    If Check_OPC_Variable(m_OPC_DevicesNamesList) Then
+	    '* Fill the combo box
+	        FillComboBox
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: ComboBoxDeviceNames_Change
+	'* Purpose: Manages getting the value selected in the combo box
+	'* ******************************************************************************************
+	Private Sub ComboBoxDeviceNames_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDeviceNames_Change", "Begin Subroutine")
+	    
+	    If (ComboBoxDeviceNames.ListIndex > -1) Then
+	        Dim OPCVarNamesArray() As String
+	    
+	        OPCVarNamesArray = Split(Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value, c_strSeparator)
+	        If (UBound(OPCVarNamesArray) > 0) Then
+	            '* Memorize the OPC variable name of the selected device
+	            Variables.Item(ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%").Value = OPCVarNamesArray(ComboBoxDeviceNames.ListIndex)
+	            
+	            '* Enable the OK button of the parent mimic
+	            Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = 0
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDeviceNames_Change", Err.Description)
+	End Sub
+	
+	'* SubRoutine: FillComboBox
+	'* Purpose:
+	'*  - Read the xml string containing the names of the devices belonging to the track plan
+	'*  - Fill the combo box
+	'*  - Memorizes the list of OPC variable names of each device belonging to the track plan
+	'* ******************************************************************************************
+	Private Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	   
+	    Dim strXML As String
+	    
+	    '* Clear the combo box
+	    ComboBoxDeviceNames.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxDeviceNames.Value = ""
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    strXML = m_OPC_DevicesNamesList.Value
+	    If (strXML <> "") Then
+	        Dim oDoc As DOMDocument
+	  
+	        Set oDoc = New DOMDocument
+	        '* Open the XMl file
+	        If (oDoc.loadXML(strXML)) Then
+	            Dim oElementsList As IXMLDOMNodeList
+	            Dim oElement As IXMLDOMElement
+	
+	            If (Variables.Item(ThisMimic.Branch & ".SignalExtremityType%").Value = 0) Then '* Origin signal
+	                '* Case of origin signal ->
+	                '* Enumerate the Signals with ID<>0 and Area=<strArea> and Blockable = 1:
+	                '* XPath string: //Signal[@ID][@Name][@Area="<strArea>"][Blockable="1"]
+	                Set oElementsList = oDoc.documentElement.selectNodes("//" & c_strHILCType & "[@" & c_strIDAttr & "][@" & c_strOriginBlockableAttr & "=""1""]")
+	            ElseIf (Variables.Item(ThisMimic.Branch & ".SignalExtremityType%").Value = 1) Then '* Destination signal
+	                '* Case of destination signal ->
+	                '* Enumerate the Signals with ID<>0 and Area=<strArea> and Blockable = 1:
+	                '* XPath string: //Signal[@ID][@Name][@Area="<strArea>"][DestinationBlockable="1"]
+	                Set oElementsList = oDoc.documentElement.selectNodes("//" & c_strHILCType & "[@" & c_strIDAttr & "][@" & c_strNameAttr & "][@" & c_strDestinationBlockableAttr & "=""1""]")
+	            End If
+	            For Each oElement In oElementsList
+	                Dim strVariableName As String
+	                Dim strName As String
+	                Dim strAreaName As String
+	                strVariableName = Format(oElement.getAttribute(c_strIDAttr))
+	                strName = Format(oElement.getAttribute(c_strNameAttr))
+	                strAreaName = Format(oElement.getAttribute(c_strAreaAttr))
+	                If ((strName <> "") And (strVariableName <> "")) And Split(strAreaName, "_")(1) = Split(ThisMimic.Branch, "_")(2) Then
+	                ComboBoxDeviceNames.AddItem (strName)
+	              
+	                Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value = Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value & _
+	                                                                                 strVariableName & c_strSeparator
+	                                                                                 
+	                  End If
+	            Next oElement
+	            
+	            '* Enable the combo box (if there exists at least one item)
+	            If (ComboBoxDeviceNames.ListCount > 0) Then
+	                ComboBoxDeviceNames.Enabled = True
+	            End If
+	            Set oElementsList = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-13,0,400,0,0,"Tahoma",0,0
+	FONT,4,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"shpConfirmation"
+	B,265,90,2,16,267,90,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtConfirmation"
+	B,12,9,109,25,12,25,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,12,9,0,0,FONT,1,"Confirmation",36,FONT,1,"Confirmation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmaci¢n",FONT,2,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Confirmaci¢n",FONT,3,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtOriginSignal"
+	B,36,35,85,51,36,51,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,36,35,0,0,FONT,1,"Origin signal",37,FONT,1,"Origin signal",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Se¤al de origen",FONT,4,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBoxDeviceNames"
+	B,35,53,201,73,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

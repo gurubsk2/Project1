@@ -1,0 +1,800 @@
+ASCII32,19,9,2018,15:55,7,1.1
+W,BEGIN,"View_LineOperatingModes","ViewLineOperatingModes"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,639,342
+	SIZE,640,512,640,512,0,0,0,1280,1024,634,490
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modo de Operaci¢n de la L¡nea"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Modo de Operaci¢n de la L¡nea"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,600,350
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"View_LineOperatingModes.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View Line Operating Modes
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of line operating modes
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '09
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '10
+	'* Change:              Fix the CR ALPHA 183404
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '11
+	'* Change:              Fix the CR ALPHA 224371
+	
+	'* Author:              VALVERDE Artur
+	'* Date:                March '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'Moved to mod_UO_General
+	
+	'''* Constants
+	'''* ******************************************************
+	''''Private Const c_strNextLineOperatingModesListTag As String = ".NextOperatingModesList"
+	''Private Const c_strMode As String = "NextMode"
+	''Private Const c_strModeIndex As String = "Index"
+	''Private Const c_strModeName As String = "Name"
+	''
+	'''Operating Mode
+	''Private Const c_strNextLineOperatingModesListTag    As String = ".ModeMgmt.NextOperatingModesList"
+	''Private Const c_strCurrentOperatingModeTag          As String = ".ModeMgmt.ModeVal"
+	''Private Const c_strCmdOperModeCarouselConfigMode    As String = "MainUO.CarouselsConfiguration.Mode"
+	''Private Const c_strCarouselConfOperatingModeList    As String = "MainUO.CarouselsConfiguration.NextOperatingModesList"
+	''Private Const c_strCmdOperModeTPBMgrConfig          As String = "MainUO.TPBModule.TPBMgr.Configuration"
+	''Private Const c_strCmdOperModeMgmtMode              As String = ".ModeMgmt.Mode"
+	''Private Const c_strCmdAutoWithTTRegulation          As String = "MainKernelExtended.ATRModule.ATRTPMA.AtrExtendedStrategy"
+	'''TT
+	''Private Const c_strChargedTTName                    As String = "MainKernelExtended.TTCModule.DBLoader.TimetableName"
+	
+	'* OPC variable
+	'* ******************************************************
+	
+	'OPC
+	'Dim m_OPC_CmdOperModeCarouselConfigMode             As Variable
+	'Dim m_OPC_CarouselConfOperatingModeList             As Variable
+	'Dim m_OPC_CmdOperModeTPBMgrConfig                   As Variable
+	'Dim m_OPC_CmdOperModeMgmtMode                       As Variable
+	'Dim m_OPC_CmdAutoWithTTRegulation                   As Variable
+	Dim WithEvents m_OPC_NextLineOperatingModesList     As Variable
+	Dim WithEvents m_OPC_CurrentOperModeVal             As Variable
+	Dim WithEvents m_OPC_ChargedTTName                  As Variable
+	
+	'Local Param
+	Dim WithEvents m_Local_AutoWithTTParam              As Variable
+	Dim WithEvents m_Local_AutoWithoutTTParamService    As Variable
+	Dim WithEvents m_Local_AutoWithoutTTParamStrategy   As Variable
+	Dim WithEvents m_Local_AutoWithoutTTParamRegulation As Variable
+	
+	Dim HDWEvents                                       As HDW.IHeadwayConfigurationCtrl
+	
+	
+	
+	
+	Private Sub btn0_Click()
+	
+	End Sub
+	
+	Private Sub btn2_Click()
+	
+	End Sub
+	
+	Private Sub CurrentLineOperatingMode_Click()
+	
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'*  On opening the mimic,
+	'*      - Init variables used in the animations of buttons
+	'*      - Add OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    '* Init variable used in the animations of buttons
+	    Variables.Item(ThisMimic.Branch & ".ButtonsEnabled%").Value = 1
+	    
+	    '* Disable buttons of line operating modes
+	    DisableModeButtons
+	    
+	'    '* Variable containing the list of possible operating modes from the current operating mode
+	'    Set m_OPC_NextLineOperatingModesList = Variables.Add(ThisMimic.Branch & c_strNextLineOperatingModesListTag, fvVariableTypeText)
+	'    If ((m_OPC_NextLineOperatingModesList.Status = fvVariableStatusGood) And (m_OPC_NextLineOperatingModesList.EnableEvents = True)) Then
+	'        m_OPC_NextLineOperatingModesList_ValueChange
+	'    Else
+	'        m_OPC_NextLineOperatingModesList.EnableEvents = True
+	'    End If
+	'
+	
+	    Call AddSetVariables
+	    
+	    Set HDWEvents = New HDW.IHeadwayConfigurationCtrl
+	
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*  Before closing the Mimic, remove the OPC variable previously subscribed
+	'* ***************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    If Not (m_OPC_NextLineOperatingModesList Is Nothing) Then
+	        Variables.Remove (m_OPC_NextLineOperatingModesList.Name)
+	        Set m_OPC_NextLineOperatingModesList = Nothing
+	    End If
+	    
+	    Set HDWEvents = Nothing
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: m_OPC_NextLineOperatingModesList_ValueChange
+	'*  Manages the list of possible operating modes from the current operating mode
+	'* ********************************************************************************
+	Private Sub m_OPC_NextLineOperatingModesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_NextLineOperatingModesList.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", "The status of " & m_OPC_NextLineOperatingModesList.Name & " is Waiting")
+	    ElseIf (m_OPC_NextLineOperatingModesList.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", "The status of " & m_OPC_NextLineOperatingModesList.Name & " is Config Error")
+	    ElseIf (m_OPC_NextLineOperatingModesList.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", "The status of " & m_OPC_NextLineOperatingModesList.Name & " is Not Connected")
+	    ElseIf (m_OPC_NextLineOperatingModesList.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", "The Quality of " & m_OPC_NextLineOperatingModesList.Name & " is not good")
+	    Else '* Status and quality of the OPC variable are valid
+	        If (m_OPC_NextLineOperatingModesList.Value <> "") Then
+	            '* Read the XML string
+	            ReadNextOperatingModesList
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_NextLineOperatingModesList_ValueChange", Err.Description)
+	End Sub
+	          
+	'* Subroutine: DisableModeButtons
+	'*  Disable buttons of line operating modes
+	'* ********************************************************************************
+	Private Sub DisableModeButtons()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "DisableModeButtons", "Begin Subroutine")
+	
+	    'Variables.Item(ThisMimic.Branch & ".Button0Enabled%").Value = 1
+	    Variables.Item(ThisMimic.Branch & ".Button1Enabled%").Value = 1
+	    Variables.Item(ThisMimic.Branch & ".Button2Enabled%").Value = 1
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "DisableModeButtons", Err.Description)
+	End Sub
+	
+	''*  SubRoutine: ReadNextOperatingModesList
+	''*    - Read the xml string containing the list of possible linr operating modes
+	''*      from the current operating mode
+	''*    - for each possible mode, enable the associated button
+	''* ******************************************************************************************
+	'Public Sub ReadNextOperatingModesList()
+	'On Error GoTo ErrorHandler
+	'    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadNextOperatingModesList", "Begin Subroutine")
+	'
+	'    Dim oDoc As DOMDocument
+	'
+	'    '* Disable buttons
+	'    DisableModeButtons
+	'
+	'    Set oDoc = New DOMDocument
+	'    '* Load the XML string
+	'    If (oDoc.loadXML(m_OPC_NextLineOperatingModesList.Value)) Then
+	'        Dim FirstNodeLevel As IXMLDOMNodeList
+	'
+	'        Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strMode)
+	'        If (FirstNodeLevel.length <> 0) Then
+	'            Dim oNodeClass As IXMLDOMNode
+	'
+	'            For Each oNodeClass In FirstNodeLevel
+	'                Dim oAttrMode As IXMLDOMAttribute
+	'                Dim strIndex As String
+	'
+	'                '* Get the attribute "Index" of the mode
+	'                For Each oAttrMode In oNodeClass.Attributes
+	'                   If (StrComp(oAttrMode.nodeName, c_strModeIndex, vbTextCompare) = 0) Then
+	'                        strIndex = oAttrMode.nodeValue
+	'                        Exit For
+	'                    End If
+	'                Next
+	'
+	'               If (strIndex <> "") Then
+	'                    '* Enable the corresponding button if switching from the current mode to this mode is possible
+	'                    Select Case Val(strIndex)
+	'                        Case 0
+	'                            Variables.Item(ThisMimic.Branch & ".Button0Enabled%").Value = 1
+	'                        Case 1
+	'                            Variables.Item(ThisMimic.Branch & ".Button1Enabled%").Value = 1
+	'                        Case 2
+	'                            Variables.Item(ThisMimic.Branch & ".Button2Enabled%").Value = 1
+	'                    End Select
+	'                End If
+	'            Next
+	'        End If
+	'        Set FirstNodeLevel = Nothing
+	'    End If
+	'    Set oDoc = Nothing
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ReadNextOperatingModesList", Err.Description)
+	'End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	'********************************************************
+	'UO Functions
+	'********************************************************
+	
+	'* Subroutine: SendCommand
+	'*  Contains the commands that will be send to the server
+	'* ********************************************************************************
+	Private Sub SendCommand(ByVal intCmd As Integer)
+	On Error GoTo ErrorHandler
+	
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "SendCommand", "Begin Subroutine")
+	    
+	    Select Case intCmd
+	        Case 1 'Manual
+	            m_OPC_CmdOperModeCarouselConfigMode.Value = 0
+	            m_OPC_CmdOperModeTPBMgrConfig.Value = "<Parameters><Path Mode=" & Chr(34) & "0" & Chr(34) & "/></Parameters>"
+	            m_OPC_CmdOperModeMgmtMode.Value = 0
+	            '[ATS_CF_UO_SyAD_581]
+	            '    On MainUO.CarouselsConfiguration.Mode the value 0
+	            '    On MainUO.TPBModule.TPBMgr.Configuration plug <Parameters><Path Mode="0"/></Parameters>
+	            '    On CATS.ModeMgmt.Mode plug the value 0
+	
+	        Case 2 'Automatic With TT
+	            m_OPC_CmdOperModeCarouselConfigMode.Value = 0
+	            m_OPC_CmdOperModeTPBMgrConfig.Value = "<Parameters><Path Mode=" & Chr(34) & "0" & Chr(34) & "/><Path Mode=" & Chr(34) & "1" & Chr(34) & " TPBPatternID=" & Chr(34) & "DeducedFromTimetable" & Chr(34) & "/></Parameters>"
+	            m_OPC_CmdOperModeMgmtMode.Value = 2
+	            m_OPC_CmdAutoWithTTRegulation.Value = m_Local_AutoWithTTParam.Value
+	            '[ATS_CF_UO_SyAD_581]
+	            'Before changing the line operating mode to Automatic with Timetable mode, HMI shall first ensure that a timetable is loaded by checking either that a timetable was loaded previously and or that the timetable loading was succesful (see F1).
+	            '[ATS_CF_UO_SyAD_582]
+	            'If a timetable is loaded, to switch to Automatic with Timetable mode, HMI shall write:
+	            '    On MainUO.CarouselsConfiguration.Mode the value 0
+	            '    On MainUO.TPBModule.TPBMgr.Configuration plug <Parameters><Path Mode="0"/><Path Mode="1" TPBPatternID="DeducedFromTimetable"/></Parameters>
+	            '    On CATS.ModeMgmt.Mode plug the value 2
+	            '    On MainKernelExtended.ATRModule.ATRTPMA.AtrExtendedMode the value 0 for ScheduleRegulation, the value 1 for Schedule and Headway regulation.
+	
+	        Case 3 'Automatic Without TT
+	            'MsgBox "COMMAND - Automatic Without TT"
+	            'MsgBox "m_Local_AutoWithoutTTParamRegulation.Value:" & m_Local_AutoWithoutTTParamRegulation.Value
+	            
+	            '[ATS_CF_UO_SyAD_1200]
+	            '    Select the set of carousels (see F2.1)
+	            Variables.Item(c_strClusterLevel2 & "MainUO.CarouselsConfiguration.Mode").Value = m_Local_AutoWithoutTTParamService.Value 'the identifier of the service (Index from NextOperatingModesList).
+	            
+	            '    Select the regulation strategy (see F2.2)
+	            Variables.Item(c_strClusterLevel2 & "MainKernelExtended.TPMModule.TPMTPC.TripTimes").Value = m_Local_AutoWithoutTTParamStrategy.Value 'Id of regulation strategy
+	            
+	            '    Select the headway (see F2.3)
+	            HDWEvents.SetHeadways m_Local_AutoWithoutTTParamStrategy.Value, CStr(m_Local_AutoWithoutTTParamRegulation.Value)
+	            
+	            '    Write on MainUO.TPBModule.TPBMgr.Configuration plug:
+	            Variables.Item(c_strClusterLevel2 & "MainUO.TPBModule.TPBMgr.Configuration").Value = CreateXMLTPMConfiguration() 'Id of regulation strategy
+	            
+	            '    Write on CATS.ModeMgmt.Mode plug the value 1.
+	            m_OPC_CmdOperModeMgmtMode.Value = 1
+	            
+	            '
+	            'The loops, patterns and initial/final maneuvers are found in MainUO.CarouselsConfiguration.NextOperatingModesList (see F2.1).
+	        Case Else
+	        
+	    End Select
+	    
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SendCommand", "End Subroutine")
+	    
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "SendCommand", "EXCEPTION: " & Err.Description)
+	
+	End Sub
+	
+	
+	'* Subroutine: CreateXMLTPMConfiguration
+	'*  Create the xml with the parameters to change the TPBMgr
+	'* ********************************************************************************
+	Private Function CreateXMLTPMConfiguration() As String
+	On Error GoTo ErrorHandler
+	Dim ServiceLoop()       As ServiceLoops
+	Dim intCountLoops       As Integer
+	Dim intCountMvts        As Integer
+	Dim oDoc                As DOMDocument
+	Dim oParameters         As IXMLDOMElement
+	Dim oPath               As IXMLDOMElement
+	Dim oAttribute          As IXMLDOMAttribute
+	    Call Mimic_Open
+	    Call ReadServiceLoop(m_Local_AutoWithoutTTParamService.Value, ServiceLoop)
+	    
+	    Set oDoc = New DOMDocument
+	    Set oParameters = oDoc.createElement("Parameters")
+	    Set oPath = oDoc.createElement("Path")
+	    oParameters.appendChild oPath
+	    
+	    'With one <Path Mode="Mode"> element per pattern involved in the selected service
+	    oPath.setAttribute "Mode", 0
+	
+	    For intCountLoops = LBound(ServiceLoop) To UBound(ServiceLoop)
+	        
+	        For intCountMvts = LBound(ServiceLoop(intCountLoops).MvtList) To UBound(ServiceLoop(intCountLoops).MvtList)
+	            Set oPath = oDoc.createElement("Path")
+	                
+	                '- Mode = 2 if the pattern is part of a loop configured in constant headway regulation, 3 for dwell time
+	                oPath.setAttribute "Mode", GetModeType(m_Local_AutoWithoutTTParamRegulation.Value)
+	                
+	                '- PatternID = Identifier of the pattern from the loop
+	                oPath.setAttribute "TPBPatternID", ServiceLoop(intCountLoops).MvtList(intCountMvts).PatternId
+	                
+	                '- InitialID = Identifier of the initial maneuver related to the pattern, attribute not generated if initial maneuver is 0
+	                If CStr(ServiceLoop(intCountLoops).MvtList(intCountMvts).InitialManeuverId) <> "0" Then
+	                    
+	                    oPath.setAttribute "InitialMvtID", CStr(ServiceLoop(intCountLoops).MvtList(intCountMvts).InitialManeuverId)
+	                    
+	                End If
+	                
+	                oPath.setAttribute "InstanciationMode", "4"
+	                
+	                'if mode is DWELLTIME DO NOT add attribute
+	                If GetModeType(m_Local_AutoWithoutTTParamRegulation.Value) <> 3 Then
+	                    
+	                    oPath.setAttribute "SpacingValue", "DeducedFromSelectedHeadways"
+	                    
+	                End If
+	                
+	                oParameters.appendChild oPath
+	                
+	        Next intCountMvts
+	        
+	    Next intCountLoops
+	    oDoc.appendChild oParameters
+	    
+	    CreateXMLTPMConfiguration = oDoc.xml
+	    
+	    Set oDoc = Nothing
+	
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "CreateXMLTPMConfiguration", "EXCEPTION: " & Err.Description)
+	End Function
+	
+	
+	'*  SubRoutine: ReadNextOperatingModesList
+	'*    - Read the xml string containing the list of possible linr operating modes
+	'*      from the current operating mode
+	'*    - for each possible mode, enable the associated button
+	'* ******************************************************************************************
+	Public Sub ReadNextOperatingModesList()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadNextOperatingModesList", "Begin Subroutine")
+	    
+	    Dim oDoc As DOMDocument
+	    
+	    
+	    Set oDoc = New DOMDocument
+	    '* Load the XML string
+	    If (oDoc.loadXML(m_OPC_NextLineOperatingModesList.Value)) Then
+	        Dim FirstNodeLevel As IXMLDOMNodeList
+	        
+	        Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strMode)
+	        If (FirstNodeLevel.length <> 0) Then
+	            Dim oNodeClass As IXMLDOMNode
+	            
+	            For Each oNodeClass In FirstNodeLevel
+	                Dim oAttrMode As IXMLDOMAttribute
+	                Dim strIndex As String
+	                
+	                '* Get the attribute "Index" of the mode
+	                For Each oAttrMode In oNodeClass.Attributes
+	                   If (StrComp(oAttrMode.nodeName, c_strModeIndex, vbTextCompare) = 0) Then
+	                        strIndex = oAttrMode.nodeValue
+	                        Exit For
+	                    End If
+	                Next
+	            Next
+	        End If
+	        Set FirstNodeLevel = Nothing
+	    End If
+	    Set oDoc = Nothing
+	
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadNextOperatingModesList", "End Subroutine")
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ReadNextOperatingModesList", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	'* Subroutine: AddSetVariables
+	'* Open mimic and operating mode modification
+	'*      - reset the mimic information
+	'* ************************************************************************************************
+	Private Sub AddSetVariables()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddSetVariables", "Begin Subroutine")
+	    
+	    'Command variables
+	    Set m_OPC_CmdOperModeCarouselConfigMode = Variables.Item(c_strClusterLevel2 & c_strCmdOperModeCarouselConfigMode)
+	    Set m_OPC_CarouselConfOperatingModeList = Variables.Item(c_strClusterLevel2 & c_strCarouselConfOperatingModeList)
+	    Set m_OPC_CmdOperModeTPBMgrConfig = Variables.Item(c_strClusterLevel2 & c_strCmdOperModeTPBMgrConfig)
+	    Set m_OPC_CmdOperModeMgmtMode = Variables.Item(ThisMimic.Branch & c_strCmdOperModeMgmtMode)
+	    Set m_OPC_CmdAutoWithTTRegulation = Variables.Item(c_strClusterLevel2 & c_strCmdAutoWithTTRegulation)
+	    
+	    'Variable to disable/enable controls
+	'    Set m_Local_AutoWithTTEnabled = Variables.Add(ThisMimic.Branch & c_strAutoWithTTEnabledRegulationModeLocalTag, fvVariableTypeBit)
+	'    Set m_Local_AutoWithoutTTEnabledService = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTEnabledServiceLocalTag, fvVariableTypeBit)
+	'    Set m_Local_AutoWithoutTTEnabledStrategy = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTEnabledStrategyLocalTag, fvVariableTypeBit)
+	'    Set m_Local_AutoWithoutTTEnabledRegulation = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTEnabledRegulationLocalTag, fvVariableTypeBit)
+	'
+	    
+	'    Set m_OPC_ChargedTTName = Variables.Add(c_strClusterLevel2 & c_strChargedTTName, fvVariableTypeText)
+	'    If ((m_OPC_ChargedTTName.Status = fvVariableStatusGood) And (m_OPC_ChargedTTName.EnableEvents = True)) Then
+	'        m_OPC_ChargedTTName_ValueChange
+	'    Else
+	'        m_OPC_ChargedTTName.EnableEvents = True
+	'    End If
+	    
+	'    '* Variable of params
+	'    Set m_Local_AutoWithTTParam = Variables.Add(ThisMimic.Branch & c_strAutoWithTTParamRegulationModeLocalTag, fvVariableTypeRegister)
+	'    If ((m_Local_AutoWithTTParam.Status = fvVariableStatusGood) And (m_Local_AutoWithTTParam.EnableEvents = True)) Then
+	'        m_Local_AutoWithTTParam_ValueChange
+	'    Else
+	'        m_Local_AutoWithTTParam.EnableEvents = True
+	'    End If
+	'
+	'    '* Variable of params
+	'    Set m_Local_AutoWithoutTTParamService = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTParamServiceLocalTag, fvVariableTypeRegister)
+	'    If ((m_Local_AutoWithoutTTParamService.Status = fvVariableStatusGood) And (m_Local_AutoWithoutTTParamService.EnableEvents = True)) Then
+	'        m_Local_AutoWithoutTTParamService_ValueChange
+	'    Else
+	'        m_Local_AutoWithoutTTParamService.EnableEvents = True
+	'    End If
+	'
+	'    '* Variable of params
+	'    Set m_Local_AutoWithoutTTParamStrategy = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTParamStrategyLocalTag, fvVariableTypeRegister)
+	'    If ((m_Local_AutoWithoutTTParamStrategy.Status = fvVariableStatusGood) And (m_Local_AutoWithoutTTParamStrategy.EnableEvents = True)) Then
+	'        m_Local_AutoWithoutTTParamStrategy_ValueChange
+	'    Else
+	'        m_Local_AutoWithoutTTParamStrategy.EnableEvents = True
+	'    End If
+	
+	'    '* Variable of params
+	'    Set m_Local_AutoWithoutTTParamRegulation = Variables.Add(ThisMimic.Branch & c_strAutoWithoutTTParamRegulationLocalTag, fvVariableTypeText)
+	'    If ((m_Local_AutoWithoutTTParamRegulation.Status = fvVariableStatusGood) And (m_Local_AutoWithoutTTParamRegulation.EnableEvents = True)) Then
+	'        m_Local_AutoWithoutTTParamRegulation_ValueChange
+	'    Else
+	'        m_Local_AutoWithoutTTParamRegulation.EnableEvents = True
+	'    End If
+	
+	    '* Variable containing the list of possible operating modes from the current operating mode
+	    Set m_OPC_NextLineOperatingModesList = Variables.Item(ThisMimic.Branch & c_strNextLineOperatingModesListTag)
+	    If ((m_OPC_NextLineOperatingModesList.Status = fvVariableStatusGood) And (m_OPC_NextLineOperatingModesList.EnableEvents = True)) Then
+	        m_OPC_NextLineOperatingModesList_ValueChange
+	    Else
+	        m_OPC_NextLineOperatingModesList.EnableEvents = True
+	    End If
+	
+	    Set m_OPC_CurrentOperModeVal = Variables.Item(ThisMimic.Branch & c_strCurrentOperatingModeTag)
+	    If ((m_OPC_CurrentOperModeVal.Status = fvVariableStatusGood) And (m_OPC_CurrentOperModeVal.EnableEvents = True)) Then
+	'        m_OPC_CurrentOperModeVal_ValueChange
+	    Else
+	        m_OPC_CurrentOperModeVal.EnableEvents = True
+	    End If
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "AddSetVariables", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"HDW", 1, 0, "{16C4B4DD-E660-48A4-8D94-B813A49B6243}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,179,179,179,0,0,0
+	COLOR,3,105,105,105,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,128,128,128,0,0,0
+	COLOR,7,215,215,215,0,0,0
+	COLOR,8,192,192,192,0,0,0
+	COLOR,9,0,255,0,0,0,0
+	COLOR,10,255,0,255,0,0,0
+	COLOR,11,204,204,204,0,0,0
+	COLOR,12,0,0,0,0,35,0
+	COLOR,13,172,168,153,0,0,0
+COLORS,END
+O,BEGIN,T,"CurrentLineOperatingMode"
+	B,170,8,457,37,170,37,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,170,8,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"<<< Modo actual de operaci¢n >>>",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"<<< Modo actual de operaci¢n >>>",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"ModeMgmt.ModeLabel"
+	A,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,277,376,352,408,277,408,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,277,376,0,0,FONT,1,"Cancel",37,FONT,1,"Cancel",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonsEnabled%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,1,COLOR,1
+		COL,0,COLOR,5,COLOR,5
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+		AUTH,"= (ButtonsEnabled% == 0)",0,0,0
+	A,END
+O,END
+O,BEGIN,T,"btn0"
+	B,85,49,214,88,85,88,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,85,49,0,0,FONT,1,"Manual",85,FONT,1,"Manual",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Manual",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Manual",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"LineOperatingModeManual_ValidationMessageBox","*",1,0,1,0,"*","*",0
+		AUTH,"= (ButtonsEnabled% == 0) OR (ModeMgmt.Mode==0)",0,0,0
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"ButtonsEnabled%",1,0,0,0,0.000000
+		AUTH,"= (ButtonsEnabled% == 0) OR (ModeMgmt.Mode==0)",0,0,0
+	A,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"= (ButtonsEnabled%) and (ModeMgmt.Mode != 0)"
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,10,COLOR,10
+		COL,1,COLOR,11,COLOR,11
+		COL,1,COLOR,12,COLOR,12
+		COL,1,COLOR,11,COLOR,11
+	A,END
+O,END
+O,BEGIN,T,"btn1"
+	B,250,49,379,88,250,88,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,250,49,0,0,FONT,1,"Automatic without timetable",85,FONT,1,"Automatic without timetable",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Autom tico sin horario",FONT,1,85
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Autom tico sin horario",FONT,1,85
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim2",0,0,"",""
+		PP,"ButtonsEnabled%","Button1Enabled%","","","","","",""
+		COL,0,COLOR,5,COLOR,5,3.000000
+		COL,0,COLOR,5,COLOR,5,4.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,1,COLOR,7,COLOR,7,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,1,COLOR,7,COLOR,7,0.000000
+	A,END
+	A,BEGIN,LO,"Anim4",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"LineOperatingModeAutoWithoutTT_Ctrl","*",1,0,1,0,"*","*",0
+		AUTH,"= (ButtonsEnabled% == 0) OR (Button1Enabled% == 0)",0,0,0
+	A,END
+	A,BEGIN,LO,"Anim3",0,0,"",""
+		PP,"LineOperatingModeAutoWithoutTT_ServiceType","*",1,0,1,0,"LineOperatingModeAutoWithoutTT_Ctrl","*",0
+		AUTH,"= (ButtonsEnabled% == 0) OR (Button1Enabled% == 0)",0,0,0
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"ButtonsEnabled%",1,0,0,0,0.000000
+		AUTH,"= (ButtonsEnabled% == 0) OR (Button1Enabled% == 0)",0,0,0
+	A,END
+O,END
+O,BEGIN,T,"btn2"
+	B,412,49,541,88,412,88,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,13,0,COLOR,13,0,COLOR,4,0,COLOR,4
+	PP,1,412,49,0,0,FONT,1,"Automatic with timetable",85,FONT,1,"Automatic with timetable",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Autom tico con horario",FONT,1,85
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Autom tico con horario",FONT,1,85
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim1",0,0,"",""
+		PP,"ButtonsEnabled%","Button2Enabled%","","","","","",""
+		COL,0,COLOR,5,COLOR,5,3.000000
+		COL,0,COLOR,5,COLOR,5,4.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,1,COLOR,7,COLOR,7,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,5,COLOR,5,0.000000
+		COL,1,COLOR,7,COLOR,7,0.000000
+	A,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"LineOperatingModeAutoWithTT_Ctrl","*",1,0,1,0,"*","*",0
+		AUTH,"= (ButtonsEnabled% == 0) OR (Button2Enabled% == 0) ",0,0,0
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"ButtonsEnabled%",1,0,0,0,0.000000
+		AUTH,"= (ButtonsEnabled% == 0) OR (Button2Enabled% == 0) ",0,0,0
+	A,END
+O,END

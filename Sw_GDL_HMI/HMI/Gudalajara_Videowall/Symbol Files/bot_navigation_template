@@ -1,0 +1,57 @@
+ASCII32,20,2,2018,3:5,0,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Dim iMimicPosition_1 As String
+	
+	Private Sub Symbol_Click()
+	Call Navegation("GUA_nota")
+	End Sub
+	
+	Private Sub Navegation(sMimicClosed As String)
+	 iMimicPosition = ThisProject.ActiveMimic.Windows(1).Left
+	
+	    If iMimicPosition >= 1920 Then
+	        iMimicPosition = 1920 + 820
+	    Else
+	        iMimicPosition = 820
+	    End If
+	    
+	    If TheseMimics.IsOpened(sMimicClosed) = False Then
+	        Mimics.Open sMimicClosed, , , , , , , , iMimicPosition, 400, True
+	        ''Mimics.Item(sMimicOpened).Close fvDoNotSaveChanges
+	        
+	    Else
+	       If ThisProject.Mimics.Item(sMimicClosed).Windows(1).Left <> iMimicPosition Then
+	        
+	           aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows(1).Left
+	           aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows(1).Left
+	           
+	           TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	           
+	           TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	       End If
+	    End If
+	End Sub
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol14"
+	B,1705,106,1664,64,1664,106,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape15"
+		B,1705,106,1664,64,1705,106,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	O,END
+O,END

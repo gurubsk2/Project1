@@ -1,0 +1,798 @@
+ASCII32,17,10,2019,13:18,10,1.1
+W,BEGIN,"PlayBack_Control","PlayBack_Control"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,897,359
+	SIZE,397,240,397,240,0,0,0,1280,1024,391,216
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   Controle de moviola/Reproduccion"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,2,2,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,4,1,400,300
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"PlayBack_Control.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	Dim WithEvents timer_Sincronismo As S2KActiveXTimerCtl.Timer
+	'''Public WithEvents varCurrentDateLV1 As Variable
+	'''Public WithEvents varCurrentDateLV2 As Variable
+	
+	Private Sub DTPicker1_Change()
+	    On Error GoTo ErrorHandler
+	    
+	    Variables("OPCCluster:S2KPlayback.Monitor.DBreakPointDate").Value = LocalTimeToUTC(DTPicker1.Value)
+	    'Variables("opcclusteratslv2:S2KPlayback.Monitor.DBreakPointDate").Value = LocalTimeToUTC(DTPicker1.Value)
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "DTPicker1_Change", Err.Description)
+	End Sub
+	
+	
+	Private Sub Mimic_Run()
+	    Dim auxDate As Date
+	    
+	    On Error GoTo ErrorHandler
+	    'Set Default date
+	    DTPicker1.MaxDate = "31/12/9999"
+	    WaitSeconds 1000
+	    auxDate = UTCToLocalTime(Variables("OPCCluster:@S2KPlayback.Monitor.DSnapshotDate").Value)
+	    DTPicker1.MinDate = auxDate
+	    auxDate = UTCToLocalTime(Variables("OPCCluster:S2KPlayback.Monitor.DEndDate").Value)
+	    DTPicker1.MaxDate = auxDate
+	    auxDate = UTCToLocalTime(Variables("OPCCluster:@S2KPlayback.Monitor.DSnapshotDate").Value)
+	    DTPicker1.Value = auxDate
+	    
+	'''    Set varCurrentDateLV1 = Variables("OPCCluster:S2KPlayback.Monitor.DCurrentDate")
+	'''    Set varCurrentDateLV2 = Variables("opcclusteratslv2:S2KPlayback.Monitor.DCurrentDate")
+	'''    varCurrentDateLV1.EnableEvents = True
+	'''    varCurrentDateLV1.EnableEvents = True
+	    SincronisarLevels
+	    [ReplaySpeed%] = 4
+	
+	    Set timer_Sincronismo = New S2KActiveXTimerCtl.Timer
+	    timer_Sincronismo.Interval = 1000
+	    timer_Sincronismo.Enabled = True
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Run", Err.Description)
+	End Sub
+	
+	Private Function SincronisarLevels()
+	    Dim dDiff As Double
+	'''    Dim iDelaySpeedLV1 As Integer
+	'''    Dim iDelaySpeedLV2 As Integer
+	    Dim iStep As Integer
+	    
+	    On Error GoTo ErrorHandler
+	    
+	'''    iDelaySpeedLV1 = Variables("OPCCluster:S2KPlayback.Monitor.ReplaySpeed").Value
+	'''    iDelaySpeedLV2 = Variables("opcclusteratslv2:S2KPlayback.Monitor.ReplaySpeed").Value
+	    
+	    If Variables("BreakPoint%").Value Then
+	        If DateDiff("s", Variables("OPCCluster:S2KPlayback.Monitor.DCurrentDate").Value, CDate(Variables("OPCCluster:S2KPlayback.Monitor.DBreakPointDate").Value)) < 0 Then
+	            [ReplaySpeed%] = 4
+	            Variables("BreakPoint%").Value = False
+	'            Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = CInt([ReplaySpeed%])
+	'            Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = CInt([ReplaySpeed%])
+	'            WaitSeconds 2000
+	'            Exit Function
+	        End If
+	    End If
+	    
+	'''    If (iDelaySpeedLV1 > 0 And iDelaySpeedLV1 < 4) Or (iDelaySpeedLV2 > 0 And iDelaySpeedLV2 < 4) Then
+	    If ([ReplaySpeed%] > 0 And [ReplaySpeed%] < 4) Then
+	        dDiff = DateDiff("s", Variables("OPCCluster:S2KPlayback.Monitor.DCurrentDate").Value, _
+	                              Variables("opcclusteratslv2:S2KPlayback.Monitor.DCurrentDate").Value)
+	        If Abs(dDiff) > 5 Then
+	            If Variables("opcclusteratslv2:S2KPlayback.Monitor.DCurrentDate").Value > Variables("OPCCluster:S2KPlayback.Monitor.DCurrentDate").Value Then
+	                'Pause Level 2
+	                For iStep = 1 To [ReplaySpeed%]
+	                    Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = iStep
+	                Next iStep
+	                Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = 4
+	            Else
+	                'Pause Level 1
+	                For iStep = 1 To [ReplaySpeed%]
+	                    Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = iStep
+	                Next iStep
+	                Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = 4
+	            End If
+	        ElseIf Abs(dDiff) < 1 Or (Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = 4 And Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = 4) Then
+	            For iStep = 1 To [ReplaySpeed%]
+	                Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = iStep
+	                Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = iStep
+	            Next iStep
+	        End If
+	    Else
+	        Variables("opcclusteratslv2:@S2KPlayback.Monitor.ReplaySpeed").Value = [ReplaySpeed%]
+	        Variables("OPCCluster:@S2KPlayback.Monitor.ReplaySpeed").Value = [ReplaySpeed%]
+	    End If
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "SincronisarLevels", Err.Description)
+	End Function
+	
+	Private Sub timer_Sincronismo_Timer()
+	    SincronisarLevels
+	End Sub
+	
+	
+	'''Private Sub varCurrentDateLV1_ValueChange()
+	'''    SincronisarLevels
+	'''
+	'''End Sub
+	'''
+	'''Private Sub varCurrentDateLV2_ValueChange()
+	'''    SincronisarLevels
+	'''
+	'''End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,113,111,100,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,0,0,0,32,0
+	COLOR,6,96,96,96,0,0,0
+	COLOR,7,0,0,0,0,0,0,GRADIENT,1,1,0,12,12,0,0,0,255,255,255,12,21,165,255,49
+	COLOR,8,172,168,153,0,0,0
+	COLOR,9,0,0,0,0,54,0
+	COLOR,10,0,255,0,0,0,0
+	COLOR,11,192,192,192,0,0,0
+	COLOR,12,0,0,0,0,44,0
+	COLOR,13,255,0,0,0,0,0
+COLORS,END
+O,BEGIN,T,"Text7"
+	B,8,16,380,70,8,71,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,8,16,3,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"HILC gi… in corso",FONT,1,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"StatusValue%",""
+		ADVFORMAT,2,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,190,87,380,132,190,133,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,190,87,3,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"HILC gi… in corso",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text13"
+	B,8,87,184,132,8,133,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,8,87,3,0,FONT,1,"HILC already in progress",84,FONT,1,"HILC already in progress",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"HILC gi… in corso",FONT,1,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"StatusValue%",""
+		ADVFORMAT,2,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage3"
+	B,24,42,164,63,24,63,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,24,42,0,0,FONT,1,"99/99/9999 99:99:99",85,FONT,1,"99/99/9999 99:99:99",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"99/99/9999 99:99:99",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"opccluster:S2KPlayback.Monitor.DSnapshotDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,GRP,"Group29"
+	B,198,97,227,126,198,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape12"
+		B,227,126,198,97,227,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,E,"Shape13"
+		B,220,119,204,103,220,119,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@BreakPoint%"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Ativar/Desativar"
+			LANG,END
+		MULTILANG,END
+		PP,"BreakPoint%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage1"
+	B,17,25,88,41,17,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,17,25,0,0,FONT,1,"99/99/9999 99:99:99",85,FONT,1,"99/99/9999 99:99:99",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage6"
+	B,223,42,363,63,223,63,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,223,42,0,0,FONT,1,"99/99/9999 99:99:99",37,FONT,1,"99/99/9999 99:99:99",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"99/99/9999 99:99:99",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"opccluster:S2KPlayback.Monitor.DEndDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage7"
+	B,231,25,276,41,231,41,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,231,25,0,0,FONT,1,"Data/Hora Inicial",84,FONT,1,"Data/Hora Inicial",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Final",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage8"
+	B,16,77,102,93,16,93,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,16,77,0,0,FONT,1,"Data/Hora Atual",84,FONT,1,"Data/Hora Atual",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Reproduccion",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage9"
+	B,194,77,308,93,194,93,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,194,77,0,0,FONT,1,"Reprodu‡Ýo",84,FONT,1,"Reprodu‡Ýo",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Punta de Parada",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage10"
+	B,16,6,176,22,16,22,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,16,6,0,0,FONT,1,"Reprodu‡Ýo",84,FONT,1,"Reprodu‡Ýo",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," Periodo de monitoreo",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"DTPicker1"
+	B,232,100,374,124,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,8,150,380,204,8,205,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,8,150,3,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1,"HILC gi… in corso",FONT,1,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"StatusValue%",""
+		ADVFORMAT,2,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[<1]\'\';[=1]\'J  existe comando em andamento\';[=2]\'Prepara‡Ýo em andamento\';[=3]\'Prepara‡Ýo falhou\';[=4]\'Confirma‡Ýo em andamento\';[=5]\'Comando falhou\';[=6]\'Comando executado com sucesso\';[=7]\'Comando nÝo foi executado\';[=8]\'Comando em andamento\';[=9]\'Comando falhou\';[=10]\'Expirou o tempo de retorno da prepara‡Ýo\';[=11]\'Expirou o tempo para a confirma‡Ýo\';[=12]\'Expirou o tempo de retorno da confirma‡Ýo\';[>12]\'\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage2"
+	B,24,176,164,197,24,197,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,24,176,0,0,FONT,1,"99/99/9999 99:99:99",37,FONT,1,"99/99/9999 99:99:99",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"99/99/9999 99:99:99",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"OPCCluster:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage4"
+	B,32,159,72,175,32,175,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,32,159,0,0,FONT,1,"Atual",84,FONT,1,"Atual",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"LV1",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage5"
+	B,223,176,363,197,223,197,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,223,176,0,0,FONT,1,"99/99/9999 99:99:99",37,FONT,1,"99/99/9999 99:99:99",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"99/99/9999 99:99:99",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"opcclusteratslv2:@S2KPlayback.Monitor.DCurrentDate",""
+		ADVFORMAT,2,"dd/mm/yyy hh:nn:ss@t"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"dd/mm/yyy hh:nn:ss@t"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"LabelMessage11"
+	B,231,159,276,175,231,175,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,231,159,0,0,FONT,1,"Final",84,FONT,1,"Final",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"LV2",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"LabelMessage12"
+	B,16,141,130,157,16,157,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,16,141,0,0,FONT,1," Data/Hora",84,FONT,1," Data/Hora",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Fecha/Hora Actual",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"Group23"
+	B,16,97,45,126,16,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape7"
+		B,45,126,16,97,45,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,P,"Poly1"
+		B,28,104,35,118,28,104,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,28,104,28,118,35,111
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 1)"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Reprodu‡Ýo Normal"
+			LANG,END
+		MULTILANG,END
+		PP,"ReplaySpeed%",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+O,END
+O,BEGIN,GRP,"Group24"
+	B,49,97,78,126,49,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape8"
+		B,78,126,49,97,78,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,GRP,"Group3"
+		B,57,106,70,117,57,117,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly7"
+			B,57,106,63,117,57,106,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,57,106,57,117,63,117,63,106
+		O,END
+		O,BEGIN,P,"Poly8"
+			B,64,106,70,117,64,106,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,64,106,64,117,70,117,70,106
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 4)"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Pausa"
+			LANG,END
+		MULTILANG,END
+		PP,"ReplaySpeed%",0,"",0,0,3,1,0,0,4.000000,0,0,0
+		ADVSENDVALUE,2,4
+	A,END
+O,END
+O,BEGIN,GRP,"Group25"
+	B,82,97,111,126,82,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape9"
+		B,111,126,82,97,111,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,GRP,"Group7"
+		B,91,105,105,117,91,117,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly12"
+			B,91,105,99,117,94,114,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,93,105,92,105,91,106,91,107,95,111
+			PP,91,115,91,116,92,117,93,117,99,111
+		O,END
+		O,BEGIN,P,"Poly13"
+			B,97,105,105,117,100,114,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,99,105,98,105,97,106,97,107,101,111
+			PP,97,115,97,116,98,117,99,117,105,111
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 2)"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Reprodu‡Ýo 2x"
+			LANG,END
+		MULTILANG,END
+		PP,"ReplaySpeed%",0,"",0,0,3,1,0,0,2.000000,0,0,0
+		ADVSENDVALUE,2,2
+	A,END
+O,END
+O,BEGIN,GRP,"Group26"
+	B,115,97,144,126,115,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape10"
+		B,144,126,115,97,144,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,GRP,"Group9"
+		B,121,105,138,117,121,117,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly12"
+			B,121,105,129,117,124,114,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,123,105,122,105,121,106,121,107,125,111
+			PP,121,115,121,116,122,117,123,117,129,111
+		O,END
+		O,BEGIN,P,"Poly13"
+			B,127,105,135,117,130,114,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,129,105,128,105,127,106,127,107,131,111
+			PP,127,115,127,116,128,117,129,117,135,111
+		O,END
+		O,BEGIN,P,"Poly14"
+			B,135,105,138,117,138,114,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+			PP,138,106,137,105,136,105,135,106,135,116
+			PP,136,117,137,117,138,116
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 3)"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Reprodu‡Ýo 3x"
+			LANG,END
+		MULTILANG,END
+		PP,"ReplaySpeed%",0,"",0,0,3,1,0,0,3.000000,0,0,0
+		ADVSENDVALUE,2,3
+	A,END
+O,END
+O,BEGIN,GRP,"Group27"
+	B,148,97,177,126,148,126,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,E,"Shape11"
+		B,177,126,148,97,177,126,65535,0,6400,0,2,0,0
+		ST,5,2,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,6,COLOR,1,0,COLOR,8,0,COLOR,8,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,P,"Poly7"
+		B,157,106,168,117,157,106,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,157,106,157,117,168,117,168,106
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"= (ReplaySpeed% == 5)"
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,5,COLOR,5
+			COL,0,COLOR,11,COLOR,11
+			COL,0,COLOR,10,COLOR,10
+			COL,0,COLOR,5,COLOR,5
+		A,END
+	O,END
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Parada do Servidor"
+			LANG,END
+		MULTILANG,END
+		PP,"OPCCluster:@S2KPlayback.Monitor.Terminate",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Parada do Servidor"
+			LANG,END
+		MULTILANG,END
+		PP,"opcclusteratslv2:@S2KPlayback.Monitor.Terminate",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+	A,BEGIN,SR,"Anim3",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"@Parada do Servidor"
+			LANG,END
+		MULTILANG,END
+		PP,"ReplaySpeed%",0,"",0,0,3,1,0,0,5.000000,0,0,0
+		ADVSENDVALUE,2,5
+	A,END
+O,END

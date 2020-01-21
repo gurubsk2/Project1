@@ -1,0 +1,349 @@
+ASCII32,11,10,2019,9:2,46,1.1
+W,BEGIN,"SubRoute_HILC_Confirmation","SubRoute_HILC_Confirmation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,330,95,330,95,0,0,0,1280,1024,330,95
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sub-route release"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,0,380,425
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SubRoute_HILC_Confirmation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SubRoute Release HILC Ctrl Confirmation
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*              - the combo box containing the list of names of SubRoutes belonging to the track plan
+	'*              - the name of the OPC variable associated to the SubRoutes selected(or entered) by the
+	'*                operator in the combobox
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Omar HAFADI
+	'* Date:                May '15
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION (Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSeparator As String = "\n"
+	
+	Private Const c_strHILCType As String = "SubRoute"
+	Private Const c_strID As String = "ID"
+	Private Const c_strName As String = "Name"
+	Private Const c_strArea As String = "Area"
+	
+	Private Const c_strDevicesListTag As String = "IconisHMI.SubRoutesList.Information.Value"
+	
+	'* OPC variables
+	'*******************************************************
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	
+	
+	'* SubRoutine: Mimic_Open
+	'*      Adds the OPC variable to the collection of all permanently subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	   
+	    Dim strClusterName As String
+	  
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    '* Add a variable containing the OPC variable name of the device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%", fvVariableTypeText
+	    
+	    '* Add a variable containing the OPC variable names of each device
+	    '* belonging to the track plan
+	    Variables.Add ThisMimic.Branch & ".ListOfOPCVarNames%", fvVariableTypeText
+	   
+	    '* Add variable containing the list of devices to the list of variables
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    
+	    Set m_OPC_DevicesNamesList = Variables.Add(strClusterName & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_DevicesNamesList.Status = fvVariableStatusGood) And (m_OPC_DevicesNamesList.EnableEvents = True)) Then
+	        m_OPC_DevicesNamesList_ValueChange
+	    Else
+	        m_OPC_DevicesNamesList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*      Unsubscribe the OPC variables previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%")
+	    Variables.Remove (ThisMimic.Branch & ".ListOfOPCVarNames%")
+	       
+	    If Not (m_OPC_DevicesNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_DevicesNamesList.Name)
+	        Set m_OPC_DevicesNamesList = Nothing
+	    End If
+	   
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* SubRoutine: m_OPC_DevicesNamesList_ValueChange
+	'*      Manages filling of the Combo box
+	'* ******************************************************************************************
+	Private Sub m_OPC_DevicesNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	    If Check_Variable(m_OPC_DevicesNamesList, ThisMimic.Name) Then
+	     '* Fill the combo box
+	        FillComboBox
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: ComboBoxDeviceNames_Change
+	'*      Manages getting the value selected in the combo box
+	'* ******************************************************************************************
+	Private Sub ComboBoxDeviceNames_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDeviceNames_Change", "Begin Subroutine")
+	    
+	    If (ComboBoxDeviceNames.ListIndex > -1) Then
+	        Dim OPCVarNamesArray() As String
+	    
+	        OPCVarNamesArray = Split(Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value, c_strSeparator)
+	        If (UBound(OPCVarNamesArray) > 0) Then
+	            '* Memorize the OPC variable name of the selected device
+	            Variables.Item(ThisMimic.Branch & ".ConfPhaseDeviceOPCVarName%").Value = OPCVarNamesArray(ComboBoxDeviceNames.ListIndex)
+	            
+	            '* Enable the OK button of the parent mimic
+	            Variables.Item(ThisMimic.Branch & ".Sub_route_release_OkActive%").Value = True
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDeviceNames_Change", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: FillComboBox
+	'*    Read the xml string containing the names of the devices belonging to the track plan
+	'*    Fill the combo box
+	'*    Memorizes the list of OPC variable names of each device belonging to the track plan
+	'* ******************************************************************************************
+	Private Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	    
+	    Dim strXML As String
+	    
+	    '* Clear the combo box
+	    ComboBoxDeviceNames.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxDeviceNames.Value = ""
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    strXML = m_OPC_DevicesNamesList.Value
+	    If (strXML <> "") Then
+	        Dim oDoc As DOMDocument
+	  
+	        Set oDoc = New DOMDocument
+	        '* Open the XMl file
+	        If (oDoc.loadXML(strXML)) Then
+	            Dim FirstNodeLevel As IXMLDOMNodeList
+	           
+	            Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strHILCType)
+	            If (FirstNodeLevel.length <> 0) Then
+	                Dim oNodeClass As IXMLDOMNode
+	                Dim strName As String
+	                Dim strVariableName As String
+	                Dim strAreaName As String
+	                    
+	                For Each oNodeClass In FirstNodeLevel
+	                    Dim oAttrDevice As IXMLDOMAttribute
+	 
+	                    strName = ""
+	                    strVariableName = ""
+	                    strAreaName = ""
+	                    For Each oAttrDevice In oNodeClass.Attributes
+	                        If (StrComp(oAttrDevice.nodeName, c_strName, vbTextCompare) = 0) Then
+	                            strName = oAttrDevice.nodeValue
+	                        ElseIf (StrComp(oAttrDevice.nodeName, c_strID, vbTextCompare) = 0) Then
+	                            strVariableName = oAttrDevice.nodeValue
+	                        ElseIf (StrComp(oAttrDevice.nodeName, c_strArea, vbTextCompare) = 0) Then
+	                            strAreaName = oAttrDevice.nodeValue
+	                        End If
+	                    Next
+	                    If ((strName <> "") And (strVariableName <> "")) And InStr(1, Split(ThisMimic.Branch, "_")(3), Split(strName, "_")(3), vbTextCompare) > 0 Then
+	                        If (StrComp(strAreaName, Variables.Item(ThisMimic.Branch & ".PrepPhaseDeviceAreaName%").Value, vbTextCompare) = 0) Then
+	                            ComboBoxDeviceNames.AddItem (strName)
+	                            Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value = Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value & _
+	                                                                                             strVariableName & c_strSeparator
+	                        End If
+	                    End If
+	                Next
+	                If (ComboBoxDeviceNames.ListCount > 0) Then
+	                    '* Enable the combo box (if it exists at least one item)
+	                    ComboBoxDeviceNames.Enabled = True
+	                End If
+	            End If
+	            Set FirstNodeLevel = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,191,191,191,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,216,216,216,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,327,95,-2,0,327,95,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape3"
+	B,305,85,15,15,305,85,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,25,6,122,22,25,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,25,6,0,0,FONT,1,"Preparaci¢n",36,FONT,1,"Preparaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmaci¢n",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Poly2"
+	B,0,0,459,0,0,0,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,0,459,0
+O,END
+O,BEGIN,L,"Poly4"
+	B,0,1,459,1,0,1,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,1,459,1
+O,END
+O,BEGIN,T,"btnClose1"
+	B,30,20,120,45,30,45,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,30,20,0,0,FONT,1,"Aguja",38,FONT,1,"Aguja",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Sub_ruta",FONT,2,38
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBoxDeviceNames"
+	B,66,50,231,75,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnClose6"
+	B,30,115,290,140,30,140,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,30,115,0,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"HILCStatus%"
+	A,END
+O,END

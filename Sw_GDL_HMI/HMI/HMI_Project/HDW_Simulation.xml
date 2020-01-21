@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Project="UEVOL_REG_GDL_L3"
+               Generation_Date="2017-07-29"
+               xsi:noNamespaceSchemaLocation="hdw.xsd">
+   <Versions>
+         <Version Name="ICONIS_IDP#SyAD_Configuration_UOCat2" Value="20"/>
+         <Version Name="ICONIS_IDP#Product_Version" Value="SW_IDP_UO_CF 3.2.2 UO 3.07.1"/>
+         <Version Name="Project#System_Database_Version" Value="4.1.2"/>
+         <Version Name="Project#ATS_Parameter_Version" Value=""/>
+      </Versions>
+   <HDWConfiguration>
+      <TraceDirectory>D:\IconisHMI\Log</TraceDirectory>
+      <TraceLevel>1</TraceLevel>
+      <ActivatedTraces>
+         <TraceType>ERROR</TraceType>
+         <TraceType>WARNING</TraceType>
+      </ActivatedTraces>
+   </HDWConfiguration>
+   <IServerConfiguration>
+      <Server1 Host="SIMSRVTTR1"/>
+      <Server2 Host="SIMSRVTTR2"/>
+   </IServerConfiguration>
+</configuration>

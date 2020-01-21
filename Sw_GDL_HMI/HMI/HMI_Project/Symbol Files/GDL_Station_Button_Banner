@@ -1,0 +1,141 @@
+ASCII32,6,10,2016,9:37,23,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,255,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,0,255,0,0,0,0
+	COLOR,7,255,0,255,0,0,0
+	COLOR,8,191,191,191,0,0,0
+	COLOR,9,160,160,160,0,0,0
+	COLOR,10,194,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 228
+	Private Const c_lContextualMenuHeight As Long = 78
+	
+	'Private Const c_strInspectorPanelMimic As String = "Point_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Station_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	
+	'''Private Sub Symbol_Click()
+	''''    Dim Corresponding_Detailed_View
+	'''    Dim Station_Name As Variant
+	''''    Dim ParentMimic As Mimic
+	''''
+	''''
+	'''        'On station banner, station button is always named "Station_<Station_Acronym>" :
+	'''        Station_Name = Split(ThisSymbol.Name, "_")
+	'''        'Only keep the station acronym ; set it as station to be centered on the detailed view to open
+	'''        Station_To_Center_On = Station_Name(1)
+	''''        Set ParentMimic = Iconis_MOD_General.GetSymbolParentMimic(ThisSymbol)
+	''''        OpenViewOnSameScreen VIEW_MainLineDetailedTrafficView, ParentMimic.Windows(1).Left
+	'''
+	'''    Call Navegation(ActiveMimic.FileName, "GDL_Operational_View")
+	'''    If Not Mimics.IsOpened("GDL_Detailed_View") Then Mimics.Open "GDL_Detailed_View", , , , "GDL_Operational_View"
+	'''    Manage_ScrollBar_Position VIEW_MainLineDetailedTrafficView
+	'''
+	'''End Sub
+	
+	Private Sub Symbol_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    Dim Station_Name As Variant, sTerritoryOPC As String
+	    
+	    If Button = 1 Then
+	        'On station banner, station button is always named "Station_<Station_Acronym>" :
+	        Station_Name = Split(ThisSymbol.Name, "_")
+	        'Only keep the station acronym ; set it as station to be centered on the detailed view to open
+	        Station_To_Center_On = Station_Name(1)
+	        
+	      'Call Navegation(ActiveMimic.FileName, "GDL_Operational_View")
+	''        If Not Mimics.IsOpened("GDL_Detailed_View") And GetmousepointerPossition = 1 Then Mimics.Open "GDL_Detailed_View", , , , "GDL_Operational_View", , , 0, 0, True
+	''        If Not Mimics.IsOpened("GDL_Detailed_View") And GetmousepointerPossition = 2 Then Mimics.Open "GDL_Detailed_View_2", , , , "GDL_Operational_View", , , 1920, 0, True
+	''        If Not Mimics.IsOpened("GDL_Detailed_View") And GetmousepointerPossition = 3 Then Mimics.Open "GDL_Detailed_View_3", , , , "GDL_Operational_View", , , 3840, 0, True
+	    'If Not Mimics.IsOpened("GDL_Detailed_View") Then
+	        If GetmousepointerPossition = 1 Then
+	         TheseMimics.Open "GDL_Operational_View", , , , , , , , 0, 0, True
+	          TheseMimics.Open "GDL_Detailed_View", , , , "GDL_Operational_View", , , , 0, 246, True
+	            'OpenmimicOnScreen 1, VIEW_MainLineDetailedTrafficView
+	            Manage_ScrollBar_Position VIEW_MainLineDetailedTrafficView
+	        End If
+	     'End If
+	    
+	    'If Not Mimics.IsOpened("GDL_Detailed_View_2") Then
+	        If GetmousepointerPossition = 2 Then
+	          TheseMimics.Open "GDL_Operational_View_2", , , , , , , , 1920, 0, True
+	          TheseMimics.Open "GDL_Detailed_View_2", , , , "GDL_Operational_View_2", , , , 0, 246, True
+	          'OpenmimicOnScreen 2, VIEW_MainLineDetailedTrafficView_2
+	          Manage_ScrollBar_Position VIEW_MainLineDetailedTrafficView_2
+	        End If
+	    'End If
+	    
+	       'If Not Mimics.IsOpened("GDL_Detailed_View_3") Then
+	        If GetmousepointerPossition = 3 Then
+	          TheseMimics.Open "GDL_Operational_View_3", , , , , , , , 3840, 0, True
+	          TheseMimics.Open "GDL_Detailed_View_3", , , , "GDL_Operational_View_3", , , , 0, 246, True
+	            'OpenmimicOnScreen 3, VIEW_MainLineDetailedTrafficView_3
+	            Manage_ScrollBar_Position VIEW_MainLineDetailedTrafficView_3
+	        End If
+	    'End If
+	    
+	    ElseIf Button = 2 Then
+	    
+	        'If the territory is already controlled by me
+	        If Variables(Me.LocalBranch & c_strControlledByMeLocalTag).Value Then
+	            If Variables(Me.LocalBranch & ".TAS.bControllRequested%").Value Then NegotiateTransfer Me.LocalBranch
+	        Else
+	            'Get the actual possition of Mouse pointer
+	            GetCursorpos Hold
+	            Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	            'Open Station contextual menu
+	           ' OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	        End If
+	    End If
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_MouseUp", Err.Description)
+	    
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Station_BAS"
+	B,348,204,413,237,348,231,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape3"
+		B,413,237,348,204,413,237,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"TAS.bControllRequested%"
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,3,COLOR,4
+			COL,1,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,6,COLOR,6
+			COL,0,COLOR,7,COLOR,7
+		A,END
+	O,END
+	O,BEGIN,R,"Shape1"
+		B,411,234,350,207,411,234,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,2,3,COLOR,8,3,COLOR,8,0,COLOR,8,0,COLOR,8
+		AST,7,2,COLOR,1,COLOR,8,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"TAS.bControlledByMe%"
+			COL,1,COLOR,10,COLOR,10
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,4,COLOR,4
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,6,COLOR,6
+			COL,0,COLOR,7,COLOR,7
+		A,END
+	O,END
+O,END

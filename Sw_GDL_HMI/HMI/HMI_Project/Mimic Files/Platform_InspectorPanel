@@ -1,0 +1,792 @@
+ASCII32,9,10,2019,4:46,1,1.1
+W,BEGIN,"Platform_InspectorPanel","Platform_InspectorPanel"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,799,398
+	SIZE,320,400,320,400,0,0,0,1920,1080,312,374
+	BACKCOLOR,191,191,191,0,44,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   And‚n STA_PF_NOR_UP"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"   And‚n PF_TZA_UP"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,1,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_InspectorPanel.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	''* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2015. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* File Name:  Platform Inspector Panel
+	'* *******************************************************************************************
+	'* Purpose:     display the Platform information and the buttons to acces to controls on the
+	'*              Platform
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Nov 16
+	'* Change:              All
+	'*
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (V3B)
+	'* *******************************************************************************************
+	Private Const c_PlatformList As String = "IconisHMI.PlatformsList.Information.Value"
+	
+	Dim WithEvents m_OPC_PlatformList As Variable
+	Dim m_strPlatformName As String
+	
+	Option Explicit
+	
+	
+	Private Sub grpComandos_Click()
+	    
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "grpComandos_Click", "Begin subroutine")
+	
+	    Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "grpComandos_Click", Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	    On Error Resume Next
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin subroutine")
+	    Variables(ThisMimic.Branch & ".ButtonActivated%").Value = False
+	
+	End Function
+	
+	Private Sub Mimic_Open()
+	    Dim iMonitor As Integer
+	    Dim sQNRENorte As String, sQNRESul As String
+	    
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin subroutine")
+	
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	     Set m_OPC_PlatformList = Variables.Add(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    If ((m_OPC_PlatformList.Status = fvVariableStatusGood) And (m_OPC_PlatformList.EnableEvents = True)) Then
+	        m_OPC_PlatformList_ValueChange
+	    Else
+	        m_OPC_PlatformList.EnableEvents = True
+	    End If
+	    
+	     Mimics.Open ThisMimic.FileName & "_Control", ThisMimic.Branch, , , ThisMimic.FileName, ThisMimic.Branch, , , 0, 0, True
+	    ThisMimic.Activate
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_PlatformList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_PlatformList) = False Then Exit Sub
+	
+	    Call ReadXMLPlatformList(m_OPC_PlatformList.Value)
+	    Me.Caption = "   And‚n " & m_strPlatformName
+	    'lblMenuTitle.Text = "And‚n "
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	Private Sub ReadXMLPlatformList(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLPlatformList", "Begin Subroutine")
+	   
+	   'Dim strXMLString As String
+	   Dim oDoc As DOMDocument
+	   Dim oPlatformList As IXMLDOMNodeList
+	   Dim oPlatform As IXMLDOMElement
+	   Dim strName As String
+	   Dim strBranch() As String
+	   Dim strID As String
+	   Dim strStationName As String
+	   Dim strStationID As String
+	   Dim dKM As Double
+	   Dim PlatformManager As Iconis_CLS_Platform
+	   
+	   strXMLString = m_OPC_PlatformList.Value
+	   If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "Platform"
+	                    Set oPlatformList = oDoc.documentElement.selectNodes("Platform")
+	                    If Not (oPlatformList Is Nothing) Then
+	                        If (oPlatformList.length > 0) Then
+	                            For Each oPlatform In oPlatformList
+	                                ' Name attribute
+	                                
+	                                ' ID attribute
+	                                strID = Format(oPlatform.getAttribute("ID"))
+	                                ' StationName attribute
+	'                                strStationName = Format(oPlatform.getAttribute(c_strStationNameAttr))
+	'                                ' StationID attribute
+	'                                strStationID = Format(oPlatform.getAttribute(c_strStationIDAttr))
+	'                                ' KM attribute
+	'                                dKM = oPlatform.getAttribute(c_strKMAttr)
+	                                strBranch = Split(ThisMimic.Branch, ":")
+	                                If ((strID <> "")) Then
+	                                    ' Create an instance of Iconis_CLS_Platform class module
+	                                    If strID = "Stop_" & strBranch(1) Then
+	                                        strName = Format(oPlatform.getAttribute("Name"))
+	                                   End If
+	                                End If
+	                                m_strPlatformName = strName
+	                            Next oPlatform
+	                         End If
+	                        Set oPlatformList = Nothing
+	                    End If
+	                End If
+	            
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", _
+	                     "The OPC variable [" & m_OPC_PlatformList.Name & "] is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", Err.Description)
+	End Sub
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-13,0,700,255,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,160,160,160,0,0,0
+	COLOR,6,0,0,0,0,35,0
+	COLOR,7,0,0,0,0,46,0
+	COLOR,8,113,111,100,0,0,0
+	COLOR,9,0,0,0,0,44,0
+	COLOR,10,148,207,202,0,0,0
+	COLOR,11,255,0,255,0,0,0
+	COLOR,12,192,192,192,0,0,0
+	COLOR,13,0,255,0,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,197,314,20,262,197,314,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape5"
+	B,241,168,18,98,241,168,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,P,"Poly1"
+	B,10,10,303,349,17,10,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,17,10,102,10,110,18,110,41,303,41
+	PP,303,349,10,349,10,18
+O,END
+O,BEGIN,T,"Text5"
+	B,18,18,103,34,18,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,18,18,0,0,FONT,1,"Informaci¢n",37,FONT,1,"Informaci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informati¢n",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Informaci¢n",FONT,1,37
+			ROLE,0,"Informaci¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"grpComandos"
+	B,110,10,214,41,110,41,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,110,10,214,41,118,10,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		AST,7,2,COLOR,2,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+		PP,118,10,206,10,214,18,214,41,110,41
+		PP,110,18
+	O,END
+	O,BEGIN,T,"Text1"
+		B,118,18,203,34,118,34,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,1,118,18,0,0,FONT,1,"Control",37,FONT,1,"Control",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Control",FONT,1,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"Control",FONT,1,37
+				ROLE,0,"Control",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,T,"Text16"
+	B,31,45,154,61,31,61,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,31,45,0,0,FONT,1,"Tren retiene",36,FONT,1,"Tren retiene",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform Hold",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tren retiene",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,170,45,269,61,170,61,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,170,45,0,0,FONT,1,"Tren directo",36,FONT,1,"Tren directo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform Skip",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tren directo",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text10"
+	B,170,61,293,85,170,85,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,170,61,0,0,FONT,1,"  ",37,FONT,1,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text18"
+	B,31,61,154,85,31,85,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,31,61,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape4"
+	B,194,235,17,183,194,235,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text6"
+	B,25,176,167,192,25,192,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,0,25,176,0,0,FONT,2,"Tiempo de recorrido",37,FONT,2,"Tiempo de recorrido",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo de recorrido",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tiempo de recorrido",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text28"
+	B,29,279,180,303,29,303,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,29,279,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,1040
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"ATR.RegPoint.PerformanceLevel",""
+		ADVFORMAT,2,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'A la deriva\';[=4]\'Baja adherencia\';\'-\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=1]\'Normal\';[=2]\'Economic\';[=3]\'Coasting\';[=4]\'Low Adherence\';\'-\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,-1,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'A la deriva\';[=4]\'Baja adherencia\';\'-\'"
+				ROLE,0,"[=1]\'Normal\';[=2]\'Economica\';[=3]\'Coasting\';[=4]\'Low Adherence\';\'-\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+O,END
+O,BEGIN,T,"Text25"
+	B,28,255,147,271,28,271,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,0,28,255,0,0,FONT,2,"Modo de marcha",37,FONT,2,"Modo de marcha",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Running Mode",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Modo de marcha",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text26"
+	B,24,201,175,225,24,225,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,24,201,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1," ",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text12"
+	B,37,132,116,156,37,156,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,37,132,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"ATR.RegPoint.DwellTimeImposed"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(ATR.RegPoint.DwellTimeImposed>0)"
+		COL,0,COLOR,10,COLOR,10
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text11"
+	B,146,118,213,134,146,134,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,146,118,0,0,FONT,1,"Restante",36,FONT,1,"Restante",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remaining",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Restante",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text13"
+	B,146,132,225,156,146,156,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,6,COLOR,7,0,COLOR,4,0,COLOR,4,0,COLOR,8,0,COLOR,8
+	PP,1,146,132,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"ATR.RegPoint.RemainingDwellTime"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"=(ATR.RegPoint.RemainingDwellTime>0)"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text9"
+	B,37,118,107,134,37,134,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,37,118,0,0,FONT,1,"Impuesto",36,FONT,1,"Impuesto",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imposed",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Impuesto",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text24"
+	B,26,89,155,105,26,105,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,0,26,89,0,0,FONT,2,"Tiempo de parada",37,FONT,2,"Tiempo de parada",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Dwell Time",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Tiempo de parada",FONT,1,37
+			ROLE,0,"Tiempo de parada",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,55,63,122,83,55,83,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,55,63,0,0,FONT,1,"Activado",37,FONT,1,"Activado",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Active",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Activado",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(HoldSkip.HSMPoint.OperatorHold==1)"
+		COL,0,COLOR,12,COLOR,12
+		COL,0,COLOR,13,COLOR,13
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,198,63,265,83,198,83,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,198,63,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(HoldSkip.HSMPoint.OperatorSkip==0)"
+		COL,0,COLOR,12,COLOR,12
+		COL,0,COLOR,13,COLOR,13
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,198,63,265,83,198,83,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,198,63,0,0,FONT,1,"Activado",37,FONT,1,"Activado",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Activado",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Activado",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(HoldSkip.HSMPoint.OperatorSkip==1)"
+		COL,0,COLOR,12,COLOR,12
+		COL,0,COLOR,13,COLOR,13
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text8"
+	B,40,134,114,154,40,154,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,40,134,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.DwellTimeImposed<0)"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text15"
+	B,148,134,222,154,148,154,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,148,134,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(ATR.RegPoint.RemainingDwellTime<1)"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,56,62,123,82,56,82,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,56,62,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=(HoldSkip.HSMPoint.OperatorHold==0)"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,103,37,20,17,103,37,65535,0,6400,0,1,0,0
+	ST,2,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text14"
+	B,62,203,129,223,62,223,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,62,203,0,0,FONT,1,"-",37,FONT,1,"-",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"-",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((ATR.RegPoint.EffortReduction==0)And(ATR.RegPoint.EnergySaving==0)And(ATR.RegPoint.CoastingMode==0))"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text17"
+	B,62,203,129,223,62,223,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,62,203,0,0,FONT,1,"Nominal",37,FONT,1,"Nominal",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nominal",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Nominal",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((ATR.RegPoint.EffortReduction==0)And(ATR.RegPoint.EnergySaving==1)And(ATR.RegPoint.CoastingMode==0))"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text19"
+	B,60,204,127,224,60,224,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,60,204,0,0,FONT,1,"Minimum",37,FONT,1,"Minimum",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"M¡nimo",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"M¡nimo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((ATR.RegPoint.EffortReduction==1)And(ATR.RegPoint.EnergySaving==0)And(ATR.RegPoint.CoastingMode==0))"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text20"
+	B,57,203,132,223,57,223,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,57,203,0,0,FONT,1,"Maximum",37,FONT,1,"Maximum",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"M ximo",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"M ximo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((ATR.RegPoint.EffortReduction==0)And(ATR.RegPoint.EnergySaving==0)And(ATR.RegPoint.CoastingMode==1))"
+		COL,0,COLOR,12,COLOR,12
+		COL,1,COLOR,3,COLOR,3
+		COL,0,COLOR,11,COLOR,11
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+	A,END
+O,END

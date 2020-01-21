@@ -1,0 +1,312 @@
+ASCII32,1,9,2014,15:35,21,1.1
+W,BEGIN,"Point_Unblock_Confirmation","TrainIndicatorATCReseTValidationMessageBox"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,686,325
+	SIZE,312,144,312,144,0,0,0,1280,1024,306,120
+	BACKCOLOR,240,240,220,0,61,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Point"
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Tren "
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,1,1,700,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Point_Unblock_Confirmation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      TrainIndicatorATCReseTValidationMessageBox
+	'* *******************************************************************************************
+	'* Purpose:     It manages: -
+	'*                  - display of the title in the title bar of the Mimic
+	'*                  - the command sending
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Danish Draboo
+	'* Date:                Oct '08
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320 ? 5)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846 ? A1)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ------------------------------------------------------
+	Option Explicit
+	Dim WithEvents OPC_HMITrainID As Variable
+	Dim WithEvents OPC_UniqueID As Variable
+	Dim WithEvents OPC_Command As Variable
+	
+	Dim strClusterName As String
+	Dim iUniqueID As Integer
+	
+	'* Subroutine:- Mimic_Open
+	'* Purpose:- Subscribes all the OPC variables to the collection of variables
+	'* ---------------------------------------------------------------------------------
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    '* Extract  the cluster name from the branch of the Mimic
+	    '* ---------------------------------------------------------
+	    Dim arrBranchInfo() As String
+	    arrBranchInfo = Split(ThisMimic.Branch, ":")
+	    If (UBound(arrBranchInfo) <> -1) Then
+	        strClusterName = arrBranchInfo(0)
+	    End If
+	    
+	    Set OPC_HMITrainID = Variables.Add(ThisMimic.Branch & ".TDS.bstrHMITrainID", fvVariableTypeText)
+	    If (OPC_HMITrainID.EnableEvents = True) Then
+	        If (OPC_HMITrainID.Status = fvVariableStatusGood) Then
+	            OPC_HMITrainID_ValueChange
+	        End If
+	    End If
+	    OPC_HMITrainID.EnableEvents = True
+	    
+	    Set OPC_UniqueID = Variables.Add(ThisMimic.Branch & ".TDS.iTrainID", fvVariableTypeRegister)
+	    If (OPC_UniqueID.EnableEvents = True) Then
+	        If (OPC_UniqueID.Status = fvVariableStatusGood) Then
+	            OPC_UniqueID_ValueChange
+	        End If
+	    End If
+	    OPC_UniqueID.EnableEvents = True
+	    
+	    Set OPC_Command = Variables.Add(strClusterName & ":IconisMain.TrainIDModule.TrainID.bstrInterposeBerth", fvVariableTypeText)
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function:- Mimic_BeforeClose
+	'* Purpose:- Unsubscribes all the previously subscribed variables
+	'* ---------------------------------------------------------------------------------
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    '* Unsubscribe the OPC Variables previously subscribed
+	    '* ---------------------------------------------------
+	    If Not OPC_HMITrainID Is Nothing Then
+	        Variables.Remove (OPC_HMITrainID.Name)
+	        Set OPC_HMITrainID = Nothing
+	    End If
+	    
+	    If Not OPC_UniqueID Is Nothing Then
+	        Variables.Remove (OPC_UniqueID.Name)
+	        Set OPC_UniqueID = Nothing
+	    End If
+	
+	    If Not OPC_Command Is Nothing Then
+	        Variables.Remove (OPC_Command.Name)
+	        Set OPC_Command = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine:- btnYes_Click
+	'* Purpose:- Build string corresponding to the command to be sent
+	'*          - Set the result in the variable associated to the OPC variable command
+	'* ---------------------------------------------------------------------------------
+	Private Sub btnYes_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnYes_Click", "Begin Subroutine")
+	    Dim strCommand As String
+	    
+	    '* Build string corresponding to the command to be send
+	    '* -----------------------------------------------------
+	    strCommand = "%UniqueID%|" & OPC_UniqueID.Value & "|CCReset"
+	    
+	    '* Set the result in the variable associated to the OPC variable command
+	    OPC_Command.Value = strCommand
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnYes_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine:- OPC_HMITrainID_ValueChange
+	'* Purpose:- Manages displaying the title bar of the mimic
+	'* ---------------------------------------------------------------------------------
+	Private Sub OPC_HMITrainID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (OPC_HMITrainID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of " & OPC_HMITrainID.Name & " is waiting")
+	    ElseIf (OPC_HMITrainID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of " & OPC_HMITrainID.Name & " is config Error")
+	    ElseIf (OPC_HMITrainID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Status of " & OPC_HMITrainID.Name & " is not connected")
+	    ElseIf (OPC_HMITrainID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_HMITrainID_ValueChange", "The Quality of " & OPC_HMITrainID.Name & " is not Good")
+	    Else
+	        '* Format the text to be displayed in the title bar of the Mimic
+	        ThisMimic.Caption = ThisMimic.Caption & " " & OPC_HMITrainID.Value
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	
+	'*Subroutine:- OPC_UniqueID_ValueChange
+	'* Purpose:- Memorizes the value of the unique ID
+	'* ---------------------------------------------------------------------------------
+	Private Sub OPC_UniqueID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_UniqueID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (OPC_UniqueID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of " & OPC_UniqueID.Name & " is waiting")
+	    ElseIf (OPC_UniqueID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of " & OPC_UniqueID.Name & " is config Error")
+	    ElseIf (OPC_UniqueID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Status of " & OPC_UniqueID.Name & " is not connected")
+	    ElseIf (OPC_UniqueID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_UniqueID_ValueChange", "The Quality of " & OPC_UniqueID.Name & " is not Good")
+	    Else
+	        iUniqueID = OPC_UniqueID.Value
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "OPC_UniqueID_ValueChange", Err.Description)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-11,0,400,0,0,"Tahoma",0,0
+	FONT,3,-13,0,700,0,0,"Tahoma",0,0
+	FONT,4,-21,0,400,0,0,"Tahoma",0,0
+	FONT,5,-11,0,700,0,0,"Tahoma",0,0
+	FONT,6,-13,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,61,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,160,160,160,0,0,0
+	COLOR,7,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,T,"btnYes"
+	B,141,85,215,108,141,108,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,141,85,0,0,FONT,1,"Yes",37,FONT,1,"Yes",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Yes",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"S¡",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,226,85,300,108,226,108,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,3,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,226,85,0,0,FONT,1,"No",37,FONT,1,"No",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,2,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"No",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,BM,"Bitmap1"
+	B,8,8,56,55,8,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,"Emergency route release dialog.bmp",1,COLOR,3
+O,END
+O,BEGIN,L,"Poly8"
+	B,0,72,367,72,0,72,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,0,72,367,72
+O,END
+O,BEGIN,T,"Text1"
+	B,71,8,255,55,71,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,71,8,0,0,FONT,4,"",37,FONT,4,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Do you really want to un-block this point?",FONT,5,84
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"¨Desea realmente reiniciar los equipos ATC a bordo?",FONT,3,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,71,43,153,56,71,56,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,71,43,0,0,FONT,6,"Please confirm.",84,FONT,6,"Please confirm.",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Please confirm.",FONT,2,84
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Porfavor confirme.",FONT,6,84
+		LANG,END
+	MULTILANG,END
+O,END

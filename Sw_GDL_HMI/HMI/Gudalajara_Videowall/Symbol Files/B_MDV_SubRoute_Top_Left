@@ -1,0 +1,20 @@
+ASCII32,16,6,2016,14:46,25,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,"Group49"
+	B,633,538,646,554,633,554,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,S,"Symbol1514"
+		B,646,540,633,553,646,553,65535,0,6400,0,2,0,0
+		PP,"B_MDV_SubRoute_Status_Top_Left","",646,540,633,553,0,0, 0, 1
+	O,END
+	O,BEGIN,S,"Symbol1515"
+		B,633,554,645,538,633,554,65535,0,6400,0,2,0,0
+		PP,"SubRoute_ReleaseHILCCtrlInactive","",633,554,645,538,1,0, 0, 1
+		A,BEGIN,OB,"Anim1",0,0,"",""
+			PP,"= ((HILCAvailable.Value.BoolValue) AND (Status.Value.BoolValue == 0)) ","",298,245,310,229,1,"",1,"SubRoute_ReleaseHILCCtrlActive",1,""
+		A,END
+	O,END
+O,END

@@ -1,0 +1,6 @@
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\HMI\HMI_GDLAnalyser\obj\Unicode Release\IconisUtilities.IconisAnalyzer.resources
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\HMI\HMI_GDLAnalyser\obj\Unicode Release\HMI_GDLAnalyser.csproj.GenerateResource.Cache
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\IconisBin8\ReleaseU\HMI_GDLAnalyser.dll
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\IconisBin8\ReleaseU\HMI_GDLAnalyser.pdb
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\HMI\HMI_GDLAnalyser\obj\Unicode Release\HMI_GDLAnalyser.dll
+C:\Users\292006\Documents\Office\HMI\Projects\Gudlajara\New Folder\Sw_GDL_HMI,292006\Sw_GDL_HMI\HMI\HMI_GDLAnalyser\obj\Unicode Release\HMI_GDLAnalyser.pdb

@@ -1,0 +1,992 @@
+ASCII32,15,10,2019,8:53,34,1.1
+W,BEGIN,"QoSC_Create","View_QoSC_Create"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,794,323
+	SIZE,330,550,330,550,0,0,0,1920,1080,324,526
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Informes de explotaci¢n"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"QoSC_Create.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Project: KMRL
+	'* *******************************************************************************************
+	'* Purpose: QoSC interface + Viewer
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vasanth
+	'* Description:         Reports
+	'* Date:                Oct 2016
+	'* Change:              All
+	
+	Option Explicit
+	
+	'Constants
+	Private Const c_strTrainListTag As String = "MainKernelBasic.TrainModule.HMITrainManager.bstrListHeadTrain"
+	' Private Const c_strPath As String = "C:\Informes\Modelos"
+	'Dialog box management
+	Enum enumReportTypes
+	    [rtTraincirculation]
+	    [rtCommercialKM]
+	    [rtTriptime]
+	
+	
+	End Enum
+	Dim ReportTypeLabels(0 To 2) As String
+	
+	
+	'*************************************
+	'* Traincirculation Varaibles
+	
+	Dim varRepor1Param1 As Variable
+	Dim varRepor1Param2 As Variable
+	Dim varRepor1Param3 As Variable
+	Dim varRepor1Fire As Variable
+	Dim WithEvents varRepor1_FileName As Variable
+	Dim varRepor1TemplateFile As Variable
+	Dim varRepor1TemplatePath As Variable
+	
+	'*************************************
+	'* CommercialKM Varaibles
+	
+	Dim varRepor2Param1 As Variable
+	Dim varRepor2Param2 As Variable
+	Dim varRepor2Param3 As Variable
+	Dim varRepor2Fire As Variable
+	Dim WithEvents varRepor2_FileName As Variable
+	Dim varRepor2TemplateFile As Variable
+	Dim varRepor2TemplatePath As Variable
+	
+	''*********************************
+	'* Triptime Varaibles
+	Dim varRepor3Param1 As Variable
+	Dim varRepor3Param2 As Variable
+	Dim varRepor3Param3 As Variable
+	Dim varRepor3Param4 As Variable
+	Dim varRepor3Fire As Variable
+	Dim WithEvents varRepor3_FileName As Variable
+	Dim varRepor3TemplateFile As Variable
+	Dim varRepor3TemplatePath As Variable
+	
+	Dim m_OPC_TrainList As Variable
+	
+	'********************************
+	Dim VarQoS_ServerName As Variable
+	Dim m_OPCCluster As String
+	'Dim CrxApp As CRAXDRT.Application
+	Dim CrxRpt As S2KReportViewer.S2KManagedReport
+	Const EXPORTPATH As String = "C:\Informes\Modelos\" ' "\REPORTS\ReportsGenerated"   #MODIF BL 26082005: Not used
+	
+	Dim bReportIsLoaded As Boolean
+	
+	
+	
+	
+	Private Sub btnOptday_Click()
+	On Error GoTo ErrorHandler
+	    
+	    If btnOptday.Value = True Then
+	        Dtp_StartDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 1
+	        Dtp_EndDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 1
+	        Dtp_StartTime.Hour = "00"
+	        Dtp_StartTime.Minute = "00"
+	        Dtp_StartTime.Second = "00"
+	        Dtp_EndTime.Hour = "23"
+	        Dtp_EndTime.Minute = "59"
+	        Dtp_EndTime.Second = "59"
+	        btnOpt7day.Value = False
+	        btnOpt30day.Value = False
+	    End If
+	  
+	    Call Enableparameters
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btnOptday_Click", Err.Description)
+	End Sub
+	Private Sub btnOpt7day_Click()
+	On Error GoTo ErrorHandler
+	
+	  If btnOpt7day.Value = True Then
+	    Dtp_StartDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 7
+	    Dtp_EndDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 1
+	    Dtp_StartTime.Hour = "00"
+	    Dtp_StartTime.Minute = "00"
+	    Dtp_StartTime.Second = "00"
+	    Dtp_EndTime.Hour = "23"
+	    Dtp_EndTime.Minute = "59"
+	    Dtp_EndTime.Second = "59"
+	    btnOptday.Value = False
+	    btnOpt30day.Value = False
+	  End If
+	  
+	  Enableparameters
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btnOpt7day_Click", Err.Description)
+	End Sub
+	Private Sub btnOpt30day_Click()
+	On Error GoTo ErrorHandler
+	
+	  If btnOpt30day.Value = True Then
+	    Dtp_StartDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 30
+	    Dtp_EndDate.Value = CDate(Format(Now, "DD/MM/YYYY")) - 1
+	    Dtp_StartTime.Hour = "00"
+	    Dtp_StartTime.Minute = "00"
+	    Dtp_StartTime.Second = "00"
+	    Dtp_EndTime.Hour = "23"
+	    Dtp_EndTime.Minute = "59"
+	    Dtp_EndTime.Second = "59"
+	    btnOptday.Value = False
+	    btnOpt7day.Value = False
+	  End If
+	  
+	  Enableparameters
+	   
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btnOpt30day_Click", Err.Description)
+	End Sub
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	
+	    If Not (varRepor1_FileName Is Nothing) Then
+	        'Variables.Remove (varRepor1_FileName.Name)
+	        Set varRepor1_FileName = Nothing
+	    End If
+	
+	    If Not (varRepor2_FileName Is Nothing) Then
+	        'Variables.Remove (varRepor2_FileName.Name)
+	        Set varRepor2_FileName = Nothing
+	    End If
+	  
+	    If Not (varRepor3_FileName Is Nothing) Then
+	        'Variables.Remove (varRepor3_FileName.Name)
+	        Set varRepor3_FileName = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_BeforClose", Err.Description)
+	End Function
+	
+	Private Sub Mimic_Open()
+	
+	
+	On Error GoTo ErrorHandler
+	
+	    '* Clear all ActiveX
+	    Call ClearActivex
+	    
+	    '* Intialize check boxes
+	    btnOptday.Value = False
+	    btnOpt7day.Value = False
+	    btnOpt30day.Value = False
+	    Call Enableparameters
+	     '* Fill the report type label array
+	    ReportTypeLabels(rtTraincirculation) = "Circulacion de trenes"
+	    ReportTypeLabels(rtCommercialKM) = "KM comercial"
+	    ReportTypeLabels(rtTriptime) = "Tiempo de Recorrido"
+	
+	    Call FillReports
+	    
+	   
+	    '* Cluster Name configuration
+	    m_OPCCluster = "OPCClusterATSLV2:"
+	   
+	    
+	    
+	    Set m_OPC_TrainList = Variables.Add(c_strClusterLevel1 & c_strTrainListTag, fvVariableTypeText)
+	    
+	'    If (m_OPC_TrainList.EnableEvents = True) Then
+	'            m_OPC_TrainList_ValueChange
+	'        Else
+	'            m_OPC_TrainList.EnableEvents = True
+	'    End If
+	    
+	    '* Variables to interact For Train circulation
+	
+	    '* Interval
+	    Set varRepor1Param1 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.ReportParameter1", fvVariableTypeText)
+	    
+	    '* Date Begin
+	    Set varRepor1Param2 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.ReportParameter2", fvVariableTypeText)
+	    
+	    '* Date End
+	    Set varRepor1Param3 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.ReportParameter3", fvVariableTypeText)
+	    
+	    '* Report Generate
+	    Set varRepor1Fire = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.FireReport", fvVariableTypeBit)
+	    Set varRepor1_FileName = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.LastExportedFile", fvVariableTypeText)
+	    
+	    '* Report Template
+	    Set varRepor1TemplateFile = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.TemplateFile", fvVariableTypeText)
+	    Set varRepor1TemplatePath = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalTrips_S2KReport.TemplatePath", fvVariableTypeText)
+	    
+	    '******************************
+	    varRepor1_FileName.EnableEvents = False
+	    
+	    
+	    '* Variables to interact for Commercial KM
+	    '* Interval
+	    Set varRepor2Param1 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.ReportParameter1", fvVariableTypeText)
+	    
+	    '* Date Begin
+	    Set varRepor2Param2 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.ReportParameter2", fvVariableTypeText)
+	    
+	    '* Date End
+	    Set varRepor2Param3 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.ReportParameter3", fvVariableTypeText)
+	    
+	    '* Report Generate
+	    Set varRepor2Fire = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.FireReport", fvVariableTypeBit)
+	    Set varRepor2_FileName = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.LastExportedFile", fvVariableTypeText)
+	    
+	    '* Report Template
+	    Set varRepor2TemplateFile = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.TemplateFile", fvVariableTypeText)
+	    Set varRepor2TemplatePath = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTotalKM_S2KReport.TemplatePath", fvVariableTypeText)
+	    '******************************
+	    varRepor2_FileName.EnableEvents = False
+	    
+	    '* Variables to interact For Trip time
+	    '* Interval
+	    Set varRepor3Param1 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.ReportParameter1", fvVariableTypeText)
+	    
+	    '* Date Begin
+	    Set varRepor3Param2 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.ReportParameter2", fvVariableTypeText)
+	    
+	    '* Date End
+	    Set varRepor3Param3 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.ReportParameter3", fvVariableTypeText)
+	    
+	    '* Train No
+	    Set varRepor3Param4 = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.ReportParameter4", fvVariableTypeText)
+	   
+	    '* Report Generate
+	    Set varRepor3Fire = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.FireReport", fvVariableTypeBit)
+	    Set varRepor3_FileName = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.LastExportedFile", fvVariableTypeText)
+	  
+	    '* Report Template
+	    Set varRepor3TemplateFile = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.TemplateFile", fvVariableTypeText)
+	    Set varRepor3TemplatePath = Variables.Add(m_OPCCluster & "MainGDLL3.QoSTripTime_S2KReport.TemplatePath", fvVariableTypeText)
+	    '******************************
+	    varRepor3_FileName.EnableEvents = False
+	       
+	        
+	    Set VarQoS_ServerName = Variables.Add(m_OPCCluster & "IconisS2K.Core.ServerState.Core.ServerState.Core.ServerID", fvVariableTypeText)
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub FillReports()
+	On Error GoTo ErrorHandler
+	Dim iIndex As Integer
+	    'Populate Report types list
+	    cboxReportType.Clear
+	    
+	    For iIndex = LBound(ReportTypeLabels) To UBound(ReportTypeLabels)
+	        cboxReportType.AddItem ReportTypeLabels(iIndex)
+	    Next
+	 
+	    'Initialize report type list
+	    cboxReportType.Value = ReportTypeLabels(rtTraincirculation)
+	
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "FillReports", Err.Description)
+	End Sub
+	
+	Private Sub ClearActivex()
+	On Error GoTo ErrorHandler
+	
+	    cboxReportType.Clear
+	    cboxReportType.Value = ""
+	 
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "ClearActivex", Err.Description)
+	End Sub
+	
+	Private Sub cboxReportType_Change()
+	'On Error GoTo ErrorHandler
+	    Call InitializeControls(cboxReportType.ListIndex)
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cboxReportType_Change", Err.Description)
+	End Sub
+	
+	
+	Private Sub InitializeControls(iReportType As enumReportTypes)
+	On Error GoTo ErrorHandler
+	
+	
+	    Select Case iReportType
+	        Case rtTraincirculation:
+	            Dtp_StartDate.Enabled = False
+	            Dtp_StartTime.Enabled = False
+	            Dtp_EndDate.Enabled = False
+	            Dtp_EndTime.Enabled = False
+	            cbx_TrainID.Enabled = False
+	            btnOptday.Enabled = True
+	            btnOpt7day.Enabled = True
+	            btnOpt30day.Enabled = True
+	        Case rtCommercialKM:
+	            Dtp_StartDate.Enabled = False
+	            Dtp_StartTime.Enabled = False
+	            Dtp_EndDate.Enabled = False
+	            Dtp_EndTime.Enabled = False
+	            cbx_TrainID.Enabled = False
+	            btnOptday.Enabled = True
+	            btnOpt7day.Enabled = True
+	            btnOpt30day.Enabled = True
+	        Case rtTriptime:
+	            Dtp_StartDate.Enabled = False
+	            Dtp_StartTime.Enabled = False
+	            Dtp_EndDate.Enabled = False
+	            Dtp_EndTime.Enabled = False
+	            cbx_TrainID.Enabled = True
+	            btnOptday.Enabled = True
+	            btnOpt7day.Enabled = True
+	            btnOpt30day.Enabled = True
+	            If Check_OPC_Variable(m_OPC_TrainList) Then ReadTrainList (m_OPC_TrainList.Value)
+	    End Select
+	
+	    Dtp_StartDate.Value = Now
+	    Dtp_EndDate.Value = Now
+	    Dtp_StartTime.Hour = "00"
+	    Dtp_StartTime.Minute = "00"
+	    Dtp_StartTime.Second = "00"
+	    Dtp_EndTime.Hour = "23"
+	    Dtp_EndTime.Minute = "59"
+	    Dtp_EndTime.Second = "59"
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "cboxReportType_Change", Err.Description)
+	End Sub
+	
+	Private Sub SendReportRequest(iReportType As enumReportTypes, ByRef bFormatOK As Boolean, ByRef bSendOK As Boolean)
+	On Error GoTo ErrorHandler
+	    
+	    Dim bFieldsCheckedOK As Boolean
+	    Dim bVarWritesOK As Boolean
+	    Dim sFormattedStartDateTime As String
+	    Dim sFormattedEndDateTime As String
+	    Dim testDate As Boolean
+	
+	    sFormattedStartDateTime = ""
+	    bFieldsCheckedOK = True
+	
+	    Select Case iReportType
+	
+	               
+	            '****************************Traincirculation*********************************************
+	    Case rtTraincirculation:
+	    
+	            'Checking
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartTime.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndTime.Value <> "")
+	            ' DISABLED TEMPORARILY, TO BE FIXED ONCE ISSUE WITH PRODUCT IS RESOLVED
+	           ' bFieldsCheckedOK = bFieldsCheckedOK And (optCorrected.Value = True Or optRaw.Value = True)
+	            
+	            sFormattedStartDateTime = Dtp_StartDate.Year & "-" & Dtp_StartDate.Month & "-" _
+	                    & Dtp_StartDate.Day & " " & Format(Dtp_StartTime.Hour, "00") & ":" _
+	                    & Format(Dtp_StartTime.Minute, "00") & ":" & Format(Dtp_StartTime.Second, "00")
+	                    
+	            sFormattedEndDateTime = Dtp_EndDate.Year & "-" & Dtp_EndDate.Month & "-" _
+	                    & Dtp_EndDate.Day & " " & Format(Dtp_EndTime.Hour, "00") & ":" _
+	                    & Format(Dtp_EndTime.Minute, "00") & ":" & Format(Dtp_EndTime.Second, "00")
+	            
+	
+	                    testDate = MOD_General.DiffStartDateTimeEndDateTime(sFormattedStartDateTime, sFormattedEndDateTime)
+	                    If (testDate) Then
+	                        If (bFieldsCheckedOK = True) Then
+	'                            If (varRepor1Param1.Status = fvVariableStatusGood And _
+	'                                varRepor1Param2.Status = fvVariableStatusGood And _
+	'                                varRepor1Param3.Status = fvVariableStatusGood And _
+	                                    varRepor1_FileName.Status = fvVariableStatusGood) Then
+	                                    varRepor1_FileName.EnableEvents = True
+	                                     varRepor1Param1.Value = ReportInterval(sFormattedStartDateTime, sFormattedEndDateTime)
+	                                    varRepor1Param2.Value = sFormattedStartDateTime
+	                                    varRepor1Param3.Value = sFormattedEndDateTime
+	                                    varRepor1Fire.Value = True
+	                                    bVarWritesOK = True
+	'                            End If
+	                        Else
+	                        MsgBox "Please fill all the required parameters", vbInformation + vbOKOnly, "QOS information"
+	                        End If
+	                    Else
+	                        MsgBox "Start Date and Time is lower than End Date and Time. Please retry", vbInformation + vbOKOnly, "QOS information"
+	                        bVarWritesOK = False
+	                    End If
+	        '****************************CommercialKM***********************************
+	        Case rtCommercialKM:
+	        
+	            'Checking
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartTime.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndTime.Value <> "")
+	           ' bFieldsCheckedOK = bFieldsCheckedOK And (cboxStations.Value <> "")
+	            
+	    
+	             sFormattedStartDateTime = Dtp_StartDate.Year & "-" & Dtp_StartDate.Month & "-" _
+	                    & Dtp_StartDate.Day & " " & Format(Dtp_StartTime.Hour, "00") & ":" _
+	                    & Format(Dtp_StartTime.Minute, "00") & ":" & Format(Dtp_StartTime.Second, "00")
+	                    
+	            sFormattedEndDateTime = Dtp_EndDate.Year & "-" & Dtp_EndDate.Month & "-" _
+	                    & Dtp_EndDate.Day & " " & Format(Dtp_EndTime.Hour, "00") & ":" _
+	                    & Format(Dtp_EndTime.Minute, "00") & ":" & Format(Dtp_EndTime.Second, "00")
+	
+	''            Select Case cboxTimeRange.ListIndex
+	''                Case "0"
+	                    testDate = MOD_General.DiffStartDateTimeEndDateTime(sFormattedStartDateTime, sFormattedEndDateTime)
+	                    If (testDate) Then
+	                        If (bFieldsCheckedOK = True) Then
+	'                            If (varRepor2Param1.Status = fvVariableStatusGood And _
+	'                                varRepor2Param2.Status = fvVariableStatusGood And _
+	'                                varRepor2Param3.Status = fvVariableStatusGood And _
+	'                                varRepor2_FileName.Status = fvVariableStatusGood) Then
+	                                    varRepor2_FileName.EnableEvents = True
+	                                    varRepor2Param1.Value = ReportInterval(sFormattedStartDateTime, sFormattedEndDateTime)
+	                                    varRepor2Param2.Value = sFormattedStartDateTime
+	                                    varRepor2Param3.Value = sFormattedEndDateTime
+	                                    varRepor2Fire.Value = True
+	                                    bVarWritesOK = True
+	'                            End If
+	                        Else
+	                        MsgBox "Please fill all the required parameters", vbInformation + vbOKOnly, "QOS information"
+	                        End If
+	                    Else
+	                        MsgBox "Start Date and Time is lower than End Date and Time. Please retry", vbInformation + vbOKOnly, "QOS information"
+	                        bVarWritesOK = False
+	                    End If
+	
+	    '****************************Triptime*************************************
+	    Case rtTriptime:
+	    
+	            'Checking
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_StartTime.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndDate.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (Dtp_EndTime.Value <> "")
+	            bFieldsCheckedOK = bFieldsCheckedOK And (cbx_TrainID.Value <> "")
+	'            bFieldsCheckedOK = bFieldsCheckedOK And (cboxInterPlatformTo.Value <> "")
+	            
+	            sFormattedStartDateTime = Dtp_StartDate.Year & "-" & Dtp_StartDate.Month & "-" _
+	                    & Dtp_StartDate.Day & " " & Format(Dtp_StartTime.Hour, "00") & ":" _
+	                    & Format(Dtp_StartTime.Minute, "00") & ":" & Format(Dtp_StartTime.Second, "00")
+	                    
+	            sFormattedEndDateTime = Dtp_EndDate.Year & "-" & Dtp_EndDate.Month & "-" _
+	                    & Dtp_EndDate.Day & " " & Format(Dtp_EndTime.Hour, "00") & ":" _
+	                    & Format(Dtp_EndTime.Minute, "00") & ":" & Format(Dtp_EndTime.Second, "00")
+	
+	
+	                    testDate = MOD_General.DiffStartDateTimeEndDateTime(sFormattedStartDateTime, sFormattedEndDateTime)
+	                    If (testDate) Then
+	                        If (bFieldsCheckedOK = True) Then
+	'                            If (varRepor3Param1.Status = fvVariableStatusGood And _
+	'                                varRepor3Param2.Status = fvVariableStatusGood And _
+	'                                varRepor3Param3.Status = fvVariableStatusGood And _
+	'                                varRepor3Param4.Status = fvVariableStatusGood And _
+	'                                varRepor3_FileName.Status = fvVariableStatusGood) Then
+	                                    varRepor3_FileName.EnableEvents = True
+	                                    varRepor3Param1.Value = ReportInterval(sFormattedStartDateTime, sFormattedEndDateTime)
+	                                    varRepor3Param2.Value = sFormattedStartDateTime
+	                                    varRepor3Param3.Value = sFormattedEndDateTime
+	                                    varRepor3Param4.Value = cbx_TrainID.Value
+	                                    varRepor3Fire.Value = True
+	                                    bVarWritesOK = True
+	'                            End If
+	                        Else
+	                        MsgBox "Please fill all the required parameters", vbInformation + vbOKOnly, "QOS information"
+	                        End If
+	                    Else
+	                        MsgBox "Start Date and Time is lower than End Date and Time. Please retry", vbInformation + vbOKOnly, "QOS information"
+	                        bVarWritesOK = False
+	                    End If
+	
+	 
+	    End Select
+	    
+	    'Debug.Print (Now() & " - " & cboxReportType.Value & " :")
+	        
+	    bSendOK = bVarWritesOK
+	    bFormatOK = bFieldsCheckedOK
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "SendReportRequest", Err.Description)
+	    bSendOK = False
+	    bFormatOK = False
+	End Sub
+	
+	Private Sub btnValidate_Click()
+	On Error GoTo ErrorHandler
+	Dim bFieldConsistent As Boolean
+	Dim bRequestSent As Boolean
+	
+	    If (cboxReportType.ListIndex > -1) Then
+	            Call SendReportRequest(cboxReportType.ListIndex, bFieldConsistent, bRequestSent)
+	            If (bFieldConsistent = False) Then
+	                MsgBox "Invalid Parameters", vbInformation, "QoS parameters"
+	            End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btnValidate_Click", Err.Description)
+	End Sub
+	
+	
+	Private Sub VarQoSReportFileName_ValueChange(ByRef Var As Variable, ByVal iRelType As Integer)
+	On Error GoTo ErrorHandler
+	    
+	    Dim sReportFullpath As String
+	    Dim ArrayTmp(0) As String
+	    Dim TheMessage As String
+	    Dim TheTitle As String
+	
+	    ArrayTmp(0) = ""
+	    
+	    If Var.Status = fvVariableStatusGood And Var.PreviousStatus = fvVariableStatusGood And Var.Value = "" Then
+	        TheMessage = "Report is not Generated"
+	        MsgBox TheMessage, vbExclamation And vbOKOnly, TheTitle
+	    End If
+	     sReportFullpath = ""
+	    If Var.Status = fvVariableStatusGood And Var.PreviousStatus = fvVariableStatusGood And Var.Value <> "" Then
+	        sReportFullpath = "\\" & VarQoS_ServerName & Var
+	        '* To be removed after Product bug closed.
+	        '* Bug: Export path defined in the Report object is different compareed to the ReportFileName attribute
+	        'sReportFullpath = Replace(sReportFullpath, "\ReportsShared", "\D$\IconisTM4\Reports")
+	        'sReportFullpath = "\\" & "OCC-SER01" & Var
+	        Call PreviewReport(iRelType)
+	    End If
+	    
+	    'Var.EnableEvents = False
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "VarQoSReportFileName_ValueChange", Err.Description)
+	End Sub
+	
+	Public Sub PreviewReport(ByVal iRelType As Integer)
+	    'bReportIsLoaded = False
+	    Dim ArrayTmp(0) As String
+	    Dim TheMessage As String
+	    Dim TheTitle As String
+	    Dim sReportFileName As String
+	    Dim sParam1 As String
+	    Dim sParam2 As String
+	    Dim sParam3 As String
+	    Dim sParam4 As String
+	    Dim bRet As Boolean
+	
+	    On Error GoTo ErrorHandler
+	    Select Case iRelType
+	        Case 1
+	            sReportFileName = "\\" & VarQoS_ServerName & "\" & varRepor1TemplatePath & "\" & varRepor1TemplateFile
+	            sReportFileName = Replace(sReportFileName, ":", "$")
+	            sParam1 = varRepor1Param1
+	            sParam2 = varRepor1Param2
+	            sParam3 = varRepor1Param3
+	        
+	        Case 2
+	            sReportFileName = "\\" & VarQoS_ServerName & "\" & varRepor2TemplatePath & "\" & varRepor2TemplateFile
+	            sReportFileName = Replace(sReportFileName, ":", "$")
+	            sParam1 = varRepor2Param1
+	            sParam2 = varRepor2Param2
+	            sParam3 = varRepor2Param3
+	        
+	        Case 3
+	            sReportFileName = "\\" & VarQoS_ServerName & "\" & varRepor3TemplatePath & "\" & varRepor3TemplateFile
+	            sReportFileName = Replace(sReportFileName, ":", "$")
+	            sParam1 = varRepor3Param1
+	            sParam2 = varRepor3Param2
+	            sParam3 = varRepor3Param3
+	            sParam4 = varRepor3Param4
+	        
+	        Case Else
+	            Exit Sub
+	    End Select
+	
+	      bReportIsLoaded = True
+	        If (sReportFileName <> "") Then
+	     
+	        Set CrxRpt = New S2KReportViewer.S2KManagedReport
+	        'Use the OpenReport method of the S2KManagedReport object to open the report.
+	        bRet = CrxRpt.OpenReport(sReportFileName)
+	        If (bRet <> False) Then
+	            ' zoom, progress and other Crystal Report Viewer features are inoperative
+	      
+	            CRViewer.ShowRefreshButton = True
+	            CRViewer.DisplayGroupTree = False
+	            Set CRViewer.ReportSource = CrxRpt
+	            CRViewer.ViewReport
+	  
+	        End If
+	            ' release the object memory
+	            Set CrxRpt = Nothing
+	    End If
+	   
+	    
+	Exit Sub
+	
+	ErrorHandler:
+	    bReportIsLoaded = False
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "PreviewReport", Err.Description)
+	End Sub
+	
+	
+	Private Sub varRepor1_FileName_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	    Call VarQoSReportFileName_ValueChange(varRepor1_FileName, 1)
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "varRepor1_FileName_ValueChange", Err.Description)
+	End Sub
+	Private Sub varRepor2_FileName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call VarQoSReportFileName_ValueChange(varRepor2_FileName, 2)
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "varRepor2_FileName_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub varRepor3_FileName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call VarQoSReportFileName_ValueChange(varRepor3_FileName, 3)
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "varRepor3_FileName_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub ReadTrainList(ByVal strxml As String)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, Me.Name, "ReadTrainList", Err.Description)
+	
+	Dim iList() As String
+	Dim i As Integer
+	Dim m_sListIDsSplitted_1() As String
+	    
+	    cbx_TrainID.Clear
+	    cbx_TrainID = ""
+	        
+	    If (strxml <> "") Then
+	        m_sListIDsSplitted_1 = Split(strxml, ";")
+	    
+	       For i = 0 To UBound(m_sListIDsSplitted_1) - 1
+	            iList = Split(m_sListIDsSplitted_1(i), ":")
+	                cbx_TrainID.AddItem (iList(1))
+	        Next
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", "WARNING:strxml is empty")
+	    End If
+	    
+	    If cbx_TrainID.ListCount > 0 Then cbx_TrainID.Enabled = True
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	
+	'Private Sub m_OPC_TrainList_ValueChange()
+	'On Error GoTo ErrorHandler
+	'    Call CBTrace(CBTRACE_VBA, Me.Name, "m_OPC_TrainList_ValueChange", Err.Description)
+	'
+	'   If Not Check_OPC_Variable(m_OPC_TrainList) Then Exit Sub
+	'
+	'Exit Sub
+	'ErrorHandler:
+	'Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_TrainList_ValueChange", Err.Description)
+	'End Sub
+	
+	Private Function ReportInterval(Date1 As String, Date2 As String) As String
+	On Error GoTo ErrorHandler
+	    
+	    If btnOptday.Value = True Then
+	       ReportInterval = "Daily"
+	    ElseIf btnOpt7day.Value = True Then
+	       ReportInterval = "Weekly"
+	    ElseIf btnOpt30day.Value = True And DateDiff("d", Date1, Date2) = 29 Then
+	       ReportInterval = "Monthly"
+	    Else
+	       ReportInterval = "On-Demand"
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReportInterval", Err.Description)
+	End Function
+	
+	Public Sub Enableparameters()
+	On Error GoTo ErrorHandler
+	    If btnOptday.Value = False And btnOpt7day.Value = False And btnOpt30day.Value = False Then
+	    
+	        Dtp_StartDate.Enabled = True
+	        Dtp_StartTime.Enabled = True
+	        Dtp_EndDate.Enabled = True
+	        Dtp_EndTime.Enabled = True
+	    Else
+	        Dtp_StartDate.Enabled = False
+	        Dtp_StartTime.Enabled = False
+	        Dtp_EndDate.Enabled = False
+	        Dtp_EndTime.Enabled = False
+	    
+	    End If
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Enableparameters", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+	"S2KReportViewer", 1, 6, "{BD7B7DA5-967E-45BF-91C0-970705FA8614}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-21,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,128,128,128,0,0,0
+	COLOR,7,238,238,238,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape"
+	B,312,474,7,12,312,474,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"cboxReportType"
+	B,25,52,297,76,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"Dtp_StartDate"
+	B,25,290,121,314,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,25,28,153,52,25,52,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,25,28,0,0,FONT,1,"Report Type",36,FONT,1,"Report Type",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Opci¢n de Informe",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,25,263,121,287,25,287,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,25,263,0,0,FONT,1,"Start Date",36,FONT,1,"Start Date",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha inicial",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"Dtp_EndDate"
+	B,25,346,121,370,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text4"
+	B,25,320,121,344,25,344,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,25,320,0,0,FONT,1,"End Date",36,FONT,1,"End Date",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha final",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"Dtp_StartTime"
+	B,177,290,275,314,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text5"
+	B,177,263,273,287,177,287,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,177,263,0,0,FONT,1,"Start Time",36,FONT,1,"Start Time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora inical",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"Dtp_EndTime"
+	B,177,346,275,370,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text6"
+	B,177,320,273,344,177,344,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,177,320,0,0,FONT,1,"End Time",36,FONT,1,"End Time",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora final",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnValidate"
+	B,68,430,222,454,68,454,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,4,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,68,430,0,0,FONT,2,"Validate",37,FONT,2,"Validate",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Generar informe",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+		AUTH,"btnView%",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,95,109,194,133,95,133,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,95,109,0,0,FONT,2,"",37,FONT,2,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ultimo d¡a",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text7"
+	B,96,153,231,177,96,177,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,96,153,0,0,FONT,2,"Ultimo d¡a",37,FONT,2,"Ultimo d¡a",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ultimos 7 d¡as",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,99,202,238,226,99,226,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,99,202,0,0,FONT,2,"Ultimo d¡a",37,FONT,2,"Ultimo d¡a",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ultimos 30 d¡as",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbx_TrainID"
+	B,25,388,121,412,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"btnOptday"
+	B,76,109,96,133,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"btnOpt7day"
+	B,76,154,96,178,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"btnOpt30day"
+	B,76,200,96,224,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"CRViewer"
+	B,325,5,1579,723,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

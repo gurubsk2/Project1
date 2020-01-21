@@ -1,0 +1,80 @@
+ASCII32,17,6,2019,0:32,29,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,34,0
+	COLOR,4,162,162,162,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Shape7_Click()
+	
+	Call GENERAL.Navegation(ActiveMimic.FileName, "GDL_Historico")
+	End Sub
+	
+	Private Sub Symbol_Click()
+	Call GENERAL.Navegation(ActiveMimic.FileName, "GDL_Historico")
+	End Sub
+	    
+	Private Sub Navegation(sMimicClosed As String, sMimicOpened As String)
+	     iMimicPosition = thisproject.ActiveMimic.Windows(1).Left
+	    
+	        If iMimicPosition >= 1920 Then
+	            iMimicPosition = 1921
+	        Else
+	            iMimicPosition = 0
+	        End If
+	        
+	        If TheseMimics.IsOpened(sMimicClosed) = False Then
+	            Mimics.Open sMimicClosed, , , , , , , , iMimicPosition, , True
+	            ''Mimics.Item(sMimicOpened).Close fvDoNotSaveChanges
+	            
+	        Else
+	            Mimics.Open sMimicClosed, , , , , , , , iMimicPosition, , True
+	        
+	'           If thisproject.Mimics.Item(sMimicClosed).Windows.Item(1).Left <> iMimicPosition Then
+	'
+	'               aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows.Item(1).Left
+	'               aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows.Item(1).Left
+	'
+	'               TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	'
+	'               TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	'           End If
+	        End If
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol7"
+	B,1512,148,1553,190,1512,190,65535,0,6400,0,2,1,1
+	O,BEGIN,BM,"Bitmap4"
+		B,1512,148,1553,190,1512,188,65535,0,6400,0,4,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,"bt19-Statistics.bmp",1,COLOR,4
+	O,END
+	O,BEGIN,R,"Shape7"
+		B,1553,190,1512,148,1553,190,65535,0,6400,0,4,1,1
+		ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+		AST,7,2,COLOR,2,COLOR,1,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Historico de variables"
+				LANG,END
+				LANG,BEGIN,2058
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Historico de variables"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END

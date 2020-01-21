@@ -1,0 +1,623 @@
+ASCII32,10,1,2018,8:26,57,1.1
+W,BEGIN,"GDL_CST_Schedule_Seq_window","GDL_CST_Schedule_Seq_window"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,394,365
+	SIZE,920,350,920,350,0,0,0,1920,1144,914,328
+	BACKCOLOR,238,238,238,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Secuencias Programadas"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,1,0,1,1,0,0,0,0,1,1,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_CST_Schedule_Seq_window.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic name:      GDL Command Schedule Sequence Window
+	'* *******************************************************************************************
+	'* Purpose:     '*It manages:
+	'*                  - creating the new Scheduling sequence
+	'*                  - modify the existing Scheduled sequence
+	'*                  - delete the Scheduled sequence
+	'*
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                April '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	Option Explicit
+	'***************Constants used for internal variables used in mimic***********************
+	
+	Private Const c_sSequence As String = "@SEQUENCE"
+	Private Const c_sEvent As String = "@EVENT"
+	Private Const c_sSeqName As String = ".SeqName%"
+	Private Const c_sSeqExecutionTime As String = ".ExecutionTime%"
+	Private Const c_sSeqStopTime As String = ".SequenceStop%"
+	Private Const c_sFrequency As String = ".Frequency%"
+	
+	'***************OPC Plugs used in mimic***********************
+	Private Const c_CommandSequenceScheduling As String = "MainGDLL3.CSTModule.CSTMgr.GetSequencesScheduling"
+	Private Const c_Command As String = "YES"
+	'***************Constants used in nodes/Attributes of the XML***********************
+	Private Const c_strCommandNode As String = "CommandsSequencesScheduling"
+	Private Const c_strDaysOfReoccurAttr As String = "DaysForRecurrence"
+	Private Const c_strDaysOfExecuteOnAttr As String = "ExecuteOn"
+	Private Const c_strNameAttr As String = "SeqName"
+	Private Const c_strseqStop As String = "StopOn"
+	Private Const c_strEqpName As String = "EqpName"
+	Private Const c_strStateName As String = "StateName"
+	Private Const c_strSeqTimeScheduleNode As String = "SequenceTimestampTrigger"
+	Private Const c_strSeqStateScheduleNode As String = "SequenceStateChangeTrigger"
+	Private Const c_iTablelength As Integer = 10
+	'***************Local/global variables used***********************
+	Dim sCurItem As String
+	Dim sCurEventItem As String
+	Dim sTimeLength As Integer
+	Dim sEventLength As Integer
+	Dim m_strSequenceList As String
+	Dim m_OPC_ExecuteSequence As Variable
+	Dim WithEvents m_OPC_CmdScheduleSequence As Variable
+	
+	
+	'***************This function manages the deletion of the selected scheduled sequence***********************
+	Private Sub btnDelete_Click()
+	On Error GoTo ErrorHandler
+	    If Variables.Item("@SelectedScheduleSeq%").Value > 0 Then
+	        Call Mimics.OpenInCenter("GDL_CST_Remove_Seq_Scheduling_Confirmation_Window", Variables.Item("@SelectedScheduleSeq%").Value, Getmousepointerpossition)
+	    ElseIf Variables.Item("@SelectedScheduleEventSeq%").Value > 0 Then
+	        Call Mimics.OpenInCenter("GDL_CST_Remove_Seq_Scheduling_Confirmation_Window", Variables.Item("@SelectedScheduleEventSeq%").Value, Getmousepointerpossition)
+	    End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnDelete_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	
+	'** This function handles the modify functionality of Command sequence scheduling mimic****
+	
+	Private Sub btnModify_Click()
+	On Error GoTo ErrorHandler
+	
+	
+	  Variables.Item("@NewScheduleSequence%").Value = 2
+	  If Variables.Item("@SelectedScheduleSeq%").Value > 0 Then
+	 sCurItem = Variables.Item("@SelectedScheduleSeq%").Value
+	
+	    If Check_OPC_Variable(m_OPC_CmdScheduleSequence) And sCurItem <> "" Then
+	        m_OPC_CmdScheduleSequence.Value = Variables.Item(c_sSequence & sCurItem & c_sSeqName).Value
+	        If Not m_OPC_CmdScheduleSequence Is Nothing Then
+	        Variables.Remove (m_OPC_CmdScheduleSequence.Name)
+	        Set m_OPC_CmdScheduleSequence = Nothing
+	        End If
+	        OpenMimicInCenter "GDL_Command_Sequence_Scheduling_Window", Variables.Item("@SelectedScheduleSeq%").Value, Getmousepointerpossition
+	        
+	   End If
+	  Else
+	   sCurEventItem = Variables.Item("@SelectedScheduleEventSeq%").Value
+	    If Check_OPC_Variable(m_OPC_CmdScheduleSequence) And sCurEventItem <> "" Then
+	        m_OPC_CmdScheduleSequence.Value = Variables.Item(c_sEvent & sCurEventItem & c_sSeqName).Value
+	            If Not m_OPC_CmdScheduleSequence Is Nothing Then
+	                Variables.Remove (m_OPC_CmdScheduleSequence.Name)
+	                Set m_OPC_CmdScheduleSequence = Nothing
+	            End If
+	        OpenMimicInCenter "GDL_Command_Sequence_Scheduling_Window", Variables.Item("@SelectedScheduleEventSeq%").Value, Getmousepointerpossition
+	     
+	    End If
+	
+	End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnExecute_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_CmdScheduleSequence_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	 If (m_OPC_CmdScheduleSequence.Value <> c_Command) Then
+	        m_strSequenceList = m_OPC_CmdScheduleSequence.Value
+	        ReadXML
+	    End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_CmdScheduleSequence_ValueChange", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	Dim m_ClusterName As String
+	Dim iCount As Integer
+	
+	m_ClusterName = "OPCCluster:"
+	
+	    Set m_OPC_CmdScheduleSequence = Variables.Add(m_ClusterName & c_CommandSequenceScheduling, fvVariableTypeText)
+	    Call Variables.Add("@SelectedScheduleSeq%", fvVariableTypeRegister)
+	    Call Variables.Add("@SelectedScheduleEventSeq%", fvVariableTypeRegister)
+	    sCurItem = Variables.Item("@SelectedScheduleSeq%").Value
+	    If Check_OPC_Variable(m_OPC_CmdScheduleSequence) Then
+	        m_OPC_CmdScheduleSequence.Value = c_Command
+	    End If
+	    If ((m_OPC_CmdScheduleSequence.Status = fvVariableStatusGood) And (m_OPC_CmdScheduleSequence.EnableEvents = True)) Then
+	        m_OPC_CmdScheduleSequence_ValueChange
+	    Else
+	        m_OPC_CmdScheduleSequence.EnableEvents = True
+	    End If
+	    For iCount = 1 To 10
+	         Variables.Item(c_sSequence & iCount & ".CommandIndex%").Value = iCount
+	          Variables.Item(c_sEvent & iCount & ".EventCommandIndex%").Value = iCount
+	     Next
+	
+	 Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "Exception:" & Err.Description)
+	End Sub
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	    Dim oDoc As DOMDocument
+	    Dim oSequenceList As IXMLDOMNodeList
+	    Dim oSequence As IXMLDOMElement
+	    Dim strSequenceName As String
+	    Dim iCount As Integer
+	    Dim jCount As Integer
+	    Dim oSequenceTimeStampList As IXMLDOMNodeList
+	    Dim oSequenceTimeStamp As IXMLDOMElement
+	    Dim oSequenceStateStamp As IXMLDOMElement
+	    Dim oSequenceStateStampList As IXMLDOMNodeList
+	   If (m_strSequenceList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strSequenceList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oSequenceList = oDoc.documentElement.selectNodes("/" & c_strCommandNode)
+	                    If Not (oSequenceList Is Nothing) Then
+	                        If (oSequenceList.length > 0) Then
+	                         iCount = 1
+	                         For Each oSequence In oSequenceList
+	                         Set oSequenceTimeStampList = oSequence.getElementsByTagName(c_strSeqTimeScheduleNode)
+	                         sTimeLength = oSequenceTimeStampList.length
+	                            For Each oSequenceTimeStamp In oSequenceTimeStampList
+	                                Variables.Item(c_sSequence & iCount & c_sSeqName).Value = Format(oSequenceTimeStamp.getAttribute(c_strNameAttr))
+	                                Variables.Item(c_sSequence & iCount & c_sSeqExecutionTime).Value = Format(oSequenceTimeStamp.getAttribute(c_strDaysOfExecuteOnAttr))
+	                                Variables.Item(c_sSequence & iCount & c_sSeqStopTime).Value = Format(oSequenceTimeStamp.getAttribute(c_strseqStop))
+	                                Variables.Item(c_sSequence & iCount & c_sFrequency).Value = Format(oSequenceTimeStamp.getAttribute(c_strDaysOfReoccurAttr))
+	
+	                             iCount = iCount + 1
+	                            Next oSequenceTimeStamp
+	                            Set oSequenceStateStampList = oSequence.getElementsByTagName(c_strSeqStateScheduleNode)
+	                            jCount = 1
+	                            sEventLength = oSequenceStateStampList.length
+	                           For Each oSequenceStateStamp In oSequenceStateStampList
+	                                Variables.Item(c_sEvent & jCount & c_sSeqName).Value = Format(oSequenceStateStamp.getAttribute(c_strNameAttr))
+	                                Variables.Item(c_sEvent & jCount & c_sSeqExecutionTime).Value = Format(oSequenceStateStamp.getAttribute(c_strEqpName))
+	                                Variables.Item(c_sEvent & jCount & c_sSeqStopTime).Value = Format(oSequenceStateStamp.getAttribute(c_strStateName))
+	                            
+	                             
+	                            jCount = jCount + 1
+	                            Next oSequenceStateStamp
+	                            
+	                            Next oSequence
+	                        End If
+	                        Set oSequenceList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	 ScrollBar1.Min = 0
+	 ScrollBar1.Max = 0
+	
+	If c_iTablelength < sTimeLength Then
+	    ScrollBar1.Max = sTimeLength - c_iTablelength
+	End If
+	ScrollBar1_Change
+	
+	ScrollBar2.Min = 0
+	ScrollBar2.Max = 0
+	
+	  If c_iTablelength < sEventLength Then
+	     ScrollBar2.Max = sEventLength - c_iTablelength
+	  End If
+	ScrollBar2_Change
+	        
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	
+	Private Sub ScrollBar1_Change()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, Me.FileName, "ScrollBar_Change", "Begin Function")
+	    Dim oSymbol As Symbol
+	    Dim m_iCounter As Integer
+	       
+	        For m_iCounter = 0 To c_iTablelength - 1
+	            Set oSymbol = Me.Graphics.Item("TIMEROW" & m_iCounter)
+	            If m_iCounter <= sTimeLength Then
+	            oSymbol.LocalBranch = "@SEQUENCE" & (ScrollBar1.Value + m_iCounter)
+	            Else
+	            oSymbol.LocalBranch = ""
+	            End If
+	        Next
+	    
+	    Exit Sub
+	ErrorHandler:
+	          Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ScrollBar_Change", "Exception:" & Err.Description)
+	    End Sub
+	Private Sub ScrollBar2_Change()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, Me.FileName, "ScrollBar_Change", "Begin Function")
+	    Dim oSymbol As Symbol
+	    Dim m_iCounter As Integer
+	       
+	        For m_iCounter = 0 To c_iTablelength - 1
+	            Set oSymbol = Me.Graphics.Item("EVENTROW" & m_iCounter)
+	            If m_iCounter <= sEventLength Then
+	            oSymbol.LocalBranch = "@EVENT" & (ScrollBar2.Value + m_iCounter)
+	            Else
+	            oSymbol.LocalBranch = ""
+	            End If
+	        Next
+	    
+	    Exit Sub
+	ErrorHandler:
+	          Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ScrollBar_Change", "Exception:" & Err.Description)
+	    End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,122,122,122,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,212,208,200,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,160,36,1,4,160,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape3"
+	B,296,36,159,4,296,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape5"
+	B,448,36,294,4,448,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text3"
+	B,3,8,160,32,3,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,3,8,0,0,FONT,1,"Nombre de la Secuencia de Commandos",37,FONT,1,"Nombre de la Secuencia de Commandos",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre de la Secuencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,183,0,282,24,183,24,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,183,0,0,0,FONT,1,"Fecha/Hora",37,FONT,1,"Fecha/Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,183,15,282,39,183,39,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,183,15,0,0,FONT,1,"de Creacion",37,FONT,1,"de Creacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"de Ejecucion",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,S,"TIMEROW1"
+	B,0,40,512,65,0,65,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE1",0,40,512,65,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW1"
+	B,527,40,895,65,527,65,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT1",527,40,895,65,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,R,"Shape1"
+	B,512,36,443,4,512,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape4"
+	B,685,36,526,4,685,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape6"
+	B,805,36,684,4,805,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape7"
+	B,896,36,804,4,896,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,528,8,685,32,528,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,528,8,0,0,FONT,1,"Nombre de la Secuencia",37,FONT,1,"Nombre de la Secuencia",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre de la Secuencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,688,8,787,32,688,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,688,8,0,0,FONT,1,"Fecha/Hora",37,FONT,1,"Fecha/Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Equipo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text6"
+	B,805,8,888,32,805,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,805,8,0,0,FONT,1,"de Creacion",37,FONT,1,"de Creacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ScrollBar1"
+	B,512,39,529,287,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"ScrollBar2"
+	B,897,39,914,287,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,S,"TIMEROW2"
+	B,0,65,512,90,0,90,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE2",0,65,512,90,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW3"
+	B,0,90,512,115,0,115,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE3",0,90,512,115,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW4"
+	B,0,115,512,140,0,140,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE4",0,115,512,140,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW5"
+	B,0,140,512,165,0,165,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE5",0,140,512,165,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW6"
+	B,0,165,512,190,0,190,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE6",0,165,512,190,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW7"
+	B,0,190,512,215,0,215,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE7",0,190,512,215,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW8"
+	B,0,215,512,240,0,240,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE8",0,215,512,240,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW9"
+	B,0,240,512,265,0,265,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE9",0,240,512,265,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"TIMEROW10"
+	B,0,265,512,290,0,290,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Left","@SEQUENCE10",0,265,512,290,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW2"
+	B,527,65,895,90,527,90,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT2",527,65,895,90,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW3"
+	B,527,90,895,115,527,115,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT3",527,90,895,115,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW4"
+	B,527,115,895,140,527,140,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT4",527,115,895,140,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW5"
+	B,527,140,895,165,527,165,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT5",527,140,895,165,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW6"
+	B,527,165,895,190,527,190,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT6",527,165,895,190,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW7"
+	B,527,190,895,215,527,215,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT7",527,190,895,215,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW8"
+	B,527,215,895,240,527,240,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT8",527,215,895,240,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW9"
+	B,527,240,895,265,527,265,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT9",527,240,895,265,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"EVENTROW10"
+	B,527,265,895,290,527,290,65535,0,6400,0,1,0,0
+	PP,"GDL_CST_SchedulingSeqDetails_Right","@EVENT10",527,265,895,290,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,T,"Text7"
+	B,322,-2,421,22,322,22,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,322,-2,0,0,FONT,1,"Fecha/Hora",37,FONT,1,"Fecha/Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,322,13,421,37,322,37,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,322,13,0,0,FONT,1,"de Creacion",37,FONT,1,"de Creacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"de Parar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text9"
+	B,445,7,510,31,445,31,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,445,7,0,0,FONT,1,"de Ejecucion",37,FONT,1,"de Ejecucion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Freuencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape11"
+	B,154,322,40,298,154,322,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"@NewScheduleSequence%",0,"",0,0,3,1,0,0,1.000000,0,0,0
+		ADVSENDVALUE,2,1
+	A,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"GDL_Command_Sequence_Scheduling_Window","*",1,0,1,0,"","",1
+	A,END
+O,END
+O,BEGIN,T,"Text13"
+	B,56,298,135,322,56,322,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,56,298,0,0,FONT,1,"Ejecutar",37,FONT,1,"Ejecutar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nueva",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"btnDelete"
+	B,704,296,818,320,704,320,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape13"
+		B,818,320,704,296,818,320,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,T,"Text14"
+		B,722,296,801,320,722,320,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,1,722,296,0,0,FONT,1,"Borrar",37,FONT,1,"Borrar",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Borrar",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END
+O,BEGIN,R,"btnModify"
+	B,520,322,400,298,520,322,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	A,BEGIN,SR,"Anim1",0,0,"",""
+		PP,"@NewScheduleSequence%",0,"",0,0,3,1,0,0,2.000000,0,0,1
+		ADVSENDVALUE,2,2
+	A,END
+O,END
+O,BEGIN,T,"Text15"
+	B,421,298,500,322,421,322,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,421,298,0,0,FONT,1,"Crear",37,FONT,1,"Crear",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modificar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END

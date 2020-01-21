@@ -1,0 +1,668 @@
+ASCII32,11,10,2019,10:41,25,1.1
+W,BEGIN,"GDL_CST_ADDCmd_Window","GDL_CST_ADDCmd_Window"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,833,366
+	SIZE,411,350,411,350,0,0,0,1680,1050,407,328
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Anadir Comando"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,1,0,0,0,0,1,0,0,1,0,0
+	GRID,1,1,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_CST_ADDCmd_Window.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: CST ADD Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages adding the commands
+	
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Dec '16
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION ()
+	'* *******************************************************************************************
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	' OPC tag used for retrieving list of possible Stations
+	Private Const c_strStationListTag As String = "MainGDLL3.CSTModule.CSTMgr.GetStations"
+	Private Const c_strStationEqpTag As String = "MainGDLL3.CSTModule.CSTMgr.GetStationEquipment"
+	Private Const c_strStationNode As String = "StationDef"
+	Private Const c_strNameAttr As String = "Name"
+	
+	
+	
+	
+	
+	
+	'XML containg possible list of stations
+	Dim m_strStationList As String
+	Dim m_strStationEqpList As String
+	Dim m_collPoints As Collection
+	Dim StationListarr() As StationEqp
+	Dim m_EqpFlavour As String
+	Dim m_EqpCommandval As Integer
+	Dim WithEvents m_OPC_StationList As Variable
+	Dim WithEvents m_OPC_StationEqpList As Variable
+	
+	
+	'Public Type StationEqp
+	 
+	Sub AddStation(Name As String)
+	    m_collPoints.Add Name
+	End Sub
+	
+	Private Sub btnDelete_Click()
+	On Error GoTo ErrorHandler
+	cbx_Station.Value = ""
+	cbx_EqpType.Value = ""
+	cbx_Eqp.Value = ""
+	cbx_Command.Value = ""
+	txt_Delay.Value = ""
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "btnDelete_Click", Err.Description)
+	End Sub
+	
+	Private Sub cbx_Station_Change()
+	On Error GoTo ErrorHandler
+	
+	Dim m_icount As Integer
+	'If m_OPC_StationEqpList.Value Is Nothing Then Exit Sub
+	
+	If cbx_Station.Value <> "" And Check_OPC_Variable(m_OPC_StationEqpList) Then
+	
+	m_OPC_StationEqpList.Value = cbx_Station.Value
+	
+	End If
+	
+	        
+	'        For m_iCount = 0 To UBound(StationListarr)
+	'        bFlag = False
+	'            If (cbx_Station.Value = StationListarr(m_iCount).StationName) Then
+	'                If cbx_EqpType.ListCount = 0 Then
+	'
+	'                    cbx_EqpType.AddItem (StationListarr(m_iCount).EqpType)
+	'                Else
+	'                    For m_jCount = 0 To cbx_EqpType.ListCount - 1
+	'                        If (StrComp(cbx_EqpType.List(m_jCount, 0), StationListarr(m_iCount).EqpType, 1) = 0) Then
+	'                            bFlag = False
+	'                            Exit For
+	'                        Else
+	'                            bFlag = True
+	'                        End If
+	'                    Next m_jCount
+	'                End If
+	'
+	'            End If
+	'
+	'            If bFlag = True Then
+	'                cbx_EqpType.AddItem (StationListarr(m_iCount).EqpType)
+	'            End If
+	'          Next m_iCount
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_Station_Change", Err.Description)
+	End Sub
+	
+	Private Sub cbx_EqpType_Change()
+	On Error GoTo ErrorHandler
+	Dim m_icount As Integer
+	Dim m_jCount As Integer
+	Dim bFlag As Boolean
+	
+	cbx_Eqp.Clear
+	
+	For m_icount = 0 To UBound(StationListarr)
+	 If (cbx_Station.Value = StationListarr(m_icount).StationName) Then
+	    If (cbx_EqpType.Value = StationListarr(m_icount).EqpType) Then
+	         If cbx_Eqp.ListCount = 0 Then
+	            cbx_Eqp.AddItem (StationListarr(m_icount).EqpID)
+	            m_EqpFlavour = StationListarr(m_icount).EqpFlavour
+	            Else
+	            
+	            
+	            For m_jCount = 0 To cbx_Eqp.ListCount - 1
+	                        If (StrComp(cbx_Eqp.List(m_jCount, 0), StationListarr(m_icount).EqpID, 1) = 0) Then
+	                            bFlag = False
+	                            Exit For
+	                        Else
+	                            bFlag = True
+	                        End If
+	         Next m_jCount
+	    End If
+	            
+	   End If
+	  End If
+	 If bFlag = True Then
+	   cbx_Eqp.AddItem (StationListarr(m_icount).EqpID)
+	 End If
+	 Next m_icount
+	   
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_Station_Change", Err.Description)
+	End Sub
+	
+	Private Sub cbx_Eqp_Change()
+	On Error GoTo ErrorHandler
+	Dim m_icount As Integer
+	Dim m_jCount As Integer
+	Dim bFlag As Boolean
+	
+	cbx_Command.Clear
+	 For m_icount = 0 To UBound(StationListarr)
+	        bFlag = False
+	            If (cbx_Station.Value = StationListarr(m_icount).StationName) Then
+	                If (cbx_EqpType.Value = StationListarr(m_icount).EqpType) Then
+	                    If (cbx_Eqp.Value = StationListarr(m_icount).EqpID) Then
+	                        If cbx_Command.ListCount = 0 Then
+	                           cbx_Command.AddItem (StationListarr(m_icount).EqpCommand1)
+	                           m_EqpCommandval = StationListarr(m_icount).EqpCommandVal
+	                        Else
+	                            For m_jCount = 0 To cbx_Command.ListCount - 1
+	                                If (StrComp(cbx_Command.List(m_jCount, 0), StationListarr(m_icount).EqpCommand1, 1) = 0) Then
+	                                    bFlag = False
+	                                    Exit For
+	                                Else
+	                                    bFlag = True
+	                                End If
+	                            Next m_jCount
+	                        End If
+	                    End If
+	                End If
+	            End If
+	 If bFlag = True Then
+	   cbx_Command.AddItem (StationListarr(m_icount).EqpCommand1)
+	 End If
+	 Next m_icount
+	
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "cbx_Station_Change", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_StationEqpList_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	If Check_OPC_Variable(m_OPC_StationEqpList) Then
+	
+	    'm_strStationEqpList = m_OPC_StationEqpList.Value
+	    'Debug.Print m_strStationEqpList
+	    
+	    ReadXML_EqpList (m_OPC_StationEqpList.Value)
+	    
+	End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_StationEqpList_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_StationList_ValueChange()
+	On Error GoTo ErrorHandler
+	If Check_OPC_Variable(m_OPC_StationList) Then
+	
+	    m_strStationList = m_OPC_StationList.Value
+	    ReadXML
+	    BuildListbox_1
+	  
+	End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "m_OPC_StationEqpList_ValueChange", Err.Description)
+	End Sub
+	
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	Dim m_strClusterName As String
+	m_strClusterName = "OPCCluster:"
+	'cbx_EqpType.Text = ""
+	cbx_EqpType.Clear
+	cbx_Station.Clear
+	cbx_Eqp.Clear
+	cbx_Command.Clear
+	cbx_Station.Value = ""
+	cbx_EqpType.Value = ""
+	cbx_Eqp.Value = ""
+	cbx_Command.Value = ""
+	txt_Delay.Value = ""
+	Set m_OPC_StationList = Variables.Add(m_strClusterName & c_strStationListTag, fvVariableTypeText)
+	Set m_OPC_StationEqpList = Variables.Add(m_strClusterName & c_strStationEqpTag, fvVariableTypeText)
+	
+	If (m_OPC_StationList.EnableEvents = True) Then
+	        m_OPC_StationList_ValueChange
+	    Else
+	        m_OPC_StationList.EnableEvents = True
+	End If
+	If (m_OPC_StationEqpList.EnableEvents = True) Then
+	        m_OPC_StationEqpList_ValueChange
+	    Else
+	        m_OPC_StationEqpList.EnableEvents = True
+	End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	
+	    Dim oDoc As DOMDocument
+	    
+	    Dim oStationList As IXMLDOMNodeList
+	    Dim oStation As IXMLDOMElement
+	    Dim strStationName As String
+	    
+	    
+	    Set m_collPoints = New Collection
+	
+	    If (m_strStationList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strStationList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oStationList = oDoc.documentElement.selectNodes(c_strStationNode)
+	                    If Not (oStationList Is Nothing) Then
+	                        If (oStationList.length > 0) Then
+	                         
+	                            For Each oStation In oStationList
+	                                strStationName = Format(oStation.getAttribute(c_strNameAttr))
+	                                If (strStationName <> "") Then
+	                                    
+	                                    AddStation strStationName
+	                                    
+	                                End If
+	                            Next oStation
+	                        End If
+	                        Set oStationList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	Private Sub BuildListbox_1()
+	On Error GoTo ErrorHandler
+	
+	    cbx_Station.Clear
+	    cbx_EqpType.Clear
+	    
+	    Dim StationList
+	    For Each StationList In m_collPoints
+	    
+	        cbx_Station.AddItem (StationList)
+	    
+	    Next
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	
+	Private Sub ReadXML_EqpList(ByVal strStationEqpList As String)
+	On Error GoTo ErrorHandler
+	
+	    Dim oDoc As DOMDocument
+	    
+	    Dim oStationEqpList As IXMLDOMElement
+	    Dim oEqpDef As IXMLDOMElement
+	    Dim oEqpCommandList As IXMLDOMNodeList
+	    Dim oEqpCommandChild As IXMLDOMNodeList
+	    Dim oEqpCommand As IXMLDOMElement
+	    Dim oEqpcmd As IXMLDOMElement
+	    
+	    Const strStationNode As String = "StationEqp"
+	    Const strStationAttr As String = "Station"
+	    
+	    
+	   
+	    
+	   
+	   
+	    Dim iCounter1 As Integer
+	    Set m_collPoints = New Collection
+	
+	    If (strStationEqpList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            iCounter1 = 0
+	            If oDoc.loadXML(strStationEqpList) And oDoc.selectSingleNode(strStationNode).Attributes.getNamedItem(strStationAttr).Text = cbx_Station.Value Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                        ReDim StationListarr(oDoc.getElementsByTagName("EqpCommand").length - 1)
+	                        ''Set oStationEqpList = oDoc.documentElement.selectSingleNode("StationEqp")
+	                        ''For Each oEqpDef In oStationEqpList
+	                        Set oEqpCommandList = oDoc.documentElement.selectNodes("EqpDef")
+	                            
+	                             For Each oEqpCommand In oEqpCommandList
+	                                          
+	                               ' For iCounter1 = 0 To oEqpCommand.childNodes.length
+	                                   Set oEqpCommandChild = oEqpCommand.selectNodes("EqpCommand")
+	                                     For Each oEqpcmd In oEqpCommandChild
+	                                      StationListarr(iCounter1).EqpFlavour = oEqpcmd.getAttribute("Flavour")
+	                                      StationListarr(iCounter1).EqpID = oEqpCommand.getAttribute("ID")
+	                                      StationListarr(iCounter1).EqpType = oEqpCommand.getAttribute("Type")
+	                                      StationListarr(iCounter1).EqpCommandVal = oEqpcmd.getAttribute("Value")
+	                                      StationListarr(iCounter1).EqpCommand1 = oEqpcmd.getAttribute("Name")
+	                                      StationListarr(iCounter1).StationName = oDoc.selectSingleNode(strStationNode).Attributes.getNamedItem(strStationAttr).Text
+	                                      iCounter1 = iCounter1 + 1
+	                                    Next
+	                                
+	                             Next
+	                             
+	                        ''Next
+	                                   
+	                  Set oStationEqpList = Nothing
+	                 
+	                  Call BuildListbox_2
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML_EqpList", Err.Description)
+	End Sub
+	Private Sub BuildListbox_2()
+	On Error GoTo ErrorHandler
+	Dim m_icount As Integer
+	Dim m_jCount As Integer
+	Dim bFlag As Boolean
+	Dim iCounter As Integer
+	cbx_EqpType.Clear
+	iCounter = 0
+	
+	
+	        For m_icount = 0 To UBound(StationListarr)
+	        bFlag = False
+	            If (cbx_Station.Value = StationListarr(m_icount).StationName) Then
+	                If cbx_EqpType.ListCount = 0 Then
+	
+	                    cbx_EqpType.AddItem (StationListarr(m_icount).EqpType)
+	                Else
+	                    For m_jCount = 0 To cbx_EqpType.ListCount - 1
+	                        If (StrComp(cbx_EqpType.List(m_jCount, 0), StationListarr(m_icount).EqpType, 1) = 0) Then
+	                            bFlag = False
+	                            Exit For
+	                        Else
+	                            bFlag = True
+	                        End If
+	                    Next m_jCount
+	                End If
+	
+	            End If
+	
+	            If bFlag = True Then
+	                cbx_EqpType.AddItem (StationListarr(m_icount).EqpType)
+	            End If
+	          Next m_icount
+	        Call BuildListbox_3
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "BuildListbox_1", Err.Description)
+	End Sub
+	
+	Private Sub btnSave_Click()
+	On Error GoTo ErrorHandler
+	
+	Mod_General.SDetails.StationName = cbx_Station.Value
+	Mod_General.SDetails.EqpType = cbx_EqpType.Value
+	Mod_General.SDetails.EqpID = cbx_Eqp.Value
+	Mod_General.SDetails.EqpCommand1 = cbx_Command.Value
+	Mod_General.SDetails.Delay = txt_Delay.Value
+	Mod_General.SDetails.EqpFlavour = m_EqpFlavour
+	Mod_General.SDetails.EqpCommandVal = m_EqpCommandval
+	Variables.Item("@SelectedCommand%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Shape1_Click", Err.Description)
+	End Sub
+	
+	Private Sub BuildListbox_3()
+	On Error GoTo ErrorHandler
+	Dim m_icount As Integer
+	Dim m_jCount As Integer
+	Dim bFlag As Boolean
+	
+	cbx_Eqp.Clear
+	
+	For m_icount = 0 To UBound(StationListarr)
+	 If (cbx_Station.Value = StationListarr(m_icount).StationName) Then
+	    If (cbx_EqpType.Value = StationListarr(m_icount).EqpType) Then
+	         If cbx_Eqp.ListCount = 0 Then
+	            cbx_Eqp.AddItem (StationListarr(m_icount).EqpID)
+	            Else
+	            
+	            
+	            For m_jCount = 0 To cbx_Eqp.ListCount - 1
+	                        If (StrComp(cbx_Eqp.List(m_jCount, 0), StationListarr(m_icount).EqpID, 1) = 0) Then
+	                            bFlag = False
+	                            Exit For
+	                        Else
+	                            bFlag = True
+	                        End If
+	         Next m_jCount
+	    End If
+	            
+	   End If
+	  End If
+	 If bFlag = True Then
+	   cbx_Eqp.AddItem (StationListarr(m_icount).EqpID)
+	 End If
+	 Next m_icount
+	  Call cbx_Eqp_Change
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Shape1_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,238,238,238,0,0,0
+	COLOR,3,0,0,0,0,0,1
+COLORS,END
+O,BEGIN,R,"Shape5"
+	B,384,248,8,16,384,248,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,14,30,85,54,14,54,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,14,30,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estaction:",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,14,70,94,94,14,94,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,14,70,0,0,FONT,2,"Estaction:",37,FONT,2,"Estaction:",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo Equipo:",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,14,110,94,134,14,134,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,14,110,0,0,FONT,2,"Tipo Equipo:",37,FONT,2,"Tipo Equipo:",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Equipo:",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,14,150,94,174,14,174,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,14,150,0,0,FONT,2,"Equipo:",36,FONT,2,"Equipo:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Comando:",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,14,190,126,214,14,214,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,14,190,0,0,FONT,2,"Comando:",36,FONT,2,"Comando:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo de Espera:",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbx_Station"
+	B,144,30,320,54,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_EqpType"
+	B,144,70,320,94,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_Eqp"
+	B,144,110,320,134,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbx_Command"
+	B,144,150,320,174,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"btnSave"
+	B,132,286,20,262,132,286,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,3,0,COLOR,3
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"GDL_CST_ADDCmd_Window","*"
+	A,END
+O,END
+O,BEGIN,R,"btnCancel"
+	B,252,286,140,262,252,286,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,3,0,COLOR,3
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"GDL_CST_ADDCmd_Window","*"
+	A,END
+O,END
+O,BEGIN,R,"btnDelete"
+	B,372,286,260,262,372,286,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,3,0,COLOR,3
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,OCX,"txt_Delay"
+	B,144,192,320,216,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text6"
+	B,41,266,112,282,41,282,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,41,266,0,0,FONT,2,"Estaction:",36,FONT,2,"Estaction:",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guardar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text7"
+	B,161,265,232,281,161,281,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,161,265,0,0,FONT,2,"Guardar",37,FONT,2,"Guardar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,281,265,352,281,281,281,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,281,265,0,0,FONT,2,"Cancelar",37,FONT,2,"Cancelar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Borrar",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END

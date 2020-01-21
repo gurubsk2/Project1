@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="TimeTableDataset" targetNamespace="http://tempuri.org/TimeTableDataset.xsd" xmlns:mstns="http://tempuri.org/TimeTableDataset.xsd" xmlns="http://tempuri.org/TimeTableDataset.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop" attributeFormDefault="qualified" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections>
+        </Connections>
+        <Tables>
+        </Tables>
+        <Sources>
+        </Sources>
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="TimeTableDataset" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:Generator_UserDSName="TimeTableDataset" msprop:Generator_DataSetName="TimeTableDataset">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="TTTrip" msdata:Locale="en-US" msprop:Generator_UserTableName="TTTrip" msprop:Generator_RowDeletedName="TTTripRowDeleted" msprop:Generator_RowChangedName="TTTripRowChanged" msprop:Generator_RowClassName="TTTripRow" msprop:Generator_RowChangingName="TTTripRowChanging" msprop:Generator_RowEvArgName="TTTripRowChangeEvent" msprop:Generator_RowEvHandlerName="TTTripRowChangeEventHandler" msprop:Generator_TableClassName="TTTripDataTable" msprop:Generator_TableVarName="tableTTTrip" msprop:Generator_RowDeletingName="TTTripRowDeleting" msprop:Generator_TablePropName="TTTrip">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Number" msdata:ReadOnly="true" msprop:Generator_UserColumnName="Number" msprop:Generator_ColumnPropNameInRow="Number" msprop:Generator_ColumnVarNameInTable="columnNumber" msprop:Generator_ColumnPropNameInTable="NumberColumn" type="xs:unsignedInt" />
+              <xs:element name="TimeTable" msdata:Caption="InstanciationMode" msprop:Generator_UserColumnName="TimeTable" msprop:Generator_ColumnPropNameInRow="TimeTable" msprop:Generator_ColumnVarNameInTable="columnTimeTable" msprop:Generator_ColumnPropNameInTable="TimeTableColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="NumberInTimetable" msprop:Generator_UserColumnName="NumberInTimetable" msprop:Generator_ColumnPropNameInRow="NumberInTimetable" msprop:Generator_ColumnVarNameInTable="columnNumberInTimetable" msprop:Generator_ColumnPropNameInTable="NumberInTimetableColumn" type="xs:unsignedInt" minOccurs="0" />
+              <xs:element name="ServiceID" msprop:Generator_UserColumnName="ServiceID" msprop:Generator_ColumnPropNameInRow="ServiceID" msprop:Generator_ColumnVarNameInTable="columnServiceID" msprop:Generator_ColumnPropNameInTable="ServiceIDColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="10" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="TripID" msprop:Generator_UserColumnName="TripID" msprop:Generator_ColumnPropNameInRow="TripID" msprop:Generator_ColumnVarNameInTable="columnTripID" msprop:Generator_ColumnPropNameInTable="TripIDColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="10" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Direction" msprop:Generator_UserColumnName="Direction" msprop:Generator_ColumnPropNameInRow="Direction" msprop:Generator_ColumnVarNameInTable="columnDirection" msprop:Generator_ColumnPropNameInTable="DirectionColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="EntryTime" msprop:Generator_UserColumnName="EntryTime" msprop:Generator_ColumnPropNameInRow="EntryTime" msprop:Generator_ColumnVarNameInTable="columnEntryTime" msprop:Generator_ColumnPropNameInTable="EntryTimeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="9" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Distance" msprop:Generator_UserColumnName="Distance" msprop:Generator_ColumnPropNameInRow="Distance" msprop:Generator_ColumnVarNameInTable="columnDistance" msprop:Generator_ColumnPropNameInTable="DistanceColumn" type="xs:unsignedInt" minOccurs="0" />
+              <xs:element name="InitialManeuver" msprop:Generator_UserColumnName="InitialManeuver" msprop:Generator_ColumnPropNameInRow="InitialManeuver" msprop:Generator_ColumnVarNameInTable="columnInitialManeuver" msprop:Generator_ColumnPropNameInTable="InitialManeuverColumn" type="xs:unsignedShort" minOccurs="0" />
+              <xs:element name="FinalManeuver" msprop:Generator_UserColumnName="FinalManeuver" msprop:Generator_ColumnPropNameInRow="FinalManeuver" msprop:Generator_ColumnVarNameInTable="columnFinalManeuver" msprop:Generator_ColumnPropNameInTable="FinalManeuverColumn" type="xs:unsignedShort" minOccurs="0" />
+              <xs:element name="TrainClass" msprop:Generator_UserColumnName="TrainClass" msprop:Generator_ColumnPropNameInRow="TrainClass" msprop:Generator_ColumnVarNameInTable="columnTrainClass" msprop:Generator_ColumnPropNameInTable="TrainClassColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="MissionType" msprop:Generator_UserColumnName="MissionType" msprop:Generator_ColumnPropNameInRow="MissionType" msprop:Generator_ColumnVarNameInTable="columnMissionType" msprop:Generator_ColumnPropNameInTable="MissionTypeColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="RunningMode" msprop:Generator_UserColumnName="RunningMode" msprop:Generator_ColumnPropNameInRow="RunningMode" msprop:Generator_ColumnVarNameInTable="columnRunningMode" msprop:Generator_ColumnPropNameInTable="RunningModeColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="CrewID" msprop:Generator_UserColumnName="CrewID" msprop:Generator_ColumnPropNameInRow="CrewID" msprop:Generator_ColumnVarNameInTable="columnCrewID" msprop:Generator_ColumnPropNameInTable="CrewIDColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="RollingStockID" msprop:Generator_UserColumnName="RollingStockID" msprop:Generator_ColumnPropNameInRow="RollingStockID" msprop:Generator_ColumnVarNameInTable="columnRollingStockID" msprop:Generator_ColumnPropNameInTable="RollingStockIDColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="PreviousTripNumber" msprop:Generator_UserColumnName="PreviousTripNumber" msprop:Generator_ColumnPropNameInRow="PreviousTripNumber" msprop:Generator_ColumnVarNameInTable="columnPreviousTripNumber" msprop:Generator_ColumnPropNameInTable="PreviousTripNumberColumn" type="xs:unsignedInt" minOccurs="0" />
+              <xs:element name="NextTripNumber" msprop:Generator_UserColumnName="NextTripNumber" msprop:Generator_ColumnPropNameInRow="NextTripNumber" msprop:Generator_ColumnVarNameInTable="columnNextTripNumber" msprop:Generator_ColumnPropNameInTable="NextTripNumberColumn" type="xs:unsignedInt" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TTTripStop" msdata:Locale="en-US" msprop:Generator_UserTableName="TTTripStop" msprop:Generator_RowDeletedName="TTTripStopRowDeleted" msprop:Generator_RowChangedName="TTTripStopRowChanged" msprop:Generator_RowClassName="TTTripStopRow" msprop:Generator_RowChangingName="TTTripStopRowChanging" msprop:Generator_RowEvArgName="TTTripStopRowChangeEvent" msprop:Generator_RowEvHandlerName="TTTripStopRowChangeEventHandler" msprop:Generator_TableClassName="TTTripStopDataTable" msprop:Generator_TableVarName="tableTTTripStop" msprop:Generator_RowDeletingName="TTTripStopRowDeleting" msprop:Generator_TablePropName="TTTripStop">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TripNumber" msprop:Generator_UserColumnName="TripNumber" msprop:Generator_ColumnPropNameInRow="TripNumber" msprop:Generator_ColumnVarNameInTable="columnTripNumber" msprop:Generator_ColumnPropNameInTable="TripNumberColumn" type="xs:unsignedInt" />
+              <xs:element name="Platform" msprop:Generator_UserColumnName="Platform" msprop:Generator_ColumnPropNameInRow="Platform" msprop:Generator_ColumnVarNameInTable="columnPlatform" msprop:Generator_ColumnPropNameInTable="PlatformColumn">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="50" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Situation" msprop:Generator_UserColumnName="Situation" msprop:Generator_ColumnPropNameInRow="Situation" msprop:Generator_ColumnVarNameInTable="columnSituation" msprop:Generator_ColumnPropNameInTable="SituationColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="Dwell" msprop:Generator_UserColumnName="Dwell" msprop:Generator_ColumnPropNameInRow="Dwell" msprop:Generator_ColumnVarNameInTable="columnDwell" msprop:Generator_ColumnPropNameInTable="DwellColumn" type="xs:unsignedShort" minOccurs="0" />
+              <xs:element name="OrderInTrip" msprop:Generator_UserColumnName="OrderInTrip" msprop:Generator_ColumnPropNameInRow="OrderInTrip" msprop:Generator_ColumnVarNameInTable="columnOrderInTrip" msprop:Generator_ColumnPropNameInTable="OrderInTripColumn" type="xs:unsignedShort" />
+              <xs:element name="ArrivalTime" msprop:Generator_UserColumnName="ArrivalTime" msprop:Generator_ColumnPropNameInRow="ArrivalTime" msprop:Generator_ColumnVarNameInTable="columnArrivalTime" msprop:Generator_ColumnPropNameInTable="ArrivalTimeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="9" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="DepartureTime" msprop:Generator_UserColumnName="DepartureTime" msprop:Generator_ColumnPropNameInRow="DepartureTime" msprop:Generator_ColumnVarNameInTable="columnDepartureTime" msprop:Generator_ColumnPropNameInTable="DepartureTimeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="9" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TTLink" msdata:Locale="en-US" msprop:Generator_UserTableName="TTLink" msprop:Generator_RowDeletedName="TTLinkRowDeleted" msprop:Generator_RowChangedName="TTLinkRowChanged" msprop:Generator_RowClassName="TTLinkRow" msprop:Generator_RowChangingName="TTLinkRowChanging" msprop:Generator_RowEvArgName="TTLinkRowChangeEvent" msprop:Generator_RowEvHandlerName="TTLinkRowChangeEventHandler" msprop:Generator_TableClassName="TTLinkDataTable" msprop:Generator_TableVarName="tableTTLink" msprop:Generator_RowDeletingName="TTLinkRowDeleting" msprop:Generator_TablePropName="TTLink">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TripNumber" msprop:Generator_UserColumnName="TripNumber" msprop:Generator_ColumnPropNameInRow="TripNumber" msprop:Generator_ColumnVarNameInTable="columnTripNumber" msprop:Generator_ColumnPropNameInTable="TripNumberColumn" type="xs:unsignedInt" />
+              <xs:element name="LinkID" msprop:Generator_UserColumnName="LinkID" msprop:Generator_ColumnPropNameInRow="LinkID" msprop:Generator_ColumnVarNameInTable="columnLinkID" msprop:Generator_ColumnPropNameInTable="LinkIDColumn" type="xs:string" />
+              <xs:element name="Situation" msprop:Generator_UserColumnName="Situation" msprop:Generator_ColumnPropNameInRow="Situation" msprop:Generator_ColumnVarNameInTable="columnSituation" msprop:Generator_ColumnPropNameInTable="SituationColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="Runtime" msprop:Generator_UserColumnName="Runtime" msprop:Generator_ColumnPropNameInRow="Runtime" msprop:Generator_ColumnVarNameInTable="columnRuntime" msprop:Generator_ColumnPropNameInTable="RuntimeColumn" type="xs:unsignedShort" minOccurs="0" />
+              <xs:element name="OrderInTrip" msprop:Generator_UserColumnName="OrderInTrip" msprop:Generator_ColumnPropNameInRow="OrderInTrip" msprop:Generator_ColumnVarNameInTable="columnOrderInTrip" msprop:Generator_ColumnPropNameInTable="OrderInTripColumn" type="xs:unsignedShort" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TimeTable" msdata:Locale="en-US" msprop:Generator_UserTableName="TimeTable" msprop:Generator_RowDeletedName="TimeTableRowDeleted" msprop:Generator_RowChangedName="TimeTableRowChanged" msprop:Generator_RowClassName="TimeTableRow" msprop:Generator_RowChangingName="TimeTableRowChanging" msprop:Generator_RowEvArgName="TimeTableRowChangeEvent" msprop:Generator_RowEvHandlerName="TimeTableRowChangeEventHandler" msprop:Generator_TableClassName="TimeTableDataTable" msprop:Generator_TableVarName="tableTimeTable" msprop:Generator_RowDeletingName="TimeTableRowDeleting" msprop:Generator_TablePropName="TimeTable">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Filename" msprop:Generator_UserColumnName="Filename" msprop:Generator_ColumnPropNameInRow="Filename" msprop:Generator_ColumnVarNameInTable="columnFilename" msprop:Generator_ColumnPropNameInTable="FilenameColumn">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="80" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Name" msprop:Generator_UserColumnName="Name" msprop:Generator_ColumnPropNameInRow="Name" msprop:Generator_ColumnVarNameInTable="columnName" msprop:Generator_ColumnPropNameInTable="NameColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="80" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Comments" msprop:Generator_UserColumnName="Comments" msprop:Generator_ColumnPropNameInRow="Comments" msprop:Generator_ColumnVarNameInTable="columnComments" msprop:Generator_ColumnPropNameInTable="CommentsColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="250" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="Service" msprop:Generator_UserColumnName="Service" msprop:Generator_ColumnPropNameInRow="Service" msprop:Generator_ColumnVarNameInTable="columnService" msprop:Generator_ColumnPropNameInTable="ServiceColumn" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TTInterval" msdata:Locale="en-US" msprop:Generator_UserTableName="TTInterval" msprop:Generator_RowDeletedName="TTIntervalRowDeleted" msprop:Generator_RowChangedName="TTIntervalRowChanged" msprop:Generator_RowClassName="TTIntervalRow" msprop:Generator_RowChangingName="TTIntervalRowChanging" msprop:Generator_RowEvArgName="TTIntervalRowChangeEvent" msprop:Generator_RowEvHandlerName="TTIntervalRowChangeEventHandler" msprop:Generator_TableClassName="TTIntervalDataTable" msprop:Generator_TableVarName="tableTTInterval" msprop:Generator_RowDeletingName="TTIntervalRowDeleting" msprop:Generator_TablePropName="TTInterval">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TimeTable" msprop:Generator_UserColumnName="TimeTable" msprop:Generator_ColumnPropNameInRow="TimeTable" msprop:Generator_ColumnVarNameInTable="columnTimeTable" msprop:Generator_ColumnPropNameInTable="TimeTableColumn">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="80" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="ID" msprop:Generator_UserColumnName="ID" msprop:Generator_ColumnPropNameInRow="ID" msprop:Generator_ColumnVarNameInTable="columnID" msprop:Generator_ColumnPropNameInTable="IDColumn" type="xs:unsignedInt" />
+              <xs:element name="Type" msprop:Generator_UserColumnName="Type" msprop:Generator_ColumnPropNameInRow="Type" msprop:Generator_ColumnVarNameInTable="columnType" msprop:Generator_ColumnPropNameInTable="TypeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="50" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="StartTime" msprop:Generator_UserColumnName="StartTime" msprop:Generator_ColumnPropNameInRow="StartTime" msprop:Generator_ColumnVarNameInTable="columnStartTime" msprop:Generator_ColumnPropNameInTable="StartTimeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="9" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="EndTime" msprop:Generator_UserColumnName="EndTime" msprop:Generator_ColumnPropNameInRow="EndTime" msprop:Generator_ColumnVarNameInTable="columnEndTime" msprop:Generator_ColumnPropNameInTable="EndTimeColumn" minOccurs="0">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="9" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:TTTrip" />
+      <xs:field xpath="mstns:Number" />
+    </xs:unique>
+    <xs:unique name="TTTripStop_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:TTTripStop" />
+      <xs:field xpath="mstns:OrderInTrip" />
+      <xs:field xpath="mstns:TripNumber" />
+      <xs:field xpath="mstns:Platform" />
+    </xs:unique>
+    <xs:unique name="TTLink_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:TTLink" />
+      <xs:field xpath="mstns:TripNumber" />
+      <xs:field xpath="mstns:LinkID" />
+    </xs:unique>
+    <xs:unique name="TimeTable_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:TimeTable" />
+      <xs:field xpath="mstns:Filename" />
+    </xs:unique>
+    <xs:unique name="TTInterval_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:TTInterval" />
+      <xs:field xpath="mstns:TimeTable" />
+      <xs:field xpath="mstns:ID" />
+    </xs:unique>
+  </xs:element>
+  <xs:annotation>
+    <xs:appinfo>
+      <msdata:Relationship name="TTInterval_TimeTable" msdata:parent="TTInterval" msdata:child="TimeTable" msdata:parentkey="TimeTable" msdata:childkey="Filename" msprop:Generator_UserRelationName="TTInterval_TimeTable" msprop:Generator_RelationVarName="relationTTInterval_TimeTable" msprop:Generator_UserChildTable="TimeTable" msprop:Generator_UserParentTable="TTInterval" msprop:Generator_ParentPropName="TTIntervalRow" msprop:Generator_ChildPropName="GetTimeTableRows" />
+      <msdata:Relationship name="TTTrip_TimeTable" msdata:parent="TTTrip" msdata:child="TimeTable" msdata:parentkey="TimeTable" msdata:childkey="Filename" msprop:Generator_UserRelationName="TTTrip_TimeTable" msprop:Generator_RelationVarName="relationTTTrip_TimeTable" msprop:Generator_UserChildTable="TimeTable" msprop:Generator_UserParentTable="TTTrip" msprop:Generator_ParentPropName="TTTripRow" msprop:Generator_ChildPropName="GetTimeTableRows" />
+      <msdata:Relationship name="TTTripStop_TTTrip" msdata:parent="TTTripStop" msdata:child="TTTrip" msdata:parentkey="TripNumber" msdata:childkey="Number" msprop:Generator_UserRelationName="TTTripStop_TTTrip" msprop:Generator_RelationVarName="relationTTTripStop_TTTrip" msprop:Generator_UserChildTable="TTTrip" msprop:Generator_UserParentTable="TTTripStop" msprop:Generator_ParentPropName="TTTripStopRow" msprop:Generator_ChildPropName="GetTTTripRows" />
+      <msdata:Relationship name="TTLink_TTTrip" msdata:parent="TTLink" msdata:child="TTTrip" msdata:parentkey="TripNumber" msdata:childkey="Number" msprop:Generator_UserRelationName="TTLink_TTTrip" msprop:Generator_RelationVarName="relationTTLink_TTTrip" msprop:Generator_UserChildTable="TTTrip" msprop:Generator_UserParentTable="TTLink" msprop:Generator_ParentPropName="TTLinkRow" msprop:Generator_ChildPropName="GetTTTripRows" />
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

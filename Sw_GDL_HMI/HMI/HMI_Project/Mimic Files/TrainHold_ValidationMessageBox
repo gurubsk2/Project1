@@ -1,0 +1,247 @@
+ASCII32,19,9,2018,17:52,57,1.1
+W,BEGIN,"TrainHold_ValidationMessageBox","PlatformValidationMessageBox"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,700,450
+	SIZE,300,130,300,130,0,0,0,1280,1024,294,108
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,""
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,700,450
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"TrainHold_ValidationMessageBox.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Platform validation message box
+	'* *******************************************************************************************
+	'* Purpose:     Manages the display of the Cycle name in the title bar of the message box
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Chaitra Purohit
+	'* Date:                October '08
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* OPC variables
+	'* ******************************************************
+	Dim WithEvents m_OPC_PlatformName As Variable
+	
+	
+	
+	Private Sub btn_Si_Click()
+	On Error GoTo ErrorHandler
+	Dim LocalBranch As String
+	
+	LocalBranch = GetSymbolBranch(Me)
+	Call ButtonCommand("btnPlatformHold", LocalBranch)
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btn_Si_Click()", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'* On Opening the Mimic, Add the OPC variable containing the name to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Set m_OPC_PlatformName = Variables.Add(ThisMimic.Branch & ".HoldSkip.HSMPoint.OperatorHold", fvVariableTypeText)
+	    If ((m_OPC_PlatformName.Status = fvVariableStatusGood) And (m_OPC_PlatformName.EnableEvents = True)) Then
+	        m_OPC_PlatformName_ValueChange
+	    Else
+	        m_OPC_PlatformName.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Before closing the Mimic, remove the OPC variable previously subscribed
+	'* ***************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    '* Remove the previously subscribed variable
+	    If Not (m_OPC_PlatformName Is Nothing) Then
+	        Variables.Remove (m_OPC_PlatformName.Name)
+	        Set m_OPC_PlatformName = Nothing
+	    End If
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: m_OPC_CycleName_ValueChange
+	'* Manages the display of the Cycle name in the title bar of the message box
+	'* ***************************************************************
+	Private Sub m_OPC_PlatformName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_PlatformName.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", "The status of " & m_OPC_PlatformName.Name & " is Waiting")
+	    ElseIf (m_OPC_PlatformName.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", "The status of " & m_OPC_PlatformName.Name & " is Config Error")
+	    ElseIf (m_OPC_PlatformName.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", "The status of " & m_OPC_PlatformName.Name & " is Not Connected")
+	    ElseIf (m_OPC_PlatformName.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", "The Quality of " & m_OPC_PlatformName.Name & " is not good")
+	    ElseIf (m_OPC_PlatformName.Value = 1) Then
+	           ThisMimic.Caption = "Tren retiene aplicar " & m_OPC_PlatformName.Value
+	    Else
+	            ThisMimic.Caption = "Tren retiene retirar " & m_OPC_PlatformName.Value
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_PlatformName_ValueChange", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,172,168,153,0,0,0
+COLORS,END
+O,BEGIN,T,"btn_Si"
+	B,44,64,118,88,44,88,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+	PP,1,44,64,0,0,FONT,1,"Yes",37,FONT,1,"Yes",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Si",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Si",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"btn_No"
+	B,185,64,259,88,185,88,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,3,0,COLOR,3
+	PP,1,185,64,0,0,FONT,1,"No",37,FONT,1,"No",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"No",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,17,17,281,56,17,56,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,17,17,0,0,FONT,1,"Do you  really want to cancel the cycle ?",85,FONT,1,"Do you  really want to cancel the cycle ?",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la retirada de la detencion de emergencia de esto tren?",FONT,1,85
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Confirma la retirada de la detencion de emergencia de esto tren?",FONT,1,85
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"HoldSkip.HSMPoint.OperatorHold"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,24,16,268,55,24,55,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,24,16,0,0,FONT,1,"Do you  really want to set the cycle ?",85,FONT,1,"Do you  really want to set the cycle ?",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la detencion de emergencia de esto tren?",FONT,1,85
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Confirma la detencion de emergencia de esto tren?",FONT,1,85
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"HoldSkip.HSMPoint.OperatorHold"
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END

@@ -1,0 +1,201 @@
+ASCII32,20,8,2018,15:51,21,1.1
+W,BEGIN,"TrainIndicator_MultiTrainList","TrainIndicator_MultiTrainList"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,604,355
+	SIZE,358,120,358,120,0,0,0,1280,1024,352,98
+	BACKCOLOR,24,61,73,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Exhibir trenes en el bloque"
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Multi trein lijst"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,2,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"TrainIndicator_MultiTrainList.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Project: GDL3
+	'* *******************************************************************************************
+	'* Purpose: Symbol:TrainIndicator_MultiTrainList
+	'* Branch:  TPBerthTFView (same as Train Indicator)
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vinay CR
+	'* Description:         Opening inspector panel on double click
+	'* Date:                Apr 2015
+	'*
+	'* Author:              Olivier Tayeg
+	'* Description:         Full redesign
+	'* Date:                July 2015
+	
+	'* Author:              Chaitra Purohit
+	'* Description:         redesign for GDL3 Project
+	'* Date:                Nov 16
+	'* *******************************************************************************************
+	'* Ref:             1. IRS ATS HUMAN INTERFACE (A429187)
+	'                   2. ICONIS ATS SCMA ARCHITECTURE DESCRIPTION (A447605)
+	'*                  2. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION (A442900)
+	'* *******************************************************************************************
+	Option Explicit
+	Private Const c_lVisibleTopPos As Long = 31
+	Private Const c_lInvisibleTopPos As Long = 100
+	
+	Private Const c_sBerthTFUniqueIDs As String = ".MultiTrainIndicator.TIBerth.bstrTrainIDList"
+	Private Const c_sTrainManagerListIDsTag As String = ":MainKernelBasic.TrainModule.HMITrainManager.bstrListHMITrain"
+	
+	Dim m_OPCSetItem_sTFUniqueIDs As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_sTrainManagerListIDs As Iconis_CLS_OPCSet_Item
+	
+	Dim WithEvents m_OPCSet_Mimic As Iconis_CLS_OPCSet
+	
+	Dim m_sOPCCluster As String
+	
+	
+	
+	
+	Private Sub Mimic_Open()
+	    On Error GoTo ErrorHandler
+	
+	    m_sOPCCluster = Get_OPCClusterName(Me.Branch)
+	
+	    Call HideTFIndicators
+	    
+	    If Not (m_OPCSet_Mimic Is Nothing) Then
+	        m_OPCSet_Mimic.Destroy
+	    End If
+	    
+	    Set m_OPCSet_Mimic = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    Set m_OPCSetItem_sTFUniqueIDs = m_OPCSet_Mimic.AddItem(Me.Branch & c_sBerthTFUniqueIDs, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItem_sTrainManagerListIDs = m_OPCSet_Mimic.AddItem(m_sOPCCluster & c_sTrainManagerListIDsTag, fvVariableTypeText, c_OPCReadOnly)
+	    m_OPCSet_Mimic.DoConnect (Me.Name)
+	
+	    Exit Sub
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	    On Error GoTo ErrorHandler
+	    
+	    If Not (m_OPCSet_Mimic Is Nothing) Then
+	        m_OPCSet_Mimic.Destroy
+	    End If
+	
+	    Exit Function
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	Private Function HideTFIndicators()
+	    On Error GoTo ErrorHandler
+	
+	    Dim i As Integer
+	    Dim oTISymbol  As Symbol
+	    
+	    For i = 0 To 2
+	        Set oTISymbol = Me.Graphics.Item("TF" & i)
+	        oTISymbol.Top = c_lInvisibleTopPos
+	    Next
+	    
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	Private Sub ProcessEvents()
+	
+	    Dim arsTFUniqueIDs() As String
+	    Dim i As Integer
+	    Dim oTISymbol  As Symbol
+	    Dim iLastTrainIndexToDisplay As Integer
+	    Dim sTFBranch As String
+	    
+	    If (m_OPCSetItem_sTFUniqueIDs.Value <> "") Then
+	        arsTFUniqueIDs = Split(m_OPCSetItem_sTFUniqueIDs.Value, ";")
+	        iLastTrainIndexToDisplay = UBound(arsTFUniqueIDs)
+	        ' This mimic is able to display up to 3 trains
+	        If iLastTrainIndexToDisplay >= 3 Then
+	            iLastTrainIndexToDisplay = 2
+	        End If
+	        
+	        For i = 0 To iLastTrainIndexToDisplay
+	            Set oTISymbol = Me.Graphics.Item("TF" & i)
+	            oTISymbol.Top = c_lVisibleTopPos
+	            sTFBranch = ":@" & MOD_Train.ReturnTrainIDfromUniqueID(m_OPCSetItem_sTrainManagerListIDs.Value, arsTFUniqueIDs(i))
+	            oTISymbol.LocalBranch = m_sOPCCluster & sTFBranch
+	        Next
+	        For i = iLastTrainIndexToDisplay + 1 To 2
+	            Set oTISymbol = Me.Graphics.Item("TF" & i)
+	            oTISymbol.Top = c_lInvisibleTopPos
+	        Next
+	    End If
+	    Exit Sub
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ProcessEvents", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCSet_Mimic_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	
+	    ProcessEvents
+	End Sub
+	
+	Private Sub m_OPCSet_Mimic_OnRefresh(lIndex As Long, Value As Variant, Status As fvVariableStatus)
+	    ProcessEvents
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,S,"TF0"
+	B,42,100,105,144,42,144,1,0,6400,0,1,1,0
+	PP,"TF_TrainIndicator","OPCCluster:@Train006",42,100,105,144,1,0, 1, 1
+	SUB
+O,END
+O,BEGIN,S,"TF1"
+	B,143,100,206,144,143,144,1,0,6400,0,1,1,0
+	PP,"TF_TrainIndicator","OPCCluster:@Train004",143,100,206,144,1,0, 1, 1
+	SUB
+O,END
+O,BEGIN,S,"TF2"
+	B,235,100,298,144,235,144,1,0,6400,0,1,1,0
+	PP,"TF_TrainIndicator","OPCCluster:@Train007",235,100,298,144,1,0, 1, 1
+	SUB
+O,END

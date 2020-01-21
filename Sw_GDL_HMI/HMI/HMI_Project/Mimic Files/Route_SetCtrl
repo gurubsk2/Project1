@@ -1,0 +1,642 @@
+ASCII32,18,9,2018,22:19,33,1.1
+W,BEGIN,"Route_SetCtrl","RouteSetCtrl"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1008,566
+	SIZE,415,260,415,260,0,0,0,1280,1024,409,238
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Route Setting"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecer itinerario"
+			ROLE,0,"Establecer itinerario"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,0,2,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Route_SetCtrl.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Route Setting mimic
+	'* *******************************************************************************************
+	'* Purpose:     It Manages:
+	'*              -   the list of route exit signals names,
+	'*              -   the display of the label of the button "OK",
+	'*              -   the command sending (to set the route).
+	'* *******************************************************************************************
+	'* Author:              Artur Valverde
+	'* Date:                Aug '11
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION ETE_02-012036900_02-ET-9.88
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* **********************************************
+	Option Explicit
+	
+	'* Constants
+	'* **********************************************
+	Const c_strServerSeparator As String = ":"
+	
+	'* Value to be sent in the command
+	Private Const c_iCommandValue As Integer = 1
+	
+	Private Const c_strDestinationsTag As String = ".Destinations.Value"
+	Private Const c_strNormalRouteCommandTag As String = ".Detection.Template.iCommand"
+	Private Const c_strPermanentRouteCommandTag As String = ".Automatic.Template.iCommand"
+	Private Const c_strRouteStatusTag As String = ".Detection.Template.iEqpState"
+	'Private Const c_iCommandValue As Integer = 1
+	
+	Private sRouteCMD As String
+	Dim WithEvents m_OPC_RouteCommand As Variable
+	Dim m_OPCBlockingRoute As Variable
+	
+	
+	
+	
+	Private Sub btnOK_Click()
+	Dim strClusterName As String
+	Dim strRoute As String
+	
+	    If Not Variables.Item(Me.Branch & ".OKEnabled%").Value Then Exit Sub
+	  
+	    If (optPadrao = True) Then
+	    If ((m_OPC_RouteCommand.Status = fvVariableStatusGood) And (m_OPC_RouteCommand.Quality = 192)) Then
+	    '*Send the command
+	        m_OPC_RouteCommand.Value = c_iCommandValue
+	    End If
+	   ElseIf (optComboio = True) Then
+	    m_OPC_RouteCommand.Value = c_iCommandValue
+	    End If
+	    
+	    
+	    
+	'  Call Variables.Add("OPCCluster:" & sRouteCMD & m_strRouteCommandTag)
+	'    Variables.Item("OPCCluster:" & sRouteCMD & m_strRouteCommandTag).Value = 1
+	'    ElseIf (optPadrao = True) Then
+	'    Call Variables.Add("OPCCluster:" & sRouteCMD & m_strRouteCommandTag, fvVariableTypeRegister)
+	'    Variables.Item("OPCCluster:" & sRouteCMD & m_strRouteCommandTag).Value = 1
+	'    End If
+	    
+	    Me.Close fvDoNotSaveChanges
+	    
+	End Sub
+	
+	
+	
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedures  : optRouteTypes
+	'Type       : Sub
+	'Objective  : Set the type of the route
+	'Parameters : N/A
+	'Return     : N/A
+	'Obs        : The exception management will be realised into the ShowDestinations function
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/11     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub optPadrao_Change()
+	   m_strRouteCommandTag = c_strNormalRouteCommandTag
+	    m_iRouteCommandType = c_iNormalRoute
+	    ShowDestinations
+	
+	End Sub
+	
+	Private Sub optComboio_Change()
+	  m_strRouteCommandTag = c_strPermanentRouteCommandTag
+	  m_iRouteCommandType = c_iPermanentRoute
+	    ShowDestinations
+	    
+	End Sub
+	'Final optRouteTypes procedures
+	'=======================================================================================
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : Mimic_Run
+	'Type       : Sub
+	'Objective  : Manages the initial values of the variables and set the Command variable
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/11     Artur Valverde    Creation
+	'        2011/12/26     Rafaela Parmezao  Me.Caption (CR259207)
+	'=======================================================================================
+	Private Sub Mimic_Run()
+	    Dim I As Integer
+	    Dim sSignalName As String
+	    
+	    On Error GoTo ErrorHandler
+	   
+	     sSignalName = Variables.Add(ThisMimic.Branch & ".HMIRouteSignal.Template.Name", fvVariableTypeRegister).Value
+	    'sSignalName = Variables.Item(ThisMimic.Branch & ".HMIRouteSignal.Template.Name").Value
+	''    If sSignalName Like "X*" Then
+	''        Me.Caption = "   Rota Alinhar - " & Replace(sSignalName, Right(sSignalName, 1), "")
+	''    Else
+	''        Me.Caption = "   Rota Alinhar - " & sSignalName
+	''    End If
+	''    '* Disable the button command and clear destination signals
+	    ClearDestinations
+	
+	    If VerifyVariable(Variables.Add(ThisMimic.Branch & c_strDestinationsTag, fvVariableTypeText)) Then
+	        Call ReadDestinations(Variables.Item(ThisMimic.Branch & c_strDestinationsTag).Value)
+	        optPadrao.Enabled = True
+	        optComboio.Enabled = True
+	        optPadrao.Value = True
+	        optPadrao_Change
+	    Else
+	        optPadrao.Enabled = False
+	        optComboio.Enabled = False
+	    End If
+	    
+	    optPadrao.Value = True
+	    optPadrao_Change
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Run", Err.Description)
+	End Sub
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : ClearDestinations
+	'Type       : Sub
+	'Objective  : Clear the object list with the name of the exit signals
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/12     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub ClearDestinations()
+	    Dim I As Integer 'index
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    '* Clear the list of destination
+	    For I = 1 To 12
+	        ThisMimic.Graphics("optDest" & I).Left = 600
+	        ThisMimic.Graphics("optDest" & I).Value = 0
+	        ThisMimic.Graphics("optDest" & I).Caption = "Destino " & I
+	    Next I
+	    
+	'    'Clear the command
+	    'cmdOkRoute.LocalBranch = ""
+	    Variables(Me.Branch & ".OKEnabled%").Value = False
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "ClearDestinations", Err.Description)
+	
+	End Sub
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedure  : ShowDestinations
+	'Type       : Sub
+	'Objective  : Manage filling the object list with the name of the exit signals
+	'Parameters : N/A
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/11     Artur Valverde    Creation
+	'  2     2011/11/24     Wagner Queiroz    GAMBS - Correction to Route from Signal 55C (The HMI was showing different routes with the same destiny signal)
+	'  2     2012/01/09     Wagner Queiroz    GAMBS
+	'=======================================================================================
+	
+	Private Sub ShowDestinations()
+	    Dim I As Integer 'index
+	    Dim iRoute As Integer 'index
+	    Dim sRouteDestName      As String
+	    Dim m_BlockingRoute As Variable
+	    On Error GoTo ErrorHandler
+	       
+	    '* Clear the list of destination and disable the button "OK"
+	    ClearDestinations
+	        
+	        
+	    For I = 0 To UBound(m_Routes(m_iRouteCommandType).SignalList)
+	
+	'        ThisMimic.Graphics("optDest" & I + 1).Caption = m_Routes(m_iRouteCommandType).SignalList(I).sName
+	
+	''''GAMBS: 09/01/2012
+	''''REF: Baseline_7 7 4_Issues_InternalAlstomTests_v9_ATS INTERNAL - item 60
+	        ThisMimic.Graphics("optDest" & I + 1).Caption = Split(m_Routes(m_iRouteCommandType).SignalList(I).sRouteID, "_")(3) & "_" & Split(m_Routes(m_iRouteCommandType).SignalList(I).sRouteID, "_")(4)
+	
+	'''        'Find RouteID
+	        For iRoute = 0 To UBound(m_Routes(m_iRouteCommandType).SignalList)
+	
+	            sRouteDestName = Split(m_Routes(m_iRouteCommandType).SignalList(iRoute).sRouteID, "_")(3) & "_" & Split(m_Routes(m_iRouteCommandType).SignalList(I).sRouteID, "_")(4)
+	
+	               If ThisMimic.Graphics("optDest" & I + 1).Caption = sRouteDestName Then
+	               Set m_OPCBlockingRoute = Variables.Add("OPCCluster:" & m_Routes(m_iRouteCommandType).SignalList(iRoute).sRouteID & ".Blocking.Status.Value", fvVariableTypeBit)
+	               If ((m_OPCBlockingRoute.Status = fvVariableStatusGood) And (m_OPCBlockingRoute.Quality = 192)) Then
+	             
+	                If (m_OPCBlockingRoute.Value = False) Then
+	                    ThisMimic.Graphics("optDest" & I + 1).Enabled = 0
+	                Else
+	                    ThisMimic.Graphics("optDest" & I + 1).Enabled = 1
+	                    Exit For
+	                End If
+	             End If
+	            End If
+	        Next
+	'''        'Show object
+	        Select Case I + 1
+	            Case 1, 4, 7, 10
+	                ThisMimic.Graphics("optDest" & I + 1).Left = 16
+	            Case 2, 5, 8, 11
+	                ThisMimic.Graphics("optDest" & I + 1).Left = 154
+	            Case 3, 6, 9, 12
+	                ThisMimic.Graphics("optDest" & I + 1).Left = 295
+	        End Select
+	
+	    Next I
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "ShowDestinations", Err.Description)
+	End Sub
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedures  : optRouteDestinations
+	'Type       : Sub
+	'Objective  : Add the route destination command
+	'Parameters : N/A
+	'Return     : N/A
+	'Obs        : The exception management will be realised into the AddCommandOPCVariable
+	'             function.
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/11     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub optDest1_Click()
+	    AddCommandOPCVariable optDest1
+	    
+	End Sub
+	
+	Private Sub optDest2_Click()
+	    AddCommandOPCVariable optDest2
+	    
+	End Sub
+	
+	Private Sub optDest3_Click()
+	    AddCommandOPCVariable optDest3
+	    
+	End Sub
+	
+	Private Sub optDest4_Click()
+	    AddCommandOPCVariable optDest4
+	    
+	End Sub
+	
+	Private Sub optDest5_Click()
+	    AddCommandOPCVariable optDest5
+	    
+	End Sub
+	
+	Private Sub optDest6_Click()
+	    AddCommandOPCVariable optDest6
+	    
+	End Sub
+	
+	Private Sub optDest7_Click()
+	    AddCommandOPCVariable optDest7
+	    
+	End Sub
+	
+	Private Sub optDest8_Click()
+	    AddCommandOPCVariable optDest8
+	    
+	End Sub
+	
+	Private Sub optDest9_Click()
+	    AddCommandOPCVariable optDest9
+	    
+	End Sub
+	
+	Private Sub optDest10_Click()
+	    AddCommandOPCVariable optDest10
+	    
+	End Sub
+	
+	Private Sub optDest11_Click()
+	    AddCommandOPCVariable optDest11
+	    
+	End Sub
+	
+	Private Sub optDest12_Click()
+	    AddCommandOPCVariable optDest12
+	    
+	End Sub
+	'Final optRouteDestinations procedure
+	'=======================================================================================
+	
+	
+	'=======================================================================================
+	'=======================================================================================
+	'Procedures  : optRouteDestinations
+	'Type       : Sub
+	'Objective  : Set the OPC variable associated to the command in the button command branch
+	'Parameters : optDestination As Object - The destiny signal option button clicked
+	'Return     : N/A
+	'=======================================================================================
+	' Rev       Date        Modified by       Description
+	'---------------------------------------------------------------------------------------
+	'  1     2011/08/11     Artur Valverde    Creation
+	'=======================================================================================
+	Private Sub AddCommandOPCVariable(ByRef optDestination As Object)
+	    Dim strClusterName      As String
+	    Dim strRoute            As String
+	    Dim I                   As Integer
+	    Dim sRouteID            As String
+	    Dim sRouteDestName      As String
+	    On Error GoTo ErrorHandler
+	 
+	    '* Disable the button "OK"
+	   'cmdOkRoute.LocalBranch = ""
+	    Variables(Me.Branch & ".OKEnabled%").Value = False
+	    
+	    If (optDestination.Caption = "") Then Exit Sub
+	
+	    sRouteCMD = "R_" & Right(Me.Branch, 8) & "_" & optDestination.Caption
+	    
+	    Variables(Me.Branch & ".OKEnabled%").Value = (Variables(Me.Branch & ".Detection.Template.Security").Value = 0)
+	    
+	'    '* Extract the cluster name from the branch of the mimic
+	    strClusterName = Left(ThisMimic.Branch, InStr(ThisMimic.Branch, c_strServerSeparator))
+	'
+	'
+	'    'Find RouteID
+	    For I = 0 To UBound(m_Routes(m_iRouteCommandType).SignalList)
+	'
+	        sRouteDestName = Split(m_Routes(m_iRouteCommandType).SignalList(I).sRouteID, "_")(3) & "_" & Split(m_Routes(m_iRouteCommandType).SignalList(I).sRouteID, "_")(4)
+	'
+	        If optDestination.Caption = sRouteDestName Then
+	            sRouteID = m_Routes(m_iRouteCommandType).SignalList(I).sRouteID
+	            Exit For
+	'
+	        End If
+	'
+	    Next
+	
+	    If sRouteID = "" Then Exit Sub
+	
+	   ' strRoute = strClusterName & "@" & sRouteID & m_strRouteCommandTag
+	   strRoute = strClusterName & sRouteID & m_strRouteCommandTag
+	    
+	    
+	    Set m_OPC_RouteCommand = Variables.Add(strRoute, fvVariableTypeRegister)
+	    Exit Sub
+	
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "AddCommandOPCVariable", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,64,64,64,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,0,0,0,0,44,0
+	COLOR,7,172,168,153,0,0,0
+	COLOR,8,128,128,128,0,0,0
+	COLOR,9,0,0,0,0,45,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,112,67,8,21,112,67,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape2"
+	B,400,67,120,21,400,67,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape1"
+	B,400,191,7,84,400,191,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"SignalName"
+	B,16,35,104,59,16,59,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+	PP,1,16,35,0,0,FONT,1," ",36,FONT,1," ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"",FONT,1,37
+			ROLE,0,"",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"HMIRouteSignal.Template.Name"
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,18,75,83,91,18,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,18,75,0,0,FONT,1,"Destinos",36,FONT,1,"Destinos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Destinations",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Destinos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"optDest1"
+	B,16,93,115,117,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest4"
+	B,600,117,699,141,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest7"
+	B,600,141,699,165,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest10"
+	B,600,165,699,189,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest2"
+	B,154,93,253,117,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest5"
+	B,600,117,699,141,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest8"
+	B,600,141,699,165,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest11"
+	B,600,165,699,189,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest3"
+	B,600,93,699,117,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest6"
+	B,600,117,699,141,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest9"
+	B,600,141,699,165,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optDest12"
+	B,600,165,699,189,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text2"
+	B,128,13,168,29,128,29,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,128,13,0,0,FONT,1,"Destinos",36,FONT,1,"Destinos",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,0
+			ROLE,0,"Type",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tipo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,16,13,71,29,16,29,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	PP,0,16,13,0,0,FONT,1,"Tipo",36,FONT,1,"Tipo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Origen",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Origen",FONT,1,36
+			ROLE,0,"Origen",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"optPadrao"
+	B,154,35,242,59,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optComboio"
+	B,264,35,366,59,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnOK1"
+	B,252,198,331,227,252,227,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,5,0,COLOR,5
+	PP,1,252,198,0,0,FONT,1,"OK",37,FONT,1,"OK",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,76,198,155,227,76,227,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,8,0,COLOR,8,0,COLOR,5,0,COLOR,5
+	PP,1,76,198,0,0,FONT,1,"Executar",37,FONT,1,"Executar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Executar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ejecutar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"OKEnabled%"
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,9,COLOR,9
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,9,COLOR,9
+	A,END
+O,END

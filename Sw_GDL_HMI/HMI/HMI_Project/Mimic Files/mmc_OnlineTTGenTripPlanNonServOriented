@@ -1,0 +1,374 @@
+ASCII32,19,4,2016,5:53,55,1.1
+W,BEGIN,"mmc_OnlineTTGenTripPlanNonServOriented","mmc_OnlineTTGenTripPlanNonServOriented"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,384,103
+	SIZE,1160,825,1160,825,0,0,0,1366,768,1154,803
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"General Timetable View for Non Service Oriented"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTTGenTripPlanNonServOriented.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      View_GeneraltripPlan_NonServiceOriented
+	'* *******************************************************************************************
+	'* Purpose:     Manages the view of general trip plan for non service oriented
+	'* *******************************************************************************************
+	'* Author:              Wagner Queiroz
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constant
+	'* ******************************************************
+	
+	'Var tags
+	Private Const c_strTABcTripNumberSel        As String = "TabCTripNumberSel%"
+	Private Const c_strTabCSelTripNumber        As String = "TabCSelTripNumber%"
+	Private Const c_strTabCSelServiceId         As String = "TabCSelServiceId%"
+	Private Const c_strTabCSelTripID            As String = "TabCSelTripID%"
+	Private Const c_strTabCSelTripState         As String = "TabCTripStateSel%"
+	
+	
+	'* Author:              Swati Das
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	
+	'* ************************************************************************************************
+	'* Subroutine: Mimic_Open
+	'* '* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTABcTripNumberSel) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTABcTripNumberSel, fvVariableTypeBit
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelTripNumber) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelTripNumber, fvVariableTypeText
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelServiceId) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelServiceId, fvVariableTypeText
+	    
+	    End If
+	    
+	    If Variables.Item(ThisMimic.Branch & c_strTabCSelTripID) Is Nothing Then
+	    
+	        Variables.Add ThisMimic.Branch & c_strTabCSelTripID, fvVariableTypeText
+	    
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	
+	Private Sub ocxGeneralTripPlanNsop_OnSelectedTripChange(ByVal TripNumber As Long, ByVal ServiceId As String, ByVal TripId As String, ByVal state As Long)
+	On Error GoTo ErrorHandler
+	    
+	    Variables.Item(c_strTabCSelTripNumber) = CStr(TripNumber)
+	    Variables.Item(c_strTabCSelServiceId) = CStr(ServiceId)
+	    Variables.Item(c_strTabCSelTripID) = CStr(TripId)
+	    Variables.Item(c_strTabCSelTripState) = CStr(state)
+	
+	    Variables.Item(ThisMimic.Branch & c_strTABcTripNumberSel).Value = IIf(CStr(TripNumber) <> "", True, False)
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ocxGeneralTripPlanNsop_OnSelectedTripChange", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"TabC", 0, 1, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Segoe UI",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,160,160,160,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,96,96,96,0,0,0
+	COLOR,7,240,240,240,0,0,0
+	COLOR,8,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,1142,790,7,683,1142,790,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"CancelButton"
+	B,29,698,154,723,29,723,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,29,698,0,0,FONT,1,"Add Trip...",37,FONT,1,"Add Trip...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Add Trip...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripAddition","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"Text3"
+	B,27,671,180,695,27,695,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,6,COLOR,6,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	PP,1,27,671,0,0,FONT,1,"Timetable adjustments",37,FONT,1,"Timetable adjustments",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Timetable adjustments",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"CancelButton2"
+	B,28,751,153,776,28,776,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,28,751,0,0,FONT,1,"Delete trip...",37,FONT,1,"Delete trip...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Delete trip...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripDeletion","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"CancelButton3"
+	B,201,749,358,774,201,774,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,201,749,0,0,FONT,1,"Reset time...",37,FONT,1,"Reset time...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reset time...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTimeResetting","",1,0,1,0,"","",0
+		AUTH,"TabCTripNumberSel%",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"TabCTripNumberSel%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"CancelButton4"
+	B,201,698,358,723,201,723,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,201,698,0,0,FONT,1,"Swap trip times...",37,FONT,1,"Swap trip times...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Swap trip times...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripTimeSwap","",1,0,1,0,"","",0
+		AUTH,"TabCTripNumberSel%",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"TabCTripNumberSel%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"CancelButton5"
+	B,647,698,858,723,647,723,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,647,698,0,0,FONT,1,"Modify trip origin movement...",37,FONT,1,"Modify trip origin movement...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modify trip origin movement...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripOrgMovMod","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"CancelButton6"
+	B,406,698,599,723,406,723,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,406,698,0,0,FONT,1,"Modify trip departure time...",37,FONT,1,"Modify trip departure time...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modify trip departure time...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripDepTimeMod","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND (TabCTripStateSel% == 0))"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"CancelButton7"
+	B,902,698,1129,723,902,723,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,902,698,0,0,FONT,1,"Modify trip destination movement...",37,FONT,1,"Modify trip destination movement...",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modify trip destination movement...",FONT,1,37
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecido en posici¢n inversa",FONT,1,37
+			ROLE,0,"Establecido en posici¢n inversa",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		PP,"mmc_OnlineTTGenTripPlanNonServOriTripDestMovMod","",1,0,1,0,"","",0
+		AUTH,"=((TabCTripNumberSel% != 0) AND ((TabCTripStateSel% == 0) OR (TabCTripStateSel% == 2))) ",1,0,0
+	A,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"=((TabCTripNumberSel% != 0) AND ((TabCTripStateSel% == 0) OR (TabCTripStateSel% == 2))) "
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,OCX,"ocxGeneralTripPlanNsop"
+	B,3,10,1147,672,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END

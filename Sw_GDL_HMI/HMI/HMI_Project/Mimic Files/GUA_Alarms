@@ -1,0 +1,977 @@
+ASCII32,23,10,2019,22:59,16,1.1
+W,BEGIN,"GUA_Alarms","GUA_Alarms"
+	TEMPLATE,"TemplateTRA",0,0,1,0,0,0,0,0,0,0,0,0
+	POSITION,-1,-2
+	SIZE,1920,1200,1920,1200,1,0,0,3840,1080,1920,1200
+	BACKCOLOR,24,61,73,0,34,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mimic2"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+	GRID,0,0,1,1,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GUA_Alarms.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Public bUpdating As Boolean
+	
+	Private Sub bt_date_ini_Click()
+	
+	End Sub
+	
+	'
+	''Quality                            4
+	''Name                               5
+	''Label                              6
+	''State                              7
+	''Severity (alarm)                   8
+	''Time of Activation                 9
+	''Time of Inactivation               10
+	''Time of Ack                        11
+	''Time of Transition                 12
+	''Transition                         13
+	''Time of Activity                   14
+	''Help                               18
+	''Mimic                              19
+	''Time stamp validity                20
+	''Activation Time stamp validity     21
+	''Deactivation Time stamp validity   22
+	''Activity Time stamp validity       23
+	''Date                               24
+	''Event Type                         25
+	''Object Name                        26
+	''Event Name                         27
+	''FuncName                           28
+	''AreaName                           29
+	''UserName                           30
+	''TypeName                           31
+	''Event Message                      32
+	''Severity                           33
+	
+	
+	
+	Private Sub cbxEstacao_Change()
+	    Dim sSub As String
+	    
+	'    If chk_Scada Then sSub = "System;"
+	'    If chk_ATS Then sSub = sSub & "SIG;"
+	'    If chk_Power Then sSub = sSub & "ENE;"
+	'    If chk_Facilities Then sSub = sSub & "AUX;"
+	    
+	    If bUpdating Then Exit Sub
+	    sSub = "SIG;"
+	    Call FillComboBox(cbxEquipamento, "Tipo", sSub, cbxEstacao)
+	
+	End Sub
+	
+	
+	Private Sub cmdApply_filter_Click()
+	On Error GoTo ErrorHandler
+	
+	'''Dim sFiltro As String, sFiltroEstado As String, sFiltroData As String
+	'''
+	'''SetGroups
+	'''
+	'''S2KAlarmViewerMultiServer1.SetExtendedFilter 1, ""
+	'''S2KAlarmViewerMultiServer1.ApplyFilters l
+	'''
+	''''Filter according to severity
+	'''
+	'''If cbxSeveridade.Value = "Minor" Then sFiltro = "Severidade BETWEEN [000,499]"
+	'''
+	'''If cbxSeveridade.Value = "Major" Then
+	''' If sFiltro <> "" Then sFiltro = sFiltro & " OR "
+	''' sFiltro = sFiltro & "Severidade BETWEEN [500,849]"
+	''' End If
+	''' If cbxSeveridade.Value = "Critical" Then
+	''' If sFiltro <> "" Then sFiltro = sFiltro & " OR "
+	''' sFiltro = sFiltro & "Severidade BETWEEN [850,1000]"
+	''' End If
+	'''If sFiltro <> " " Then sFiltro = "(" & sFiltro & ")"
+	'''
+	'''' Filter according to alarm status
+	'''
+	'''If cbxEstado.Value = "Active not acknowledge" Then sFiltroEstado = "Estado = # Activo_Not_Reconhecido"
+	'''    If cbxEstado.Value = "Active Acknowledged" Then
+	'''    If sFiltroEstado <> "" Then sFiltroEstado = sFiltroEstado & "OR"
+	'''        sFiltroEstado = sFiltroEstado & "Esatdo = #Activo_-_reconhecido"
+	'''    End If
+	'''If cbxEstado.Value = "Inactive Not Acknowledge" Then
+	'''    If sFiltroEstado <> "" Then sFiltroEstado = sFiltroEstado & "OR"
+	'''        sFiltroEstado = sFiltroEstado & "Esatdo = #InActivo_Not_reconhecido"
+	'''    End If
+	'''If sFiltroEstado <> "" Then sFiltro = sFiltro & " AND (" & sFiltroEstado & ")"
+	'''
+	''''Filter according to date and Time
+	
+	
+	    Dim sAuxFiltroGrupoEquipamento As String
+	    Dim sTipoDataHora As String
+	    Dim StrFiltro As String, sSub As String
+	    Dim StrStation As String, VerDataHora, sCaracStr, sLCaracStr, sRCaracStr, sCaracStrSize, iCount, sFCaracStr, bSpecialCarac, StrFilterEquip, StrFilterEquiptxt, StrFilterStation, StrFilterStationtxt
+	   ' Dim StrFilterStation As String
+	
+	 
+	    'Preparar Filtro por DATA
+	    If [sS2KDataIniAlarmes%] <> "" And [sS2KDataFimAlarmes%] <> "" Then
+	        StrFiltro = "[] " & [sS2KDataIniAlarmes%] & "," & [sS2KDataFimAlarmes%]     'aplicar o filtro com as duas datas como parametro
+	    ElseIf [sS2KDataIniAlarmes%] <> "" Then
+	        StrFiltro = ">= " & [sS2KDataIniAlarmes%]    'aplicar o filtro de data com o valor da data inicial
+	    ElseIf [sS2KDataFimAlarmes%] <> "" Then
+	        StrFiltro = "<= " & [sS2KDataFimAlarmes%]    'aplicar o filtro de data com o valor da data final
+	    Else
+	        StrFiltro = vbNullString 'nao aplicara filtro de data/hora
+	    End If
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 9, StrFiltro
+	    
+	    
+	    'Preparar Filtro por Estado
+	    '#Ativo_-_reconhecido, #Ativo_nao_reconhecido, #Inativo_nao_reconhecido-ativo)
+	    Select Case cbxEstado
+	        Case "Alarmado reconocido"
+	            StrFiltro = "= Activa"
+	            'StrFiltro = "= Ativo_-_reconhecido"
+	        Case "Alarmado no reconocido"
+	            StrFiltro = "= Activa-no_reconocida"
+	            'StrFiltro = "= Ativo_nao_reconhecido"
+	        Case "Normalizado no reconocido"
+	            StrFiltro = "= No_activa-activa_no_reconocida"
+	            'StrFiltro = "= Inativo_nao_reconhecido-ativo"
+	        Case Else
+	            StrFiltro = vbNullString
+	    End Select
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 7, StrFiltro
+	    
+	    'Preparar Filtro por Severidade
+	    If cbxSeveridade = "Minor" Then 'severidade baixa
+	            'StrFiltro = "[] 0, 499"
+	            StrFiltro = "= 1"
+	    ElseIf cbxSeveridade = "Baja" Then  'severidade media
+	            'StrFiltro = "[] 500, 849"
+	            StrFiltro = "= 2"
+	    ElseIf cbxSeveridade = "Major" Then  'severidade grave
+	            'StrFiltro = "[] 850, 1000"
+	            StrFiltro = "= 3"
+	    Else
+	            StrFiltro = "[] 1, 1000"
+	    End If
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 8, StrFiltro
+	    
+	    
+	    'Filtrar por Nome de equipamento
+	    If UCase(txtNome.Value) = vbNullString Then
+	       S2KAlarmViewerMultiServer1.SetFilter 1, 5, vbNullString
+	    Else
+	        'Verify * in equipment name
+	
+	        sCaracStr = UCase(txtNome.Value)
+	        sLCaracStr = Asc(sCaracStr)
+	        sRCaracStr = Right(sCaracStr, 1)
+	        'sLCaracStr = Left(sCaracStr, 1)
+	        
+	        sCaracStrSize = Len(sCaracStr)
+	    
+	            For iCount = 1 To sCaracStrSize
+	             sFCaracStr = Mid(sCaracStr, iCount, 1)
+	                If Asc(sFCaracStr) = "42" Then
+	                bSpecialCarac = True
+	                End If
+	            Next iCount
+	
+	        If Asc(sRCaracStr) = "42" And sLCaracStr = "42" Then
+	            S2KAlarmViewerMultiServer1.SetFilter 1, 5, "= " & txtNome.Value
+	        ElseIf Asc(sRCaracStr) = "42" Then
+	            S2KAlarmViewerMultiServer1.SetFilter 1, 5, "= " & txtNome.Value
+	        ElseIf sLCaracStr = "42" Then
+	            S2KAlarmViewerMultiServer1.SetFilter 1, 5, "= " & txtNome.Value
+	        ElseIf bSpecialCarac = True Then
+	           S2KAlarmViewerMultiServer1.SetFilter 1, 5, "= " & txtNome.Value
+	        Else
+	           S2KAlarmViewerMultiServer1.SetFilter 1, 5, "= " & "*" & txtNome.Value & "*"
+	        End If
+	
+	    End If
+	
+	    'Aplicar Filtro
+	    S2KAlarmViewerMultiServer1.ApplyFilters 1
+	    
+	    'Preparar Filtro por Localiza‡ao, Tipo de Equipamento e Tipo de Alarme
+	'    If chk_Scada Then sSub = "System;"
+	'    If chk_ATS Then sSub = sSub & "SIG;"
+	'    If chk_Power Then sSub = sSub & "ENE;"
+	'    If chk_Facilities Then sSub = sSub & "AUX;"
+	    
+	    sSub = "SIG;"
+	    StrFiltro = FindArea(cbxEstacao, cbxEquipamento, sSub)
+	    
+	    S2KAlarmViewerMultiServer1.SetGroups StrFiltro
+	
+	
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "cmdApply_filter", "cmdApply_filter", Err.Description)
+	End Sub
+	
+	
+	
+	Private Sub cmdCancelFilter_Click()
+	    CleanFilters
+	    
+	End Sub
+	
+	Private Sub cmdPrintAlarms_Click()
+	
+	End Sub
+	
+	Private Sub Gestion_Alarms_Click()
+	On Error GoTo ErrorHandler
+	
+	Call Mimics.Open("GUA_Alarms_EquipmentFilter", , , , "GUA_Alarms", , , , 0, 286, True)
+	
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Gestion_Alarms_Click", "Gestion_Alarms_Click", Err.Description)
+	End Sub
+	
+	Private Sub Mimic_Open()
+	    Dim sSub As String
+	
+	On Error Resume Next
+	
+	'    cbxEquipamento.AddItem "Todos"
+	'    cbxEstacao.AddItem "Area_TZA"
+	'    cbxEstacao.AddItem "Area_BAN"
+	'    cbxEstacao.AddItem "Area_NIL"
+	    cbxSeveridade.Clear
+	    cbxSeveridade.AddItem "Todas"
+	    cbxSeveridade.AddItem "Minor"
+	    cbxSeveridade.AddItem "Baja"
+	    cbxSeveridade.AddItem "Major"
+	    cbxEstado.ListIndex = 0
+	    
+	    cbxEstado.Clear
+	    cbxEstado.AddItem "Todos"
+	    cbxEstado.AddItem "Alarmado reconocido"
+	    cbxEstado.AddItem "Alarmado no reconocido"
+	    cbxEstado.AddItem "Normalizado no reconocido"
+	    cbxEstado.ListIndex = 0
+	    
+	    'sSub is used for the subsystem, we need to confirm it with Rodrigo in the configuration
+	    'We'll chage it later, when the configuration generate the files "FilterConfigArea.txt" and "FilterConfigFunction.txt"
+	    'Let's use SIG, because the configuration file was created with this
+	    sSub = "SIG;"
+	    bUpdating = True
+	    Call FillComboBox(cbxEstacao, "Local", sSub)
+	    Call FillComboBox(cbxEquipamento, "Tipo", sSub)
+	    bUpdating = False
+	
+	    If [sS2KDataIniAlarmes%] Is Nothing Then Variables.Add "sS2KDataIniAlarmes%", fvVariableTypeText
+	    If [sS2KDataFimAlarmes%] Is Nothing Then Variables.Add "sS2KDataFimAlarmes%", fvVariableTypeText
+	    If [txtDataIniAlarmes%] Is Nothing Then Variables.Add "txtDataIniAlarmes%", fvVariableTypeText
+	    If [txtDataFimAlarmes%] Is Nothing Then Variables.Add "txtDataFimAlarmes%", fvVariableTypeText
+	    If [txtHoraIniAlarmes%] Is Nothing Then Variables.Add "txtHoraIniAlarmes%", fvVariableTypeText
+	    If [txtHoraFimAlarmes%] Is Nothing Then Variables.Add "txtHoraFimAlarmes%", fvVariableTypeText
+	    CleanFilters
+	
+	End Sub
+	
+	Function CleanFilters()
+	    
+	    cbxEstacao.ListIndex = 0
+	    cbxEquipamento.ListIndex = 0
+	    cbxEstado.ListIndex = 0
+	    cbxSeveridade.ListIndex = 0
+	    
+	    txtNome.Value = vbNullString
+	
+	    Variables.Item("txtDataIniAlarmes%").Value = "__.__.__"
+	    Variables.Item("txtDataFimAlarmes%").Value = "__.__.__"
+	    Variables.Item("txtHoraIniAlarmes%").Value = "__:__:__"
+	    Variables.Item("txtHoraFimAlarmes%").Value = "__:__:__"
+	
+	    [sS2KDataIniAlarmes%] = ""
+	    [sS2KDataFimAlarmes%] = ""
+	    
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 5, ""
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 7, ""
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 9, ""
+	    S2KAlarmViewerMultiServer1.SetFilter 1, 8, "[] 1, 1000"
+	    S2KAlarmViewerMultiServer1.ApplyFilters 1
+	    S2KAlarmViewerMultiServer1.SetGroups ""
+	    
+	End Function
+	
+	
+	Private Sub txtAckpage1_Click()
+	
+	End Sub
+	
+	Private Sub txtAckSelection18_Click()
+	    S2KAlarmViewerMultiServer1.AckSelection
+	    
+	End Sub
+	
+	Private Sub txtAckpage_Click()
+	    S2KAlarmViewerMultiServer1.AckPage
+	
+	End Sub
+	
+	'Private Function SetGroups()
+	'Dim sGroupFilter As String
+	'Dim sATS As String
+	'
+	'sATS = "UEVOL_REG_GDL_L3.ATS_2.Area/LI_GDL_L3/ML_GDL_L3"
+	'
+	'If cbxEstacao.Value = "Area_TZA" Then
+	'sGroupFilter = sATS & "/Territory_6/Area_TZA"
+	'ElseIf cbxEstacao.Value = "Area_BAN" Then
+	'sGroupFilter = sATS & "/Territory_5/Area_BAN"
+	'ElseIf cbxEstacao.Value = "Area_NIL" Then
+	'sGroupFilter = sATS & "/Territory_4/Area_NIL"
+	'ElseIf cbxEstacao.Value = "Area_NIL" Then
+	'sGroupFilter = sATS & "/Territory_3/Area_NIL"
+	'End If
+	'S2KAlarmViewerMultiServer1.SetGroups sGroupFilter
+	'End Function
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+	"S2KALARMVIEWERMULTISERVERLib", 1, 0, "{CDE7605A-F73D-4C86-AEDC-203B90B6086C}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-21,0,400,0,0,"Arial",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-13,0,700,0,0,"Arial Narrow",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,130,130,130,0,0,0
+	COLOR,4,76,74,70,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,0,0,128,0,0,0
+	COLOR,7,128,128,128,0,0,0
+	COLOR,8,172,168,153,0,0,0
+	COLOR,9,0,0,0,0,0,1
+	COLOR,10,157,157,161,0,0,0
+	COLOR,11,96,96,96,0,0,0
+	COLOR,12,176,176,176,0,0,0
+	COLOR,13,204,204,204,0,0,0
+COLORS,END
+O,BEGIN,T,"Text29"
+	B,263,9,474,33,263,33,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,263,9,0,0,FONT,1,"Guadalajara - L¡nea 3 ",37,FONT,1,"Guadalajara - L¡nea 3 ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guadalajara - L¡nea 3 ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,794,11,1018,35,794,35,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,794,11,0,0,FONT,1,"Telemando de Tr fico",37,FONT,1,"Telemando de Tr fico",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Alarmas",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape32"
+	B,1909,1024,1638,937,1909,1024,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,R,"Shape33"
+	B,1909,926,1638,796,1909,926,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,R,"Shape27"
+	B,1909,783,1638,285,1909,783,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,R,"Shape17"
+	B,1903,398,1641,292,1903,398,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text2"
+	B,1643,307,1902,323,1643,323,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,307,0,0,FONT,2,"Fecha y Hora",37,FONT,2,"Fecha y Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text57"
+	B,1643,291,1902,305,1643,305,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,291,0,0,FONT,2,"FILTROS",37,FONT,2,"FILTROS",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"FILTROS",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"FILTROS",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"bt_date_fim"
+	B,1648,370,1732,393,1648,393,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,2,0,COLOR,7,0,COLOR,7,0,COLOR,5,0,COLOR,5
+	PP,1,1648,370,0,0,FONT,2,"Final",37,FONT,2,"Final",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Final",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Final",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraAlarmsEnd","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"bt_date_ini"
+	B,1648,344,1732,367,1648,367,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,2,0,COLOR,8,0,COLOR,8,0,COLOR,5,0,COLOR,5
+	PP,1,1648,344,0,0,FONT,2,"Inicial",37,FONT,2,"Inicial",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Inicial",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim2",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_DataHoraAlarmsBeg","",1,0,1,0,"","",0
+	A,END
+O,END
+O,BEGIN,T,"Text7"
+	B,1757,327,1798,342,1757,342,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1757,327,0,0,FONT,3,"Fecha ",37,FONT,3,"Fecha ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha ",FONT,3,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,1831,327,1872,342,1831,342,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1831,327,0,0,FONT,3,"Hora",37,FONT,3,"Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,3,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text12"
+	B,1741,348,1813,363,1741,363,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1741,348,0,0,FONT,2," . . ",37,FONT,2," . . ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtDataIniAlarmes%"
+	A,END
+O,END
+O,BEGIN,T,"Text5"
+	B,1820,348,1882,363,1820,363,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1820,348,0,0,FONT,2," : : ",37,FONT,2," : : ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtHoraIniAlarmes%"
+	A,END
+O,END
+O,BEGIN,T,"Text6"
+	B,1741,374,1813,389,1741,389,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1741,374,0,0,FONT,2," . . ",37,FONT,2," . . ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," / / ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtDataFimAlarmes%"
+	A,END
+O,END
+O,BEGIN,T,"Text10"
+	B,1820,374,1882,389,1820,389,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	PP,1,1820,374,0,0,FONT,2," : : ",37,FONT,2," : : ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1," : : ",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtHoraFimAlarmes%"
+	A,END
+O,END
+O,BEGIN,T,"txtAckpage"
+	B,1651,983,1895,1010,1651,1010,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,8,0,COLOR,8,0,COLOR,5,0,COLOR,5
+	PP,1,1651,983,0,0,FONT,2,"Reconocer la P gina",37,FONT,2,"Reconocer la P gina",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reconocer la P gina",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reconocer la P gina",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"txtAckSelection18"
+	B,1651,946,1895,973,1651,973,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,10,0,COLOR,10,0,COLOR,5,0,COLOR,5
+	PP,1,1651,946,0,0,FONT,2,"Reconocer la Selecci¢n",37,FONT,2,"Reconocer la Selecci¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reconocer la Selecci¢n",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reconocer la Selecci¢n",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdApply_filter"
+	B,1651,803,1895,830,1651,830,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,8,0,COLOR,8,0,COLOR,5,0,COLOR,5
+	PP,1,1651,803,0,0,FONT,2,"Aplicar Filtro",37,FONT,2,"Aplicar Filtro",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar Filtro",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar Filtro",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdCancelFilter"
+	B,1651,846,1895,873,1651,873,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,8,0,COLOR,8,0,COLOR,5,0,COLOR,5
+	PP,1,1651,846,0,0,FONT,2,"Quitar Filtro",37,FONT,2,"Quitar Filtro",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Quitar Filtro",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Quitar Filtro",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"cmdPrintAlarms"
+	B,1651,889,1895,916,1651,916,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,10,0,COLOR,10,0,COLOR,5,0,COLOR,5
+	PP,1,1651,889,0,0,FONT,2,"Imprimir Alarmas",37,FONT,2,"Imprimir Alarmas",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imprimir Alarmas",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Imprimir Alarmas",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,1904,455,1642,404,1904,455,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text25"
+	B,1644,405,1903,421,1644,421,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1644,405,0,0,FONT,2,"Localizati¢n",37,FONT,2,"Localizati¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicaci¢n",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicaci¢n",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxEstacao"
+	B,1655,427,1890,451,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape24"
+	B,1903,534,1641,483,1903,534,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text26"
+	B,1643,484,1902,500,1643,500,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,484,0,0,FONT,2,"Tipo del Equipo",37,FONT,2,"Tipo del Equipo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del Equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxEquipamento"
+	B,1655,504,1890,528,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape31"
+	B,1904,691,1642,640,1904,691,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"cbxSeveridade"
+	B,1656,662,1891,686,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text27"
+	B,1643,641,1902,657,1643,657,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,641,0,0,FONT,2,"Severidad",37,FONT,2,"Severidad",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Severidad",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Severidad",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape19"
+	B,1904,770,1642,719,1904,770,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text32"
+	B,1643,720,1902,736,1643,736,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,720,0,0,FONT,2,"Estado Alarma",37,FONT,2,"Estado Alarma",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado Alarma",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado Alarma",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbxEstado"
+	B,1656,741,1891,765,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape22"
+	B,1628,286,31,266,1628,286,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text115"
+	B,34,268,179,283,34,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,34,268,10,0,FONT,2,"Fecha y Hora",36,FONT,2,"Fecha y Hora",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text117"
+	B,894,268,1626,283,894,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,894,268,10,0,FONT,2,"Descripci¢n Alarma",36,FONT,2,"Descripci¢n Alarma",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n Alarma",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Descripci¢n Alarma",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text118"
+	B,373,268,542,283,373,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,373,268,10,0,FONT,2,"Ubicac¡on",36,FONT,2,"Ubicac¡on",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicac¡on",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Ubicac¡on",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text119"
+	B,718,268,891,283,718,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,718,268,10,0,FONT,2,"Nombre del Equipo",36,FONT,2,"Nombre del Equipo",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text135"
+	B,182,268,254,283,182,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,182,268,5,0,FONT,2,"Severidad",36,FONT,2,"Severidad",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Severidad",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Severidad",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text9"
+	B,257,268,370,283,257,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,257,268,10,0,FONT,2,"Clasificaci¢n",36,FONT,2,"Clasificaci¢n",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Clasificaci¢n",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Clasificaci¢n",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape21"
+	B,1903,613,1641,562,1903,613,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,2,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text11"
+	B,1643,563,1902,579,1643,579,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,1643,563,0,0,FONT,2,"Nombre del Equipo",37,FONT,2,"Nombre del Equipo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtNome"
+	B,1655,584,1890,608,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,6,COLOR,6,1,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"S2KAlarmViewerMultiServer1"
+	B,4,289,1622,1195,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,13,COLOR,13,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text13"
+	B,544,268,715,283,544,283,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,12,0,COLOR,12,0,COLOR,1,0,COLOR,1
+	PP,1,544,268,10,0,FONT,2,"Nombre del Equipo",37,FONT,2,"Nombre del Equipo",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre del Equipo",FONT,2,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo del equipo",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END

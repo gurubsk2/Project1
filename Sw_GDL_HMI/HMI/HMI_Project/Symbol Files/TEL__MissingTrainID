@@ -1,0 +1,16 @@
+ASCII32,16,12,2017,14:23,26,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,"Symbol1600"
+	B,682,142,722,160,682,160,32767,0,6400,0,2,0,0
+	O,BEGIN,S,"Symbol1599"
+		B,682,142,722,160,682,160,65535,0,6400,0,4,0,0
+		PP,"TEL_dispServiceID_Missing","",682,142,722,160,1,0, 0, 1
+		SUB
+		A,BEGIN,OBG,"Anim1",0,0,"",""
+			PP,"@btnRSID%","@btnServiceID%","@btnTripID%","","",1296,28,1336,46,1,"TEL_dispRSID_Missing",1,"TEL_dispRSID_Missing",1,"TEL_dispServiceID_Missing",0,"",1,"TEL_dispTripID_Missing",1,"",1,"",1,"",0,"",0,"",0,"",0,"",0,"",0,"",0,"",0,"",0,""
+		A,END
+	O,END
+O,END

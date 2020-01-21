@@ -1,0 +1,23 @@
+ASCII32,7,5,2016,7:12,24,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+COLORS,END
+O,BEGIN,GRP,"Symbol66"
+	B,24,24,496,48,24,48,65535,0,6400,0,2,0,0
+	O,BEGIN,S,"Symbol63"
+		B,33,42,24,33,24,42,65535,0,6400,0,4,0,0
+		PP,"EGamaAuthorizationStatus","",33,42,24,33,1,0, 0, 1
+	O,END
+	O,BEGIN,S,"Symbol64"
+		B,496,48,347,24,347,48,65535,0,6400,0,4,0,0
+		PP,"Egama_HILC_Status","",466,48,347,24,1,0, 0, 1
+		A,BEGIN,ORL,"Anim1",0,0,"",""
+			PP,"=((1*((Status%==1))  AND ((EGAMAStatus.Value==0)))+(2*(((Status% > 0 ) OR (Status% == 2)) AND ((EGAMAStatus.Value== 1) )))+(3*((Status%>1) AND ((EGAMAStatus.Value==0)))))","",526,48,377,24,1,"HILCGlobal_StatusEmpty",1.000000,1,"HILCGlobal_Status1",2.000000,1,"HILCGlobal_Status2",3.000000,1,"HILCGlobal_Status3",4.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000
+		A,END
+	O,END
+	O,BEGIN,S,"Symbol65"
+		B,60,27,345,46,60,46,65535,0,6400,0,4,0,0
+		PP,"EGamaDeviceName","",60,27,345,46,1,0, 0, 1
+	O,END
+O,END

@@ -1,0 +1,91 @@
+ASCII32,13,12,2016,7:54,34,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	
+	Private Sub Symbol_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    Dim harsha As String
+	    If Button = 2 Then 'direito
+	        TheseMimics.Open ("GUA_notaequip")
+	    Else
+	        If ActiveMimic.Branch = "M2" Then
+	    iPopupPosition = iPopupPosition + 1921
+	    Else
+	    iPopupPosition = 0
+	    End If
+	'        iPopupPosition = Thisproject.ActiveMimic.Windows(1).Left
+	    harsha = Thisproject.ActiveMimic.FileName
+	        iPopupPositionl = (((ThisSymbol.Left + 1680) + ThisSymbol.Width) * 0.753)
+	        iPopupPositiont = (ThisSymbol.Top + ThisSymbol.Height) * 0.753
+	    
+	    
+	        iPopupPositionl = (ThisSymbol.Left + ThisSymbol.Width) * 0.753
+	        iPopupPositiont = (ThisSymbol.Top + ThisSymbol.Height) * 0.753
+	'     For Each oMimic In Mimics
+	'
+	'
+	'           If (harsha = "SR_Detailed_View") Then
+	'          If StrComp(oMimic.FileName, "GDL_Operational_View", vbTextCompare) = 0 Then
+	'
+	'            iPopupPosition = oMimic.Windows.Item(1).Left
+	'
+	'          End If
+	'           End If
+	'           Next
+	        If iPopupPositionl > 1100 Then iPopupPositionl = (iPopupPositionl - 20)
+	        
+	        StrObjectNameGUA = ThisSymbol.LocalBranch
+	        
+	        If Split(StrObjectNameGUA, "_")(2) Like "DIS*" Then
+	        Thisproject.Variable_DV (ThisSymbol.LocalBranch)
+	            Call OpenForms("frm_gua_cmd_disyuntor_dv", ThisSymbol.LocalBranch)
+	    End If
+	    End If
+	    
+	End Sub
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol901"
+	B,2757,507,2800,564,2757,562,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape25"
+		B,2800,564,2757,507,2800,561,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		AST,7,1,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	O,END
+	O,BEGIN,R,"Shape36"
+		B,2800,562,2758,509,2800,562,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,2,3,COLOR,1,3,COLOR,1,0,COLOR,3,0,COLOR,3
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"POS.Template.bIsOn"
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,1,COLOR,1,1.000000
+			COL,1,COLOR,3,COLOR,3,2.000000
+			COL,1,COLOR,3,COLOR,3,3.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+O,END

@@ -1,0 +1,976 @@
+ASCII32,13,8,2019,18:39,51,1.1
+W,BEGIN,"Platform_VUT","Platform_VUT"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,789,463
+	SIZE,340,270,340,270,0,0,0,1280,1024,334,248
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"VUT STA_COD_12T_TZA_BH"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"VUT PF_IND_UP"
+			ROLE,0,"VUT STA_COD_12T_TZA_BH"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Platform_VUT.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* Copyright, ALSTOM Transport Information Solutions, 2010. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'*Mimic Name:      Platform VUT
+	'* *******************************************************************************************
+	'* Purpose:     Manage VUT activation and Deactivation
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra
+	'* Date:                May '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION()
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (GDL-ES-2.2-D200-B00-00584)
+	'* *******************************************************************************************
+	
+	
+	
+	
+	Option Explicit
+	
+	'*********OPC CPlugs Defined for VUT as per SyAD*************************
+	                                            
+	Private Const c_strVUTActivate As String = ".STMOrigin.STMOriginPoint.Activate"
+	Private Const c_strVUTChangeRatio As String = ".STMOrigin.STMOriginPoint.ChangeRatio"
+	Private Const c_strVUTRemove As String = ".STMOrigin.STMOriginPoint.Remove"
+	Private Const c_strVUTCurrentDestination As String = ".STMOrigin.STMOriginPoint.CurrentDestination"
+	Private Const c_strVUTRatioLeft As String = ".STMOrigin.STMOriginPoint.RatioLeft"
+	Private Const c_strVUTRatioRight As String = ".STMOrigin.STMOriginPoint.RatioRight"
+	Private Const c_strVUTDestinations As String = ".STMOrigin.STMOriginPoint.Destinations"
+	Private Const c_strVUTSingleTrackState As String = ".STM.STMHMIPoint.SingleTrackState"
+	Private Const c_strVUTActiveSingleTrackState As String = "MainGDLL3.STMModule.STMMgr.SingleTrackMovements"
+	Private Const c_sRemove As String = "TRUE"
+	Private Const c_strSingleTrackMovement As String = "SingleTrackMovement"
+	Private Const c_PlatformList As String = "IconisHMI.PlatformsList.Information.Value"
+	Private Const c_charset As String = "+0-0"
+	Dim WithEvents m_OPC_PlatformList As Variable
+	Dim m_strPlatformName As String
+	Dim m_strTxtVal As String
+	Dim WithEvents m_OPCSet_PlatVUTStatus As Iconis_CLS_OPCSet
+	
+	'*********Local variables and OPC variables Defined for VUT *************************
+	Dim sBranch() As String
+	Dim m_sCurDestination() As String
+	Dim m_ActivatedTrip As Boolean
+	Dim m_sDestinations As String
+	Dim m_ActivatedTripDestID() As String
+	Dim m_ActivatedTripLeftRatio() As String
+	Dim m_ActivatedTripRightRatio() As String
+	Dim m_OPCSetItem_VUTActivate As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTChangeRatio As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTRemove As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTCurrentDestination As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTRatioLeft As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTRatioRight As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTDestinations As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTSingleTrackState As Iconis_CLS_OPCSet_Item
+	Dim m_OPCSetItem_VUTActiveSingleTrackState As Iconis_CLS_OPCSet_Item
+	
+	
+	
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "btnOK_Click", "Begin Subroutine")
+	If m_OPCSet_PlatVUTStatus.IsAllGood Then
+	    If optRetirar And m_ActivatedTrip = True Then
+	        m_OPCSetItem_VUTRemove.Value = c_sRemove
+	    ElseIf optAplicar And txtLeft.Value > 0 And txtRight.Value > 0 And m_sCurDestination(ScrollBar.Value) <> "" And m_ActivatedTrip = False Then
+	                m_OPCSetItem_VUTActivate.Value = m_sCurDestination(ScrollBar.Value) & ";" & txtLeft.Value & ";" & txtRight.Value
+	                
+	    ElseIf optAplicar And txtLeft.Value > 0 And txtRight.Value > 0 And m_sCurDestination(ScrollBar.Value) <> "" And m_ActivatedTrip = True Then
+	         m_OPCSetItem_VUTChangeRatio.Value = txtLeft.Value & ";" & txtRight.Value
+	   End If
+	        
+	End If
+	Me.Close
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "btnOK_Click", Err.Description)
+	End Sub
+	
+	Private Sub m_OPCSet_PlatVUTStatus_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "m_OPCSet_PlatVUTStatus_OnConnection", "Begin Subroutine")
+	Dim i As Integer
+	If m_OPCSet_PlatVUTStatus.IsAllGood Then
+	         m_sCurDestination = Split(m_OPCSetItem_VUTDestinations.Value, ";")
+	         For i = 0 To UBound(m_sCurDestination)
+	            If m_sCurDestination(i) = m_OPCSetItem_VUTCurrentDestination.Value Then
+	            m_ActivatedTrip = True
+	            Exit For
+	            Else
+	            m_ActivatedTrip = False
+	            End If
+	        Next
+	            
+	        'Call Read_ActivatedXML(sBranch(1))
+	''    If m_OPCSetItem_VUTSingleTrackState.Value > 1 Then
+	''            optAplicar.Value = True
+	''            optRetirar.Enabled = False
+	''
+	''            txtRight.Value = m_OPCSetItem_VUTRatioRight.Value
+	''            txtLeft.Value = m_OPCSetItem_VUTRatioLeft.Value
+	  If m_OPCSetItem_VUTSingleTrackState.Value = 1 And m_ActivatedTrip = True Then
+	        optAplicar.Enabled = False
+	        optRetirar.Enabled = True
+	        txtRight.Value = m_OPCSetItem_VUTRatioRight.Value
+	        txtLeft.Value = m_OPCSetItem_VUTRatioLeft.Value
+	        Call LoadImage(m_OPCSetItem_VUTCurrentDestination.Value)
+	   ElseIf m_OPCSetItem_VUTSingleTrackState.Value = 0 And m_ActivatedTrip = False Then
+	            optAplicar.Enabled = False
+	            optRetirar.Enabled = False
+	            txtRight.Value = 0
+	            txtLeft.Value = 0
+	            If UBound(m_sCurDestination) > 0 Then
+	                ScrollBar.Max = UBound(m_sCurDestination)
+	                ScrollBar.Min = 0
+	                ScrollBar.Value = 0
+	                    Call LoadImage(m_sCurDestination(0))
+	            Else
+	                 Exit Sub
+	        
+	            End If
+	    End If
+	   
+	End If
+	
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "m_OPCSet_PlatVUTStatus_OnConnection", Err.Description)
+	End Sub
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    If Not m_OPCSet_PlatVUTStatus Is Nothing Then
+	        m_OPCSet_PlatVUTStatus.Destroy
+	        Set m_OPCSet_PlatVUTStatus = Nothing
+	    End If
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	Private Sub Mimic_Open()
+	
+	
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "Mimic_Open", "Begin Subroutine")
+	
+	Variables.Add "tes%", fvVariableTypeBit
+	Variables.Item("tes%").Value = True
+	
+	    sBranch = Split(ThisMimic.Branch, ":")
+	     Set m_OPC_PlatformList = Variables.Add(c_strClusterLevel1 & c_PlatformList, fvVariableTypeText)
+	    If ((m_OPC_PlatformList.Status = fvVariableStatusGood) And (m_OPC_PlatformList.EnableEvents = True)) Then
+	        m_OPC_PlatformList_ValueChange
+	    Else
+	        m_OPC_PlatformList.EnableEvents = True
+	    End If
+	    Set m_OPCSet_PlatVUTStatus = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	    Set m_OPCSetItem_VUTActivate = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTActivate, fvVariableTypeText, c_OPCReadWrite)
+	    Set m_OPCSetItem_VUTChangeRatio = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTChangeRatio, fvVariableTypeText, c_OPCReadWrite)
+	    Set m_OPCSetItem_VUTRemove = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTRemove, fvVariableTypeText, c_OPCReadWrite)
+	    Set m_OPCSetItem_VUTCurrentDestination = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTCurrentDestination, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItem_VUTRatioLeft = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTRatioLeft, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItem_VUTRatioRight = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTRatioRight, fvVariableTypeRegister, c_OPCReadOnly)
+	    Set m_OPCSetItem_VUTDestinations = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTDestinations, fvVariableTypeText, c_OPCReadOnly)
+	    Set m_OPCSetItem_VUTSingleTrackState = m_OPCSet_PlatVUTStatus.AddItem(ThisMimic.Branch & c_strVUTSingleTrackState, fvVariableTypeRegister, c_OPCReadOnly)
+	    'Set m_OPCSetItem_VUTActiveSingleTrackState = m_OPCSet_PlatVUTStatus.AddItem(c_strClusterLevel2 & c_strVUTActiveSingleTrackState, fvVariableTypeText, c_OPCReadOnly)
+	    optAplicar.Enabled = False
+	    optRetirar.Enabled = False
+	    m_ActivatedTrip = False
+	    txtRight.Value = 1
+	    txtLeft.Value = 1
+	    UpDwLeft.Min = 0
+	    UpDwLeft.Max = 100
+	    UpDwRight.Min = 0
+	    UpDwRight.Max = 100
+	    UpDwLeft.Enabled = True
+	    UpDwRight.Enabled = True
+	    ScrollBar.Enabled = True
+	    m_OPCSet_PlatVUTStatus.DoConnect (Me.Name & ThisMimic.Branch)
+	    'ThisMimic.Caption = "VUT " & Variables.Item(ThisMimic.Branch & ".Shortname%").Value
+	  
+	  Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "Mimic_Open", Err.Description)
+	   
+	End Sub
+	Private Sub m_OPC_PlatformList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_PointOutAutomaton_ValueChange", "Begin subroutine")
+	
+	    If Check_OPC_Variable(m_OPC_PlatformList) = False Then Exit Sub
+	
+	    Call ReadXMLPlatformList(m_OPC_PlatformList.Value)
+	   ThisMimic.Caption = "VUT " & m_strPlatformName
+	    'lblMenuTitle.Text = "And‚n "
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_PointOutAutomaton_ValueChange", Err.Description)
+	End Sub
+	Private Sub optAplicar_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "optAplicar_Click", "Begin Subroutine")
+	    Call EnableButtonCommand
+	    txtRight.Enabled = True
+	    txtLeft.Enabled = True
+	    UpDwLeft.Enabled = True
+	    UpDwRight.Enabled = True
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub optRetirar_Click()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "optRetirar_Click", "Begin Subroutine")
+	     optAplicar.Enabled = True
+	  
+	    
+	'     optAplicar.Enabled = False
+	'     optAplicar.Value = False
+	    txtRight.Enabled = False
+	    txtLeft.Enabled = False
+	    UpDwLeft.Enabled = False
+	    UpDwRight.Enabled = False
+	    ScrollBar.Enabled = False
+	    Call EnableButtonCommand
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "Mimic_Open", Err.Description)
+	End Sub
+	
+	Private Sub ScrollBar_Change()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "ScrollBar_Change", "Begin Subroutine")
+	
+	If ScrollBar.Value >= 0 Then Call LoadImage(m_sCurDestination(ScrollBar.Value))
+	
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "ScrollBar_Change", Err.Description)
+	End Sub
+	
+	Private Sub txtLeft_Change()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "txtLeft_Change", "Begin Subroutine")
+	
+	If Asc(Right(txtLeft.Value, 1)) < 48 Or Asc(Right(txtLeft.Value, 1)) > 57 Then txtLeft.Value = Left(txtLeft.Value, Len(txtLeft.Value) - 1)
+	Call EnableButtonCommand
+	    'Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = txtLeft >= 0 And txtRight >= 0
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "txtLeft_Change", Err.Description)
+	End Sub
+	Private Sub LoadImage(ByVal sDestinations As String)
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "LoadImage", "Begin Subroutine")
+	Dim iCount As Integer
+	Dim sPathImage As String
+	sBranch = Split(ThisMimic.Branch, ":")
+	    If UBound(sBranch) > 0 Then
+	    
+	        ''sPathImage = "D:\IconisHMI\HMI_GDL\Bitmap Files\" & sBranch(1) & "-" & sDestinations & ".bmp"
+	        ''sPathImage = "D:\IconisHMI\GDl 2.4.0\HMI_Project\HMI_Project\Bitmap Files\" & sBranch(1) & "-" & sDestinations & ".bmp"
+	        
+	        sPathImage = sBranch(1) & sDestinations
+	        
+	       
+	        'Image1.Enabled = True
+	         ''Mimics("Platform_VUT", ThisMimic.Branch).Graphics.Item("Image1").Picture = LoadPicture(sPathImage)
+	           
+	         
+	         For iCount = 1 To Me.Graphics.Count
+	         
+	         If Me.Graphics.Item(iCount).Name = sPathImage And sPathImage <> "" Then
+	            
+	            Me.Graphics.Item(iCount).Left = 14
+	            Me.Graphics.Item(iCount).Top = 39
+	            
+	        ElseIf Me.Graphics.Item(iCount).Name <> sPathImage And Me.Graphics.Item(iCount).Name Like "*STA_*" Then
+	        
+	            Me.Graphics.Item(iCount).Left = 700
+	            Me.Graphics.Item(iCount).Top = 39
+	        End If
+	            
+	         Next
+	        
+	        'ThisMimic.Image1.Picture = LoadPicture(sPathImage)
+	        
+	     
+	        
+	    End If
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "LoadImage", Err.Description)
+	End Sub
+	
+	
+	Private Sub txtRight_Change()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "txtRight_Change", "Begin Subroutine")
+	
+	If Asc(Right(txtRight.Value, 1)) < 48 Or Asc(Right(txtRight.Value, 1)) > 57 Then txtRight.Value = Left(txtRight.Value, Len(txtRight.Value) - 1)
+	    'Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = (txtLeft.Value >= 0 And txtRight.Value >= 0)
+	    Call EnableButtonCommand
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "txtRight_Change", Err.Description)
+	End Sub
+	
+	Private Sub UpDwLeft_DownClick()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "UpDwLeft_DownClick", "Begin Subroutine")
+	
+	    If CInt(txtLeft.Text) > 0 And IsNumeric(txtLeft.Value) Then
+	        optAplicar.Enabled = True
+	        optAplicar.Value = True
+	        txtLeft.Text = CStr(CInt(txtLeft.Text) - 1)
+	        UpDwLeft.Enabled = True
+	    ElseIf CInt(txtLeft.Text) <= 0 Then
+	        UpDwLeft.Enabled = True
+	    End If
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "UpDwLeft_DownClick", Err.Description)
+	End Sub
+	
+	Private Sub UpDwLeft_UpClick()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "UpDwLeft_UpClick", "Begin Subroutine")
+	 If CInt(txtLeft.Text) >= 0 And IsNumeric(txtLeft.Value) Then
+	        optAplicar.Enabled = True
+	        optAplicar.Value = True
+	        txtLeft.Text = CStr(CInt(txtLeft.Text) + 1)
+	    
+	End If
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "UpDwLeft_UpClick", Err.Description)
+	End Sub
+	Private Sub UpDwRight_DownClick()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "UpDwRight_DownClick", "Begin Subroutine")
+	
+	 If CInt(txtRight.Text) > 0 And IsNumeric(txtRight.Value) Then
+	        optAplicar.Enabled = True
+	        optAplicar.Value = True
+	        UpDwRight.Enabled = True
+	        txtRight.Text = CStr(CInt(txtRight.Text) - 1)
+	 ElseIf CInt(txtRight.Text) <= 0 Then
+	    UpDwRight.Enabled = True
+	 End If
+	
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "UpDwLeft_UpClick", Err.Description)
+	End Sub
+	Private Sub UpDwRight_UpClick()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACE_VBA, "Platform_VUT", "UpDwRight_UpClick", "Begin Subroutine")
+	
+	 If CInt(txtRight.Text) >= 0 And IsNumeric(txtRight.Value) Then
+	          optAplicar.Enabled = True
+	        optAplicar.Value = True
+	        txtRight.Text = CStr(CInt(txtRight.Text) + 1)
+	End If
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "UpDwRight_UpClick", Err.Description)
+	End Sub
+	Private Function EnableButtonCommand()
+	        On Error GoTo ErrorHandler
+	        
+	        If optRetirar Then
+	            Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = True
+	        ElseIf Not IsNumeric(txtRight.Value) Then
+	            Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = False
+	        ElseIf Not IsNumeric(txtLeft.Value) Then
+	            Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = False
+	        End If
+	        Variables.Item(ThisMimic.Branch & ".btnOKEnabled%").Value = True
+	        Exit Function
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "EnableButtonCommand", Err.Description)
+	    End Function
+	''Public Function Read_ActivatedXML(ByVal sOrigin As String, ByVal sXMLvalue As String) As Boolean
+	''On Error GoTo ErrorHandler
+	''    Call CBTrace(CBTRACE_VBA, "Iconis_CLS_Gama", "ReadGamaListFromXML", "Begin Function")
+	''
+	''   Dim oDoc As DOMDocument
+	''   Dim oSingleTrackMvtsList As IXMLDOMNodeList
+	''   Dim oSingleTrackMvt As IXMLDOMElement
+	''   Dim oAttrDestID As String
+	''   Dim oAttrDestName As String
+	''   Dim oAttrOriginID As String
+	''   Dim oAttrOriginName As String
+	''    Dim oAttrRatioLeft As String
+	''    Dim oAttrRatioRight As String
+	''   Dim str_Temp As String
+	''   Dim str_result As String
+	''
+	''   Dim I As Integer
+	''   Dim j As Integer
+	''
+	''     oAttrOriginID = "OriginID"
+	''     oAttrOriginName = "OriginName"
+	''
+	''   str_result = ""
+	''   If (sXMLvalue <> "") Then
+	''
+	''        Set oDoc = New DOMDocument
+	''        If Not (oDoc Is Nothing) Then
+	''            ' Load the XML document from the specified string
+	''            If (oDoc.loadXML(sXMLvalue) = True) Then
+	''                If Not (oDoc.documentElement Is Nothing) Then
+	''                    ' Find all the nodes "ElementaryGama"
+	''                    Set oSingleTrackMvtsList = oDoc.documentElement.selectNodes("//" & c_strSingleTrackMovement & "[@" & oAttrOriginID & "=""" & sOrigin & """]")
+	''
+	''                    If Not (oSingleTrackMvtsList Is Nothing) Then
+	''                        For Each oSingleTrackMvt In oSingleTrackMvtsList
+	''                            ' read the attributes
+	''                            m_ActivatedTripDestID = oSingleTrackMvt.getAttribute(oAttrDestID)
+	''                            m_ActivatedTripLeftRatio = oSingleTrackMvt.getAttribute(oAttrRatioLeft)
+	''                            m_ActivatedTripRightRatio = oSingleTrackMvt.getAttribute(oAttrRatioRight)
+	''
+	''                        Next oSingleTrackMvt
+	''                    End If
+	''                    Set oSingleTrackMvtsList = Nothing
+	''                End If
+	''            Else
+	''                Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "ReadGamaListFromXML", _
+	''                             "The content of the OPC variable [GamaListXML] has not been loaded ")
+	''            End If
+	''            Set oDoc = Nothing
+	''        End If
+	''    Else
+	''        Call CBTrace(CBTRACEF_ALWAYS, "Platform_VUT", "ReadGamaListFromXML", _
+	''                     "The OPC variable [GamaListXML] is empty")
+	''    End If
+	''
+	''Exit Function
+	''ErrorHandler:
+	''    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Gama", "ReadGamaListFromXML", Err.Description)
+	''End Function
+	Private Sub ReadXMLPlatformList(ByVal strXMLString As String)
+	On Error GoTo ErrorHandler
+	   Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ReadXMLPlatformList", "Begin Subroutine")
+	   
+	   'Dim strXMLString As String
+	   Dim oDoc As DOMDocument
+	   Dim oPlatformList As IXMLDOMNodeList
+	   Dim oPlatform As IXMLDOMElement
+	   Dim strName As String
+	   Dim strBranch() As String
+	   Dim strID As String
+	   Dim strStationName As String
+	   Dim strStationID As String
+	   Dim dKM As Double
+	   Dim PlatformManager As Iconis_CLS_Platform
+	   
+	   strXMLString = m_OPC_PlatformList.Value
+	   If (strXMLString <> "") Then
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            ' Load the XML document from the specified string
+	            If (oDoc.loadXML(strXMLString) = True) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    ' Find all the nodes "Platform"
+	                    Set oPlatformList = oDoc.documentElement.selectNodes("Platform")
+	                    If Not (oPlatformList Is Nothing) Then
+	                        If (oPlatformList.length > 0) Then
+	                            For Each oPlatform In oPlatformList
+	                                ' Name attribute
+	                                
+	                                ' ID attribute
+	                                strID = Format(oPlatform.getAttribute("ID"))
+	                                ' StationName attribute
+	'                                strStationName = Format(oPlatform.getAttribute(c_strStationNameAttr))
+	'                                ' StationID attribute
+	'                                strStationID = Format(oPlatform.getAttribute(c_strStationIDAttr))
+	'                                ' KM attribute
+	'                                dKM = oPlatform.getAttribute(c_strKMAttr)
+	                                strBranch = Split(ThisMimic.Branch, ":")
+	                                If ((strID <> "")) Then
+	                                    ' Create an instance of Iconis_CLS_Platform class module
+	                                    If strID = "Stop_" & strBranch(1) Then
+	                                        strName = Format(oPlatform.getAttribute("Name"))
+	                                   End If
+	                                End If
+	                                m_strPlatformName = strName
+	                            Next oPlatform
+	                         End If
+	                        Set oPlatformList = Nothing
+	                    End If
+	                End If
+	            
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    Else
+	        Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", _
+	                     "The OPC variable [" & m_OPC_PlatformList.Name & "] is empty")
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_CLS_Platforms", "ReadPlatformXMLString", Err.Description)
+	End Sub
+	
+	
+	Function TxtBXMaxMinLimit(ByVal TxtVal As String, ByVal MinVal As String, ByVal MaxVal As String) As String
+	    On Error GoTo ErrorHandler
+	    Dim i As Integer
+	    Dim bChar As Boolean
+	    Dim strChar() As String
+	    bChar = False
+	    strChar = Split(c_charset, "0")
+	    For i = 0 To UBound(strChar) - 1
+	    If InStr(TxtVal, strChar(i)) Then
+	    bChar = True
+	    Exit For
+	    End If
+	    Next
+	    
+	    If bChar = True Then
+	    ElseIf IsNumeric(TxtVal) And Val(TxtVal) < Val(MinVal) And bChar = False Then
+	        m_strTxtVal = TxtVal
+	    ElseIf IsNumeric(TxtVal) And Val(TxtVal) > Val(MaxVal) And bChar = False Then
+	    ElseIf IsNumeric(TxtVal) And Val(TxtVal) >= Val(MinVal) And Val(TxtVal) <= Val(MaxVal) And bChar = False Then
+	        m_strTxtVal = TxtVal
+	    ElseIf TxtVal = "" Then
+	        m_strTxtVal = ""
+	    Else
+	        m_strTxtVal = m_strTxtVal
+	    End If
+	    TxtBXMaxMinLimit = m_strTxtVal
+	    
+	    
+	    
+	      Exit Function
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "TxtBXMaxMinLimit", Err.Description)
+	    End Function
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+	"MSXML2", 6, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,32,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,0,0,0,0,35,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,172,168,153,0,0,0
+	COLOR,8,192,192,192,0,0,0
+	COLOR,9,0,255,0,0,0,0
+	COLOR,10,255,0,255,0,0,0
+	COLOR,11,215,215,215,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,323,194,12,37,289,192,65535,0,6400,1,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text23"
+	B,85,298,157,322,76,330,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,85,298,0,0,FONT,1,"Name",37,FONT,1,"Name",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Name",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text24"
+	B,245,298,317,322,236,330,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,245,298,0,0,FONT,1,"ID",37,FONT,1,"ID",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"ID",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text25"
+	B,327,298,399,322,318,330,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,327,298,0,0,FONT,1,"Type",37,FONT,1,"Type",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Type",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text26"
+	B,415,298,521,322,402,330,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,415,298,0,0,FONT,1,"JunctionID",37,FONT,1,"JunctionID",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"JunctionID",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"RouteID"
+	B,255,325,307,349,246,357,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,255,325,0,0,FONT,1,"303",37,FONT,1,"303",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"303",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"RouteType"
+	B,337,325,389,349,328,357,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,337,325,0,0,FONT,1,"Variant",37,FONT,1,"Variant",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Variant",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"RouteJunctionID"
+	B,442,325,494,349,433,357,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,442,325,0,0,FONT,1,"Mvt_304_303",37,FONT,1,"Mvt_304_303",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mvt_304_303",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"RouteName"
+	B,9,328,237,352,-22,360,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,9,328,0,0,FONT,1,"MVT_VAR_V2_CLI1_VMD2_Variant",37,FONT,1,"MVT_VAR_V2_CLI1_VMD2_Variant",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"MVT_VAR_V2_CLI1_VMD2_Variant",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"RouteJunctionID2"
+	B,444,325,496,349,435,357,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,444,325,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text1"
+	B,33,134,185,166,33,166,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,33,134,0,0,FONT,1,"Raz¢n de pasaje en la via £nica",84,FONT,1,"Raz¢n de pasaje en la via £nica",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Raz¢n de pasaje en la via £nica",FONT,1,84
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Raz¢n de pasaje en la via £nica",FONT,1,84
+			ROLE,0,"Raz¢n de pasaje en la via £nica",FONT,1,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,224,135,248,159,215,166,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,224,135,0,0,FONT,1,":",37,FONT,1,":",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1046
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,":",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"UpDwRight"
+	B,230,135,213,159,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"txtRight"
+	B,184,135,213,159,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"UpDwLeft"
+	B,289,135,272,159,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"txtLeft"
+	B,243,135,272,159,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,GRP,"Group2"
+	B,259,109,289,129,259,129,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,269,109,259,129,267,119,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		PP,269,109,269,129,259,119
+	O,END
+	O,BEGIN,R,"Shape2"
+		B,267,123,289,114,267,123,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	O,END
+O,END
+O,BEGIN,GRP,"Group3"
+	B,214,165,184,185,214,185,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,P,"Poly2"
+		B,204,165,214,185,206,175,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		PP,204,165,204,185,214,175
+	O,END
+	O,BEGIN,R,"Shape2"
+		B,206,179,184,170,206,179,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	O,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,46,208,115,237,46,237,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,46,208,0,0,FONT,1,"Aceptar",37,FONT,1,"Aceptar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"btnOKEnabled%"
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,9,COLOR,9
+		COL,0,COLOR,10,COLOR,10
+		COL,1,COLOR,11,COLOR,11
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,10,COLOR,10
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+		AUTH,"ButtonOKEnabled%",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,206,208,275,237,206,237,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+	PP,1,206,208,0,0,FONT,1,"Cancelar",37,FONT,1,"Cancelar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,LC,"Anim3",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,OCX,"optAplicar"
+	B,47,7,135,31,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optRetirar"
+	B,191,6,279,30,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,3,COLOR,3,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,306,40,322,98,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,BM,"STA_COD_09T_BAN_BHSTA_PF_CIR_UP"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_09T_BAN_BH-STA_PF_CIR_UP.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_11T_TCC_BHSTA_COD_09T_BAN_BH"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_11T_TCC_BH-STA_COD_09T_BAN_BH.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_11T_TCC_BHSTA_PF_REV_UP"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_11T_TCC_BH-STA_PF_REV_UP.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_12T_TZA_BHSTA_COD_06T_PAT_DN"
+	B,14,39,303,99,14,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_12T_TZA_BH-STA_COD_06T_PAT_DN.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_PF_IND_DNSTA_COD_10T_N1L_DN"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_PF_IND_DN-STA_COD_10T_N1L_DN.bmp",0,COLOR,10
+O,END
+O,BEGIN,OCX,"Image1"
+	B,811,129,1087,190,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,BM,"STA_COD_09T_BAN_BHSTA_PF_BAS_UP"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_09T_BAN_BH-STA_PF_BAS_UP.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_09T_BAN_BHSTA_PF_SAN_UP"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_09T_BAN_BH-STA_PF_SAN_UP.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_12T_TZA_BHSTA_COD_02T_NOR_DN"
+	B,700,39,989,98,700,98,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_12T_TZA_BH-STA_COD_02T_NOR_DN.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_COD_12T_TZA_BHSTA_COD_16T_NOR_DN"
+	B,700,39,989,98,700,98,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_COD_12T_TZA_BH-STA_COD_16T_NOR_DN.bmp",0,COLOR,10
+O,END
+O,BEGIN,BM,"STA_PF_IND_DNSTA_COD_02T_BAN_DN"
+	B,700,39,989,99,700,99,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,"STA_PF_IND_DN-STA_COD_02T_BAN_DN.bmp",0,COLOR,10
+O,END

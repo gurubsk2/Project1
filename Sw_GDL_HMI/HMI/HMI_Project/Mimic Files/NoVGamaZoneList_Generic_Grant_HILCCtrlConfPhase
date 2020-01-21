@@ -1,0 +1,392 @@
+ASCII32,11,5,2016,5:50,39,1.1
+W,BEGIN,"NoVGamaZoneList_Generic_Grant_HILCCtrlConfPhase","NoVGamaZoneList_Generic_Grant_HILCCtrlConfPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,15,60
+	SIZE,526,280,526,280,0,0,0,1280,1024,526,280
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,0,0,8,8,224,192,192,0,35,0
+	LAYERS,65527
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"NoVGamaZoneList_Generic_Grant_HILCCtrlConfPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2014. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Gama List Global UnBlock HILC Ctrl Prep Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	
+	'* Author:              Vasanth
+	'* Date:                April '16
+	'* Change:              All
+	'*                      Wrong Display of Blocking indicators
+	
+	'* Author:              Vasanth
+	'* Date:                May '16
+	'* Change:              atvcm00704998 : modification for retry
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSectorSeparator As String = ";"
+	Private Const c_strDeviceSeparator As String = ","
+	Private Const c_strValue As String = ".Value"
+	Private Const c_strEgamaName As String = ".name%"
+	Private Const c_strStatusValueLocalTag As String = ".Status%"
+	Private Const c_Tablelength As Integer = 10
+	
+	Dim arrayDevicesOPCVar() As String
+	Dim m_iCounter As Integer
+	Dim m_GamaManager As Iconis_CLS_Gama
+	
+	
+	
+	'* Module Variables
+	'* ***********************************************
+	
+	
+	
+	'* SubRoutine: Mimic_Open
+	'*      - Init and display data for each device managed by the current sector
+	'*      - Display data for each device
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim strClusterName As String
+	    Dim strCurrentCBI As String
+	    Dim arraySectors() As String
+	    Dim arraySectorDevices() As String
+	    
+	    Dim OPCLocal_sBranchPassed As Variable
+	    Dim sBranch As String
+	    Dim iNumberofGama As Integer
+	    Dim sEgamaName() As String
+	    Dim sDeviceName As String
+	    Dim BlockID As String
+	           
+	    Set OPCLocal_sBranchPassed = Variables.Add("@LocalBranchPassed%", fvVariableTypeText)
+	    sBranch = OPCLocal_sBranchPassed.Value
+	    
+	    '* Extract the cluster name from the branch of the mimic
+	    strClusterName = Left(sBranch, InStr(1, sBranch, c_strServerSeparator, vbTextCompare))
+	        
+	    '* Extract the current CBI (OPC variable name) from the branch of this mimic
+	    strCurrentCBI = Mid(sBranch, InStr(1, sBranch, c_strServerSeparator, vbTextCompare) + 1)
+	    
+	    '* Extract data (list of OPC variables associated to each sector) into an array
+	    arraySectors = Split(Variables.Item("@ListOfSectorOPCVar%").Value, c_strSectorSeparator, -1, vbTextCompare)
+	    '* Extract data (list of OPC variables associated to each device of each sector) into an array
+	    arraySectorDevices = Split(Variables.Item("@ListOfEGamaOPCVar%").Value, c_strDeviceSeparator, -1, vbTextCompare)
+	
+	    
+	    For m_iCounter = 0 To UBound(arraySectorDevices) - 1
+	    sEgamaName = Split(arraySectorDevices(m_iCounter), ":")
+	        If (StrComp(sEgamaName(1), strCurrentCBI, vbTextCompare) = 0) Then
+	            '* Extract data (list of OPC variables of each device) into an array
+	            sDeviceName = sDeviceName & sEgamaName(0) & ","
+	           ' Exit For
+	        End If
+	    Next
+	    arrayDevicesOPCVar = Split(sDeviceName, ",")
+	    Variables.Item("@DevicesOfSector%").Value = sDeviceName
+	    
+	    Set m_GamaManager = Iconis_MOD_General.GetGamaManager
+	        
+	  
+	       For m_iCounter = 0 To UBound(arrayDevicesOPCVar) - 1
+	       BlockID = m_GamaManager.Get_EGamaBlockID(arrayDevicesOPCVar(m_iCounter))
+	       Call Variables.Add(strClusterName & BlockID & "." & arrayDevicesOPCVar(m_iCounter) & c_strStatusValueLocalTag, fvVariableTypeRegister)
+	        If Not (Variables.Item(strClusterName & BlockID & "." & arrayDevicesOPCVar(m_iCounter) & c_strStatusValueLocalTag) Is Nothing) Then
+	                Variables.Item(strClusterName & BlockID & "." & arrayDevicesOPCVar(m_iCounter) & c_strStatusValueLocalTag).Value = 0
+	        End If
+	       Call Variables.Add(strClusterName & BlockID & "." & arrayDevicesOPCVar(m_iCounter) & c_strEgamaName, fvVariableTypeText)
+	       Variables.Item(strClusterName & BlockID & "." & arrayDevicesOPCVar(m_iCounter) & c_strEgamaName).Value = arrayDevicesOPCVar(m_iCounter)
+	        Next m_iCounter
+	       
+	
+	        
+	    '* Enable the OK button of the parent mimic
+	    Variables.Item("@ButtonOKDisabled%").Value = False
+	    ScrollBar.Min = 0
+	    ScrollBar.Max = 0
+	    iNumberofGama = UBound(arrayDevicesOPCVar)
+	    If c_Tablelength < iNumberofGama Then
+	        ScrollBar.Max = iNumberofGama - c_Tablelength
+	    End If
+	    ScrollBar_Change
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	Private Sub ScrollBar_Change()
+	On Error GoTo ErrorHandler
+	Dim oSymbol As Symbol
+	Dim m_iCounterSymbols As Integer
+	Dim BlockID As String
+	
+	For m_iCounterSymbols = 1 To 10
+	    Set oSymbol = Me.Graphics.Item("GamaSymbol_" & m_iCounterSymbols)
+	    If m_iCounterSymbols <= UBound(arrayDevicesOPCVar) Then
+	    BlockID = m_GamaManager.Get_EGamaBlockID(arrayDevicesOPCVar(ScrollBar.Value + m_iCounterSymbols - 1))
+	    oSymbol.LocalBranch = MOD_Deployment.CBTCLevel1Cluster & BlockID & "." & arrayDevicesOPCVar(ScrollBar.Value + m_iCounterSymbols - 1)
+	    Else
+	    oSymbol.LocalBranch = MOD_Deployment.CBTCLevel1Cluster
+	    End If
+	Next
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ScrollBar_Change", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-11,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,179,179,179,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,136,141,155,0,0,0
+	COLOR,5,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,T,"txtStatus"
+	B,346,-1,496,23,346,23,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,346,-1,0,0,FONT,1,"Status",37,FONT,1,"Status",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Command Status",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Status",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtSwitch"
+	B,60,-1,346,23,60,23,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,60,-1,0,0,FONT,1,"Switch",37,FONT,1,"Switch",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Elementary Gama Name",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Wissel",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtBlockedStatus"
+	B,1,-1,60,23,1,23,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,1,-1,0,0,FONT,1,"Blocked",37,FONT,1,"Blocked",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Status",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Gesperd",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"shpArray"
+	B,496,273,0,24,496,273,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,497,25,516,274,10,60,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,27
+		Size,"450;6535"
+		MousePointer,0
+		Min,0
+		Max,0
+		Position,0
+		PrevEnabled,1
+		NextEnabled,1
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END
+O,BEGIN,L,"HorLine1"
+	B,0,48,496,48,0,48,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,48,496,48
+O,END
+O,BEGIN,L,"HorLine2"
+	B,0,74,496,74,0,74,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,74,496,74
+O,END
+O,BEGIN,L,"HorLine3"
+	B,0,99,496,99,0,99,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,99,496,99
+O,END
+O,BEGIN,L,"HorLine4"
+	B,0,124,496,124,0,124,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,124,496,124
+O,END
+O,BEGIN,L,"HorLine5"
+	B,0,149,496,149,0,149,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,149,496,149
+O,END
+O,BEGIN,L,"HorLine6"
+	B,0,174,496,174,0,174,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,174,496,174
+O,END
+O,BEGIN,L,"HorLine7"
+	B,0,199,496,199,0,199,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,199,496,199
+O,END
+O,BEGIN,L,"HorLine8"
+	B,0,224,496,224,0,224,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,224,496,224
+O,END
+O,BEGIN,L,"HorLine9"
+	B,0,249,496,249,0,249,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,249,496,249
+O,END
+O,BEGIN,L,"HeaderHorLine1"
+	B,0,0,496,0,937,0,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,496,0,0,0
+O,END
+O,BEGIN,L,"HeaderVerLine1"
+	B,0,23,0,-1,0,23,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,0,23,0,-1
+O,END
+O,BEGIN,L,"HeaderVerLine5"
+	B,496,23,496,-1,496,23,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,496,23,496,-1
+O,END
+O,BEGIN,L,"VerLine1"
+	B,59,272,59,24,59,272,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,59,272,59,24
+O,END
+O,BEGIN,L,"VerLine3"
+	B,346,272,346,24,346,272,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,346,272,346,24
+O,END
+O,BEGIN,L,"HeaderVerLine2"
+	B,59,24,59,0,59,24,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,59,24,59,0
+O,END
+O,BEGIN,L,"HeaderVerLine4"
+	B,346,24,346,0,346,24,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,346,24,346,0
+O,END
+O,BEGIN,S,"GamaSymbol_2"
+	B,23,49,495,73,23,73,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,49,495,73,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_3"
+	B,23,72,495,96,23,96,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,72,495,96,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_4"
+	B,23,99,495,123,23,123,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,99,495,123,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_5"
+	B,23,124,495,148,23,148,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,124,495,148,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_6"
+	B,23,149,495,173,23,173,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,149,495,173,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_7"
+	B,23,174,495,198,23,198,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,174,495,198,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_8"
+	B,23,199,495,223,23,223,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,199,495,223,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_9"
+	B,23,224,495,248,23,248,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,224,495,248,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_10"
+	B,23,248,495,272,23,272,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:",23,248,495,272,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"GamaSymbol_1"
+	B,24,24,496,48,24,48,65535,0,6400,0,1,0,0
+	PP,"EgamaCmdStatus","OPCCluster:B_26.EG_EZ_SDDB_3305T_3401T_SDDB_3401T_3501T",24,24,496,48,1,0, 0, 1
+O,END

@@ -1,0 +1,217 @@
+ASCII32,19,9,2018,16:47,31,1.1
+W,BEGIN,"mmc_OnlineTTGenTripPlanServOrientedServiceCancellation","mmc_OnlineTTGenTripPlanServOrientedServiceCancellation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,694,377
+	SIZE,343,190,343,190,0,0,0,1366,768,337,168
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Service Cancellation"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Cancelar servicio"
+			ROLE,0,"Cancelar servicio"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,0
+	GRID,0,0,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_OnlineTTGenTripPlanServOrientedServiceCancellation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      mmc_OnlineTTGenTripPlanNonServOriTripDeletion
+	'* *******************************************************************************************
+	'* Purpose:     It allows to delete the trip from the timetable
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Swati Das
+	'* Date:                Dec '15
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. Human Machine Interface Specification Urban Operation (T-221 E128131)
+	'*                  2. Requirement Specification and Architecture Description
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* ************************************************************************************************
+	'* Subroutine: BtnYes_Click
+	'* Send command to the Active X
+	'* ************************************************************************************************
+	Private Sub BtnYes_Click()
+	On Error GoTo ErrorHandler
+	    ocxServiceCancellation.SendCommand
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "ButtonOK_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    ocxServiceCancellation.TripNumber = Variables.Item("TabCSelTripNumber%").Value
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"TabC", 0, 3, "{9EFD4E55-0447-43CA-B404-6E36E46346BF}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,160,160,160,0,0,0
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,204,204,204,0,0,0
+	COLOR,6,128,128,128,0,0,0
+COLORS,END
+O,BEGIN,T,"BtnNo"
+	B,242,130,327,152,242,152,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,242,130,0,0,FONT,1,"No",37,FONT,1,"No",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"No",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,92,9,352,33,92,33,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	PP,1,92,9,0,0,FONT,1,"Are you sure you want to",36,FONT,1,"Are you sure you want to",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Are you sure you want to",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"¨Confirma la cancelaci¢n de todos",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,92,34,275,58,92,58,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	PP,1,92,34,0,0,FONT,1,"delete the trip",36,FONT,1,"delete the trip",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"cancel all the trips of the service",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"los viajes delservicio",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"Poly1"
+	B,-1,119,448,119,-1,119,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,-1,119,448,119
+O,END
+O,BEGIN,T,"Text1"
+	B,212,34,251,58,212,58,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	PP,1,212,34,0,0,FONT,1,"xxxx",36,FONT,1,"xxxx",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"xxxx",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"TabCSelServiceId%"
+	A,END
+O,END
+O,BEGIN,T,"Text4"
+	B,242,34,255,58,242,58,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	PP,1,242,34,0,0,FONT,1,"?",36,FONT,1,"?",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"?",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"?",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"BtnYes"
+	B,147,130,232,152,147,152,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,7,2,COLOR,1,COLOR,2,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,147,130,0,0,FONT,1,"Yes",37,FONT,1,"Yes",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Yes",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Si",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"*","*"
+	A,END
+O,END
+O,BEGIN,BM,"Bitmap_1"
+	B,33,17,64,48,33,48,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,"img_GenQuestion.bmp",0,COLOR,1
+O,END
+O,BEGIN,OCX,"ocxServiceCancellation"
+	B,9,63,75,100,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,5,COLOR,5,1,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+O,END

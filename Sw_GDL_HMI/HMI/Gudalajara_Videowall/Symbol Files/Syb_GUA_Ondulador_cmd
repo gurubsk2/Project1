@@ -1,0 +1,142 @@
+ASCII32,19,3,2018,9:27,21,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,192,192,192,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,0,0,0,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	Dim ABC As String
+	Dim iMimicPosition As Variant
+	ABC = Thisproject.ActiveMimic.FileName
+	    If Button = 2 Then 'direito
+	        If ABC = "SR_Detailed_View" Then
+	        Call Navegation_1("GUA_notaequip", GetSymbolBranch(ThisSymbol))
+	        Else
+	        Call Navegation("GUA_notaequip", GetSymbolBranch(ThisSymbol))
+	        End If
+	
+	    Else
+	    
+	    If ActiveMimic.Branch = "M2" Then
+	        iPopupPosition = iPopupPosition + 1921
+	    Else
+	        iPopupPosition = 0
+	    End If
+	        
+	    StrObjectNameGUA = ThisSymbol.LocalBranch
+	        
+	    If Split(StrObjectNameGUA, "_")(2) Like "OND*" Then
+	    Thisproject.Variable_Check (ThisSymbol.LocalBranch)
+	        Call OpenForms("frm_gua_cmd_Ondulador", ThisSymbol.LocalBranch)
+	    End If
+	    End If
+	    
+	End Sub
+	
+	Private Sub Navegation(sMimicClosed As String, ByVal sBranch As String)
+	    iMimicPosition = Thisproject.ActiveMimic.Windows(1).Left
+	    Dim oMimic As Mimic
+	
+	    If iMimicPosition >= 1920 Then
+	        iMimicPosition = 1920 + 720
+	    Else
+	        iMimicPosition = 720
+	    End If
+	    
+	    If TheseMimics.IsOpened(sMimicClosed) = False Then
+	        Mimics.Open sMimicClosed, sBranch, , , , , , , iMimicPosition, 400, True
+	        
+	    Else
+	       
+	    If Thisproject.Mimics.Item(sMimicClosed).Windows(1).Left <> iMimicPosition Then
+	        
+	        aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows(1).Left
+	        aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows(1).Left
+	           
+	        TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	           
+	        TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	    End If
+	    End If
+	End Sub
+	
+	Private Sub Navegation_1(sMimicClosed As String, ByVal sBranch As String)
+	Dim iMimicPosition_1 As String
+	    iMimicPosition_1 = Thisproject.ActiveMimic.Branch
+	
+	    If iMimicPosition_1 = "M2" Then
+	        iMimicPosition = 1920 + 720
+	    Else
+	        iMimicPosition = 720
+	    End If
+	    
+	    If TheseMimics.IsOpened(sMimicClosed) = False Then
+	        Mimics.Open sMimicClosed, sBranch, , , , , , , iMimicPosition, 400, True
+	        
+	    Else
+	       
+	    If Thisproject.Mimics.Item(sMimicClosed).Windows(1).Left <> iMimicPosition Then
+	        
+	        aux_posic_origem = TheseMimics.Item(sMimicOpened).Windows(1).Left
+	        aux_posic_destino = TheseMimics.Item(sMimicClosed).Windows(1).Left
+	           
+	        TheseMimics.Item(sMimicOpened).Windows(1).Left = aux_posic_destino
+	           
+	        TheseMimics.Item(sMimicClosed).Windows(1).Left = aux_posic_origem
+	    End If
+	    End If
+	End Sub
+	
+	Private Function GetSymbolBranch(theSymbol As Symbol) As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, "Iconis_MOD_General", "GetSymbolBranch", "Begin Subroutine")
+	
+	    GetSymbolBranch = theSymbol.LocalBranch
+	
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, "Iconis_MOD_General", "GetSymbolBranch", Err.Description)
+	
+	End Function
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol83"
+	B,1564,687,1623,746,1564,746,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape16"
+		B,1620,743,1565,688,1616,739,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,2,3,COLOR,2,3,COLOR,2,0,COLOR,1,0,COLOR,1
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"POS.Template.blsOn"
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,3,COLOR,3,1.000000
+			COL,1,COLOR,1,COLOR,1,2.000000
+			COL,1,COLOR,1,COLOR,1,3.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+			COL,1,COLOR,1,COLOR,1,0.000000
+		A,END
+	O,END
+	O,BEGIN,R,"Shape21"
+		B,1623,746,1564,687,1578,744,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,1,3,COLOR,3,3,COLOR,3,0,COLOR,4,0,COLOR,4
+	O,END
+O,END

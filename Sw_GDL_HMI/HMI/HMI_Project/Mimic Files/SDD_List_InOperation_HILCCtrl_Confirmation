@@ -1,0 +1,431 @@
+ASCII32,19,12,2017,4:46,1,1.1
+W,BEGIN,"SDD_List_InOperation_HILCCtrl_Confirmation","SDD_List_InOperation_HILCCtrl_Confirmation"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,15,60
+	SIZE,280,180,280,180,0,0,0,1920,1080,280,180
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mimic1"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SDD_List_InOperation_HILCCtrl_Confirmation.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2014. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SDD_List_InOperation_HILCCtrl
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Vasanth M
+	'* Date:                OCT 2017
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSectorSeparator As String = ";"
+	Private Const c_strDeviceSeparator As String = ","
+	
+	Private Const c_lSDDOperationalStatusLeft As Long = 41
+	Private Const c_lDeviceNameLeft As Long = 98
+	'Private Const c_lStatusValueLeft As Long = 366
+	
+	'* To manage the list of devices
+	Private Const c_lLineMaxCount As Long = 5
+	Private Const c_strColumnSDDOperationalStatus As String = "OperationalStatus"
+	Private Const c_strColumnDeviceName As String = "txtDeviceName"
+	'Private Const c_strColumnStatusValue As String = "ConfCtrlStatus"
+	Private Const c_strValue As String = ".Value"
+	
+	Private Const c_strSDDOperationalStatusTag As String = ".SDOperationalStatus.Value"
+	Private Const c_strSDDListTag As String = ".SDDList.Value"
+	Private Const c_strDeviceNameTag As String = ".UEID.Name"
+	'Private Const c_strPointNameTag As String = ".SwitchName.Value"
+	Private Const c_strStatusValueLocalTag As String = ".Status%"
+	
+	'* Module Variables
+	'* ***********************************************
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	Dim WithEvents m_OPC_SDDGroupList As Variable
+	Dim strClusterName As String
+	Dim i As Long
+	Dim lCount As Long
+	Dim arrayCurrentGroup As String
+	Dim arraySectors() As String
+	Dim arrayGroups() As String
+	Dim arrayDevicesOPCVar() As String
+	Dim strSDDOperationalStatusValues() As String
+	'Dim strPointNameValues() As String
+	Dim strDeviceNameValues() As String
+	Dim strStatusValues() As String
+	'* Get the Group Name
+	
+	
+	
+	Private Sub m_OPC_SDDGroupList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_SDDGroupList_ValueChange", "Begin Subroutine")
+	    Dim oDoc As DOMDocument
+	    Dim oGroupIDList As IXMLDOMNodeList
+	    Dim oElementGroupID As IXMLDOMElement
+	    
+	    Set oDoc = New DOMDocument
+	    
+	                  If Check_opc_Variable(m_OPC_SDDGroupList) Then
+	                    If (oDoc.loadXML(m_OPC_SDDGroupList) = True) Then
+	                       
+	                        Set oGroupIDList = oDoc.documentElement.getElementsByTagName("SDD")
+	                       
+	                       Dim j As Integer
+	                       
+	                       If oGroupIDList.length > 0 Then
+	                       
+	                           j = 0
+	                           ReDim arrayDevicesOPCVar(oGroupIDList.length)
+	                           For Each oElementGroupID In oGroupIDList
+	                           
+	                           arrayDevicesOPCVar(j) = oElementGroupID.getAttribute("ID")
+	                           
+	                           j = j + 1
+	    
+	                           Next
+	                       
+	                       End If
+	                    End If
+	                End If
+	                Set oGroupIDList = Nothing
+	                Set oDoc = Nothing
+	    
+	     '* Create and initialize the list
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	    
+	    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar, False
+	    m_List.NewColumn c_strColumnSDDOperationalStatus, fvVariableTypeRegister, c_lSDDOperationalStatusLeft, c_strValue
+	    'm_List.NewColumn c_strColumnPointName, fvVariableTypeText, c_lPointNameLeft, c_strValue
+	    m_List.NewColumn c_strColumnDeviceName, fvVariableTypeText, c_lDeviceNameLeft, c_strValue
+	    'm_List.NewColumn c_strColumnStatusValue, fvVariableTypeRegister, c_lStatusValueLeft, c_strValue
+	        
+	    '* Memorize the number of devices managed by the selected sector
+	    lCount = UBound(arrayDevicesOPCVar)
+	
+	        
+	    If (lCount > 0) Then
+	        '* Redim arrays
+	        ReDim strSDDOperationalStatusValues(0 To lCount - 1)
+	        'ReDim strPointNameValues(0 To lCount - 1)
+	        ReDim strDeviceNameValues(0 To lCount - 1)
+	        'ReDim strStatusValues(0 To lCount - 1)
+	        
+	        Variables.Item("@DevicesOfSector%").Value = ""
+	        
+	        '* Initialize the column 'Blocking Status'
+	        For i = 0 To lCount - 1
+	            strSDDOperationalStatusValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strSDDOperationalStatusTag
+	            'strPointNameValues(i) = strClusterName & arrayDevicesOPCVar(i) & ".PointName.Value"
+	            strDeviceNameValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strDeviceNameTag
+	            'strStatusValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strStatusValueLocalTag
+	            If Not (Variables.Item(strClusterName & arrayDevicesOPCVar(i) & c_strStatusValueLocalTag) Is Nothing) Then
+	                Variables.Item(strClusterName & arrayDevicesOPCVar(i) & c_strStatusValueLocalTag).Value = 0
+	            End If
+	            
+	            
+	            '* Memorize the list of OPC variables of devices managed by the selected sector
+	    
+	               Variables.Item("@DevicesOfSector%").Value = Variables.Item("@DevicesOfSector%").Value & arrayDevicesOPCVar(i) & c_strDeviceSeparator
+	        
+	        Next i
+	        
+	        m_List.BindColumnToSource c_strColumnSDDOperationalStatus, strSDDOperationalStatusValues, c_strValue
+	        'm_List.BindColumnToSource c_strColumnPointName, strPointNameValues, c_strValue
+	        m_List.BindColumnToSource c_strColumnDeviceName, strDeviceNameValues, c_strValue
+	        'm_List.BindColumnToSource c_strColumnStatusValue, strStatusValues, c_strValue
+	    End If
+	    
+	    '* Display the list
+	    m_List.Display
+	    
+	    '* Enable the OK button of the parent mimic
+	    Variables.Item(ThisMimic.Branch & ".SDDGroup_InOperation_OkActive%").Value = True
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_SDDGroupList_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Open
+	'*      - Init and display data for each device managed by the current sector
+	'*      - Display data for each device
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	
+	    
+	    Dim oDoc As DOMDocument
+	    Dim oGroupIDList As IXMLDOMNodeList
+	    Dim oElementGroupID As IXMLDOMElement
+	   
+	    
+	    '* Extract the cluster name from the branch of the mimic
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	        
+	    '* Extract the current CBI (OPC variable name) from the branch of this mimic
+	    arrayCurrentGroup = Split(Variables.Item("@SelectedSDDGroupNameVar%").Value, c_strServerSeparator)(1)
+	    
+	    '* Extract data (list of OPC variables associated to each sector) into an array
+	    arraySectors = Split(Variables.Item("@ListOfSectorOPCVar%").Value, c_strSectorSeparator, -1, vbTextCompare)
+	    '* Extract data (list of OPC variables associated to each device of each sector) into an array
+	    arrayGroups = Split(Variables.Item("@ListOfDeviceOPCVar%").Value, c_strDeviceSeparator, -1, vbTextCompare)
+	    
+	    Set oDoc = New DOMDocument
+	    
+	    For i = 0 To UBound(arrayGroups) - 1
+	        If (StrComp(arrayGroups(i), arrayCurrentGroup, vbTextCompare) = 0) Then
+	            Set m_OPC_SDDGroupList = Variables.Add(strClusterName & arrayCurrentGroup & c_strSDDListTag, fvVariableTypeText)
+	            
+	                If ((m_OPC_SDDGroupList.Status = fvVariableStatusGood) And (m_OPC_SDDGroupList.EnableEvents = True)) Then
+	                    m_OPC_SDDGroupList_ValueChange
+	                Else
+	                    m_OPC_SDDGroupList.EnableEvents = True
+	                End If
+	
+	            Exit For
+	        End If
+	    Next
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Design
+	'* Restore the position of the controls
+	'* ******************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	        
+	    If Not (m_List Is Nothing) Then
+	        m_List.ShowAllControls
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Before closing the Mimic, destroy the list object
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    
+	    If Not (m_OPC_SDDGroupList Is Nothing) Then
+	        Variables.Remove (m_OPC_SDDGroupList.Name)
+	        Set m_OPC_SDDGroupList = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-11,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,191,191,191,0,0,0
+	COLOR,4,122,122,122,0,0,0
+	COLOR,5,160,160,160,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,136,141,155,0,0,0
+	COLOR,8,192,192,192,0,0,0
+	COLOR,9,240,240,240,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,320,310,-10,-5,320,310,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape12"
+	B,248,160,8,60,248,160,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape5"
+	B,248,60,83,40,248,60,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,6,1,COLOR,6,COLOR,4,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"Shape10"
+	B,83,60,8,40,83,60,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,6,1,COLOR,6,COLOR,4,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtBlockedStatus3"
+	B,15,43,75,58,15,58,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,15,43,0,0,FONT,1,"Status",37,FONT,1,"Status",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Vrijgeven",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtSwitch"
+	B,100,43,230,58,100,58,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,100,43,0,0,FONT,1,"Name",37,FONT,1,"Name",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,L,"VerLine1"
+	B,83,160,83,60,83,245,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,83,160,83,60
+O,END
+O,BEGIN,L,"Poly1"
+	B,8,80,248,80,59,80,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,8,80,248,80
+O,END
+O,BEGIN,L,"Poly3"
+	B,8,100,248,100,52,100,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,8,100,248,100
+O,END
+O,BEGIN,L,"Poly5"
+	B,8,120,248,120,53,120,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,8,120,248,120
+O,END
+O,BEGIN,L,"Poly6"
+	B,8,140,248,140,53,140,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,8,140,248,140
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,249,60,269,161,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,S,"OperationalStatus0"
+	B,50,75,41,66,41,75,65535,0,6400,0,1,0,0
+	PP,"DeviceSDD_OperationalStatus","OperationalStatus0",50,75,41,66,1,0, 0, 1
+O,END
+O,BEGIN,S,"OperationalStatus1"
+	B,50,95,41,86,41,95,65535,0,6400,0,1,0,0
+	PP,"DeviceSDD_OperationalStatus","OperationalStatus1",50,95,41,86,1,0, 0, 1
+O,END
+O,BEGIN,S,"OperationalStatus2"
+	B,50,114,41,105,41,114,65535,0,6400,0,1,0,0
+	PP,"DeviceSDD_OperationalStatus","OperationalStatus2",50,114,41,105,1,0, 0, 1
+O,END
+O,BEGIN,S,"OperationalStatus3"
+	B,50,135,41,126,41,135,65535,0,6400,0,1,0,0
+	PP,"DeviceSDD_OperationalStatus","OperationalStatus3",50,135,41,126,1,0, 0, 1
+O,END
+O,BEGIN,S,"OperationalStatus4"
+	B,50,154,41,145,41,154,65535,0,6400,0,1,0,0
+	PP,"DeviceSDD_OperationalStatus","OperationalStatus4",50,154,41,145,1,0, 0, 1
+O,END
+O,BEGIN,S,"txtDeviceName0"
+	B,98,61,227,80,98,80,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtDeviceName0",98,61,227,80,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtDeviceName1"
+	B,98,81,227,100,98,100,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtDeviceName1",98,81,227,100,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtDeviceName2"
+	B,98,101,227,120,98,120,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtDeviceName2",98,101,227,120,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtDeviceName3"
+	B,98,121,227,140,98,140,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtDeviceName3",98,121,227,140,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtDeviceName4"
+	B,98,141,227,160,98,160,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtDeviceName4",98,141,227,160,0,0, 0, 1
+O,END
+O,BEGIN,T,"btnClose2"
+	B,12,16,164,41,12,41,65535,0,6400,0,1,1,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,12,16,0,0,FONT,2,"DDS Grupo",38,FONT,2,"DDS Grupo",38
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Lista de DDS del grupo",FONT,2,36
+		LANG,END
+	MULTILANG,END
+O,END

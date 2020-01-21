@@ -1,0 +1,624 @@
+ASCII32,19,3,2014,16:4,49,1.1
+W,BEGIN,"Signal_Unblock_HILCPrep","SignalGlobalUnblockHILCCtrlPrepPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,207,81
+	SIZE,595,365,595,365,0,0,0,1280,1024,595,365
+	BACKCOLOR,235,235,215,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,0,1,8,8,224,192,192,0,35,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Signal_Unblock_HILCPrep.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2010. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Signal Global UnBlock HILC Ctrl Prep Phase
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of data (name, origin and destination blocking status,
+	'*              origin and destination report status) of signals for the preparation phase
+	'*              of the global UnBlock HILC command
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              All - CR ALPHA 177802
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '10
+	'* Change:              CR ALPHA 190586
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '11
+	'* Change:              CR ALPHA 237154
+	'*                      Take into account the destination signals
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* ******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSectorSeparator As String = ";"
+	Private Const c_strDeviceSeparator As String = ","
+	Private Const c_strDeviceAttributSeparator As String = ":"
+	
+	'* Left position of data of devices in the array
+	Private Const c_lDeviceNameLeft As Long = 106
+	Private Const c_lOriginBlockableLeft As Long = 339
+	Private Const c_lOriginBlockingStatusLeft As Long = 340
+	Private Const c_lDestinationBlockableLeft As Long = 419
+	Private Const c_lDestinationBlockingStatusLeft As Long = 420
+	
+	'* To manage the list of devices
+	Private Const c_lLineMaxCount As Long = 10
+	Private Const c_strColumnDeviceName As String = "txtPrepDeviceName"
+	Private Const c_strColumnOriginBlockable As String = "PrepOriginBlockable"
+	Private Const c_strColumnOriginBlockingStatus As String = "PrepOriginBlockingStatus"
+	Private Const c_strColumnDestinationBlockable As String = "PrepDestinationBlockable"
+	Private Const c_strColumnDestinationBlockingStatus As String = "PrepDestinationBlockingStatus"
+	Private Const c_strValue As String = ".Value"
+	Private Const c_strAvailable As String = ".Available"
+	
+	Private Const c_strDeviceNameTag As String = ".HMIBlocking.Template.Name"
+	Private Const c_strBlockingStatusTag As String = ".HMIBlocking.Template.iEqpState"
+	Private Const c_strOriginHILCAvailableTag As String = ".HILCAvailable.Value"
+	Private Const c_strDestinationHILCAvailableTag As String = ".HILCDestinationBlockingType.Value"
+	
+	'* Module Variables
+	'* ***********************************************
+	'* Variable to manage the list
+	Dim WithEvents m_List As Iconis_CLS_List
+	
+	'* SubRoutine: Mimic_Open
+	'* Purpose: Init and display data for each device managed by the current sector
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	
+	    Dim strClusterName As String
+	    Dim i As Long
+	    Dim lCount As Long
+	    Dim strCurrentCBI As String
+	    Dim arraySectors() As String
+	    Dim arraySectorDevices() As String
+	    Dim arrayDevicesOPCVar() As String
+	    Dim strDeviceNameValues() As String
+	    Dim strOriginBlockableAvailables() As String
+	    Dim strOriginBlockingStatusValues() As String
+	    Dim strDestinationBlockableAvailables() As String
+	    Dim strDestinationBlockingStatusValues() As String
+	    
+	    '* Extract the cluster name from the branch of the mimic
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	        
+	    '* Extract the current CBI (OPC variable name) from the branch of this mimic
+	    strCurrentCBI = Mid(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare) + 1)
+	    
+	    '* Extract data (list of OPC variables associated to each sector) into an array
+	    arraySectors = Split(Variables.Item("@ListOfSectorOPCVar%").Value, c_strSectorSeparator, -1, vbTextCompare)
+	    '* Extract data (list of OPC variables associated to each device of each sector) into an array
+	    arraySectorDevices = Split(Variables.Item("@ListOfDeviceOPCVar%").Value, c_strSectorSeparator, -1, vbTextCompare)
+	    
+	    For i = 0 To UBound(arraySectors) - 1
+	        If (StrComp(arraySectors(i), strCurrentCBI, vbTextCompare) = 0) Then
+	            '* Extract data (list of OPC variables of each device for the current sector) into an array
+	            arrayDevicesOPCVar = Split(arraySectorDevices(i), c_strDeviceSeparator, -1, vbTextCompare)
+	            Exit For
+	        End If
+	    Next
+	  
+	    '* Create and initialize the list
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    Set m_List = Iconis_MOD_General.CreateNew_Iconis_CLS_List
+	    
+	    m_List.Init ThisMimic, ThisMimic.Branch, c_lLineMaxCount, ScrollBar, False
+	    m_List.NewColumn c_strColumnDeviceName, fvVariableTypeText, c_lDeviceNameLeft, c_strValue
+	    m_List.NewColumn c_strColumnOriginBlockable, fvVariableTypeBit, c_lOriginBlockableLeft, c_strAvailable
+	    m_List.NewColumn c_strColumnOriginBlockingStatus, fvVariableTypeRegister, c_lOriginBlockingStatusLeft, c_strValue
+	    m_List.NewColumn c_strColumnDestinationBlockable, fvVariableTypeRegister, c_lDestinationBlockableLeft, c_strAvailable
+	    m_List.NewColumn c_strColumnDestinationBlockingStatus, fvVariableTypeRegister, c_lDestinationBlockingStatusLeft, c_strValue
+	       
+	    '* Memorize the number of devices managed by the sector
+	    lCount = UBound(arrayDevicesOPCVar)
+	        
+	    If (lCount > 0) Then
+	        '* Redim arrays
+	        ReDim strDeviceNameValues(0 To lCount - 1)
+	        ReDim strOriginBlockableAvailables(0 To lCount - 1)
+	        ReDim strOriginBlockingStatusValues(0 To lCount - 1)
+	        ReDim strDestinationBlockableAvailables(0 To lCount - 1)
+	        ReDim strDestinationBlockingStatusValues(0 To lCount - 1)
+	        
+	        '* Initialize all columns
+	        For i = 0 To lCount - 1
+	            strDeviceNameValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strDeviceNameTag
+	            strOriginBlockableAvailables(i) = strClusterName & arrayDevicesOPCVar(i) & c_strOriginHILCAvailableTag
+	            strOriginBlockingStatusValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strBlockingStatusTag
+	            strDestinationBlockableAvailables(i) = strClusterName & arrayDevicesOPCVar(i) & c_strDestinationHILCAvailableTag
+	            strDestinationBlockingStatusValues(i) = strClusterName & arrayDevicesOPCVar(i) & c_strBlockingStatusTag
+	        Next i
+	        m_List.BindColumnToSource c_strColumnDeviceName, strDeviceNameValues, c_strValue
+	        m_List.BindColumnToSource c_strColumnOriginBlockable, strOriginBlockableAvailables, c_strAvailable
+	        m_List.BindColumnToSource c_strColumnOriginBlockingStatus, strOriginBlockingStatusValues, c_strValue
+	        m_List.BindColumnToSource c_strColumnDestinationBlockable, strDestinationBlockableAvailables, c_strAvailable
+	        m_List.BindColumnToSource c_strColumnDestinationBlockingStatus, strDestinationBlockingStatusValues, c_strValue
+	    End If
+	    
+	    '* Display the list
+	    m_List.Display
+	        
+	    '* Enable the OK button of the parent mimic
+	    Variables.Item("@ButtonOKDisabled%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* SubRoutine: Mimic_Design
+	'* Purpose: Restore the position of the controls
+	'* ******************************************************************************************
+	Private Sub Mimic_Design()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Design", "Begin Subroutine")
+	        
+	    If Not (m_List Is Nothing) Then
+	        m_List.ShowAllControls
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Design", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, destroy the list object
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    If Not (m_List Is Nothing) Then
+	        m_List.Destroy
+	        Set m_List = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,192,191,193,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,235,235,215,0,0,0
+	COLOR,5,113,111,100,0,0,0
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,136,141,155,0,0,0
+	COLOR,8,179,179,179,0,0,0
+	COLOR,9,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"shpRectangle"
+	B,586,357,7,8,586,357,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,R,"shpArray"
+	B,485,339,105,90,485,339,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtPreparation"
+	B,14,0,101,16,14,16,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,14,0,0,0,FONT,1,"Preparation",36,FONT,1,"Preparation",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Preparation",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtCBISector"
+	B,15,25,90,41,15,41,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,15,25,0,0,FONT,1,"CBI sector",37,FONT,1,"CBI sector",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"IXL sector",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtCBISectorName"
+	B,105,20,284,44,105,44,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,1,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,105,20,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Mode.Name"
+	A,END
+O,END
+O,BEGIN,T,"txtName"
+	B,105,56,304,89,105,89,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,105,56,0,0,FONT,1,"Name",37,FONT,1,"Name",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Name",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtOriginBlockedStatus"
+	B,305,56,384,89,305,89,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,305,56,0,0,FONT,1,"Blocked as origin",85,FONT,1,"Blocked as origin",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Blocked as origin",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtDestinationBlockedStatus"
+	B,386,56,465,89,386,89,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,386,56,0,0,FONT,1,"Blocked as destination",85,FONT,1,"Blocked as destination",85
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Blocked as destination",FONT,1,85
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ScrollBar"
+	B,466,91,485,339,10,60,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,1,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	OCX_PROPBAG,BEGIN,"Microsoft Forms 2.0 ScrollBar",{DFD181E0-5E2F-11CE-A449-00AA004A803D},1342177280
+		ForeColor,2147483666
+		BackColor,2147483663
+		VariousPropertyBits,27
+		Size,"450;6509"
+		MousePointer,0
+		Min,0
+		Max,32767
+		Position,0
+		PrevEnabled,1
+		NextEnabled,1
+		SmallChange,1
+		LargeChange,1
+		Orientation,4294967295
+		ProportionalThumb,65535
+		Delay,50
+	OCX_PROPBAG,END
+O,END
+O,BEGIN,L,"HorLine1"
+	B,105,115,466,115,105,115,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,115,466,115
+O,END
+O,BEGIN,L,"HorLine2"
+	B,105,140,466,140,105,140,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,140,466,140
+O,END
+O,BEGIN,L,"HorLine3"
+	B,105,165,466,165,105,165,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,165,466,165
+O,END
+O,BEGIN,L,"HorLine4"
+	B,105,190,466,190,105,190,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,190,466,190
+O,END
+O,BEGIN,L,"HorLine5"
+	B,105,215,466,215,105,215,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,215,466,215
+O,END
+O,BEGIN,L,"HorLine6"
+	B,105,240,466,240,105,240,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,240,466,240
+O,END
+O,BEGIN,L,"HorLine7"
+	B,105,265,466,265,105,265,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,265,466,265
+O,END
+O,BEGIN,L,"HorLine8"
+	B,105,290,466,290,105,290,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,290,466,290
+O,END
+O,BEGIN,L,"HorLine9"
+	B,105,315,466,315,105,315,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,315,466,315
+O,END
+O,BEGIN,L,"HeaderHorLine1"
+	B,104,56,466,56,1048,56,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,466,56,104,56
+O,END
+O,BEGIN,L,"HeaderVerLine1"
+	B,105,90,105,56,105,90,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,105,90,105,56
+O,END
+O,BEGIN,L,"HeaderVerLine2"
+	B,305,90,305,56,305,90,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,305,90,305,56
+O,END
+O,BEGIN,L,"HeaderVerLine3"
+	B,385,90,385,56,385,90,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,385,90,385,56
+O,END
+O,BEGIN,L,"HeaderVerLine4"
+	B,466,90,466,56,466,90,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,466,90,466,56
+O,END
+O,BEGIN,L,"VerLine1"
+	B,305,338,305,90,305,338,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,305,338,305,90
+O,END
+O,BEGIN,L,"VerLine2"
+	B,385,338,385,90,385,338,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,7,COLOR,7,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,385,338,385,90
+O,END
+O,BEGIN,S,"txtPrepDeviceName0"
+	B,106,94,305,113,106,113,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName0",106,94,305,113,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName1"
+	B,106,118,305,137,106,137,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName1",106,118,305,137,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName2"
+	B,106,144,305,163,106,163,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName2",106,144,305,163,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName3"
+	B,106,168,305,187,106,187,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName3",106,168,305,187,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName4"
+	B,106,194,305,213,106,213,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName4",106,194,305,213,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName5"
+	B,106,218,305,237,106,237,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName5",106,218,305,237,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName6"
+	B,106,244,305,263,106,263,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName6",106,244,305,263,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName7"
+	B,106,268,305,287,106,287,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName7",106,268,305,287,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName8"
+	B,106,294,305,313,106,313,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName8",106,294,305,313,0,0, 0, 1
+O,END
+O,BEGIN,S,"txtPrepDeviceName9"
+	B,106,318,305,337,106,337,65535,0,6400,0,1,0,0
+	PP,"Device_Name","txtPrepDeviceName9",106,318,305,337,0,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus0"
+	B,349,108,340,99,340,108,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus0",349,108,340,99,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus1"
+	B,349,133,340,124,340,133,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus1",349,133,340,124,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus2"
+	B,349,158,340,149,340,158,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus2",349,158,340,149,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus3"
+	B,349,183,340,174,340,183,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus3",349,183,340,174,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus4"
+	B,349,208,340,199,340,208,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus4",349,208,340,199,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus5"
+	B,349,233,340,224,340,233,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus5",349,233,340,224,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus6"
+	B,349,258,340,249,340,258,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus6",349,258,340,249,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus7"
+	B,349,283,340,274,340,283,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus7",349,283,340,274,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus8"
+	B,349,308,340,299,340,308,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus8",349,308,340,299,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockingStatus9"
+	B,349,333,340,324,340,333,65535,0,6400,0,1,0,0
+	PP,"DeviceOriginSignal_BlockingStatus_Visible","PrepOriginBlockingStatus9",349,333,340,324,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable0"
+	B,350,109,339,98,339,109,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable0",350,109,339,98,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable1"
+	B,350,134,339,123,339,134,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable1",350,134,339,123,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable2"
+	B,350,159,339,148,339,159,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable2",350,159,339,148,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable3"
+	B,350,184,339,173,339,184,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable3",350,184,339,173,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable4"
+	B,350,209,339,198,339,209,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable4",350,209,339,198,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable5"
+	B,350,234,339,223,339,234,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable5",350,234,339,223,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable6"
+	B,350,259,339,248,339,259,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable6",350,259,339,248,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable7"
+	B,350,284,339,273,339,284,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable7",350,284,339,273,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable8"
+	B,350,309,339,298,339,309,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable8",350,309,339,298,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepOriginBlockable9"
+	B,350,334,339,323,339,334,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepOriginBlockable9",350,334,339,323,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus0"
+	B,429,108,420,99,420,108,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus0",429,108,420,99,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus1"
+	B,429,133,420,124,420,133,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus1",429,133,420,124,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus2"
+	B,429,158,420,149,420,158,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus2",429,158,420,149,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus3"
+	B,429,183,420,174,420,183,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus3",429,183,420,174,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus4"
+	B,429,208,420,199,420,208,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus4",429,208,420,199,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus5"
+	B,429,233,420,224,420,233,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus5",429,233,420,224,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus6"
+	B,429,258,420,249,420,258,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus6",429,258,420,249,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus7"
+	B,429,283,420,274,420,283,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus7",429,283,420,274,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus8"
+	B,429,308,420,299,420,308,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus8",429,308,420,299,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockingStatus9"
+	B,429,333,420,324,420,333,65535,0,6400,0,1,0,0
+	PP,"DeviceDestinationSignal_BlockingStatus_Visible","PrepDestinationBlockingStatus9",429,333,420,324,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable0"
+	B,430,109,419,98,419,109,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable0",430,109,419,98,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable1"
+	B,430,134,419,123,419,134,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable1",430,134,419,123,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable2"
+	B,430,159,419,148,419,159,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable2",430,159,419,148,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable3"
+	B,430,184,419,173,419,184,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable3",430,184,419,173,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable4"
+	B,430,209,419,198,419,209,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable4",430,209,419,198,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable5"
+	B,430,234,419,223,419,234,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable5",430,234,419,223,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable6"
+	B,430,259,419,248,419,259,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable6",430,259,419,248,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable7"
+	B,430,284,419,273,419,284,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable7",430,284,419,273,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable8"
+	B,430,309,419,298,419,309,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable8",430,309,419,298,1,0, 0, 1
+O,END
+O,BEGIN,S,"PrepDestinationBlockable9"
+	B,430,334,419,323,419,334,65535,0,6400,0,1,0,0
+	PP,"DeviceSignal_Blockable","PrepDestinationBlockable9",430,334,419,323,1,0, 0, 1
+O,END

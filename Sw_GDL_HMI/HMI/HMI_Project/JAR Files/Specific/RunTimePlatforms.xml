@@ -1,0 +1,7 @@
+<RunTimeLevelPlatform>
+	<IniPlat>Plataforma Inicial</IniPlat>
+	<FinPlat>Plataforma Final</FinPlat> <!--Opcional-->
+	<!--Não existe necessidade de colocar as plataformas em ordem topologica-->
+	<Level>Nível de Desempenho</Level> <!--Não é necessário quando removendo a imposição-->
+	<ApplyYn>Tipo</ApplyYn> <!--'0' remove, '1' aplica e '2' memoriza-->
+</RunTimeLevelPlatform>

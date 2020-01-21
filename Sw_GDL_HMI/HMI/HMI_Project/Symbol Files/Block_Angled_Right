@@ -1,0 +1,358 @@
+ASCII32,4,10,2019,8:34,7,1.1
+FONTS,BEGIN
+	FONT,1,-11,0,700,0,0,"Lucida Console",0,0
+	FONT,2,-11,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,41,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,0,0,0,0,32,0
+	COLOR,5,0,0,0,0,63,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,0,255,0,0,0,0
+	COLOR,8,255,255,255,0,0,0
+	COLOR,9,0,255,255,0,0,0
+	COLOR,10,255,214,0,0,0,0
+	COLOR,11,194,0,0,0,0,0
+	COLOR,12,255,64,64,0,0,0
+	COLOR,13,0,147,201,0,0,0
+	COLOR,14,0,99,135,0,0,0
+	COLOR,15,0,149,37,0,0,0
+	COLOR,16,0,0,0,0,40,0
+	COLOR,17,0,0,0,0,34,0
+	COLOR,18,0,0,0,0,52,0
+	COLOR,19,0,0,0,0,36,0
+	COLOR,20,0,0,0,0,43,0
+	COLOR,21,0,0,0,0,38,0
+	COLOR,22,0,0,0,0,37,0
+	COLOR,23,255,0,0,0,0,0
+	COLOR,24,0,0,255,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Block Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages opening of the:
+	'*                  - Inspector panel
+	'*                  - Contextual menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                June '08
+	'* Change:              All
+	    
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172265
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Vinay CR
+	'* Date:                March '15
+	'* Change:              CR 00610876 & 621646 Code Updated for OpenContextualMenu and Point API is Added
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Private Const c_lContextualMenuWidth As Long = 160
+	Private Const c_lContextualMenuHeight As Long = 50
+	
+	Private Const c_strInspectorPanelMimic As String = "Block_InspectorPanel"
+	Private Const c_strContextualMenuMimic As String = "Block_ContextualMenu"
+	Private Hold As POINTAPI
+	
+	
+	'* Open the Inspector Panel mimic when the command symbol is double clicked
+	'*********************************************************************************
+	
+	    
+	Private Sub Poly33_DblClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_DblClickEx", "Begin subroutine")
+	    '* Open the Inspector Panel mimic
+	    Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	    'Mimics.OpenInCenter c_strInspectorPanelMimic, GetSymbolBranch(Me), , , "*", , , fvCenterOnParent
+	      Call OpenMimicInCenter(c_strInspectorPanelMimic, GetSymbolBranch(Me), Getmousepointerpossition)
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "IXL_Status_Click", Err.Description)
+	End Sub
+	
+	'* Open the Contextual Menu mimic when the command symbol is right clicked
+	'*********************************************************************************
+	Private Sub Poly33_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Symbol_MouseUp", "Begin subroutine")
+	       
+	    '* If mouse is right clicked
+	    If (Button = 2) Then
+	    'Get the actual possition of Mouse pointer
+	        GetCursorPos Hold
+	        Variables.Item(GetSymbolBranch(Me) & ".blinking%").Value = True
+	        'OpenContextualMenu ThisSymbol, c_strContextualMenuMimic, GetSymbolBranch(Me), "*", Hold.lXpos, Hold.lYpos, x, y, c_lContextualMenuWidth, c_lContextualMenuHeight
+	     Call OpenContextualMenu(c_strContextualMenuMimic, GetSymbolBranch(ThisSymbol))
+	    End If
+	       
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "IXL_Status_MouseUp", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"B_305"
+	B,2586,528,2688,676,2586,676,65535,0,6400,0,1,0,0
+	O,BEGIN,P,"Poly40"
+		B,2634,528,2604,535,2634,535,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,2604,528,2633,528,2634,535,2605,535
+	O,END
+	O,BEGIN,P,"Poly33"
+		B,2606,535,2659,676,2606,535,65535,0,6400,0,2,1,1
+		ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		PP,2606,535,2635,676,2659,676,2630,535
+		A,BEGIN,SB,"Anim2",0,0,"",""
+			PP,"NotUsed%",0,0,0,0,0.000000
+		A,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=((blinking%)AND((HMIBlockStatus.Template.iEqpState==0)OR(HMIBlockStatus.Template.iEqpState==1)))"
+			COL,0,COLOR,6,COLOR,6
+			COL,0,COLOR,7,COLOR,7
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,8
+			COL,1,COLOR,8,COLOR,8
+		A,END
+	O,END
+	O,BEGIN,MZ,"MultiZone12"
+		B,2654,676,2625,536,2656,685,65535,0,6400,0,2,0,0
+		ST,0,10,COLOR,9,COLOR,9,0,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+		PP,2654,676,2625,536
+		A,BEGIN,MZA,"Anim1",0,0,"",""
+			PP,"TSRApplied.Value.bstrValue",0
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,9,COLOR,9
+			COL,COLOR,9,COLOR,9
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,6,COLOR,6
+		A,END
+	O,END
+	O,BEGIN,MZ,"MultiZone11"
+		B,2665,674,2637,534,2664,663,65535,0,6400,0,2,0,0
+		ST,5,8,COLOR,9,COLOR,9,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,2665,674,2637,534
+		A,BEGIN,MZA,"Anim1",0,0,"",""
+			PP,"TSRApplied.Value.bstrValue",0
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,3,COLOR,3
+			COL,COLOR,6,COLOR,6
+			TXT,1,257,FONT,1,COLOR,9,COLOR,3,VAR,
+		A,END
+	O,END
+	O,BEGIN,T,"Block_Number1"
+		B,2586,537,2605,551,2586,551,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,3,0,COLOR,3,0,COLOR,3,0,COLOR,3
+		PP,1,2586,537,0,0,FONT,2,"XX",36,FONT,2,"XX",36
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1046
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"XX",FONT,2,38
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"21",FONT,2,36
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,DT,"Anim1",0,0,"",""
+			PP,"shortname%"
+		A,END
+	O,END
+	O,BEGIN,P,"Poly6"
+		B,2650,535,2619,676,2627,575,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+		PP,2619,536,2622,535,2650,676,2647,676
+		A,BEGIN,CBW,"Anim1",0,0,"",""
+			PP,"HMIBlockStatus.Template.iEqpState","= (NOT LeftSubRouteStatus.Value.BoolValue) OR (NOT RightSubRouteStatus.Value.BoolValue) OR (OverlapStatus.Template.iEqpState%) ","SDOperationalStatus.Value.BoolValue","","","","",""
+			COL,1,COLOR,11,COLOR,12,1.000000
+			COL,1,COLOR,14,COLOR,13,2.000000
+			COL,1,COLOR,11,COLOR,12,3.000000
+			COL,1,COLOR,15,COLOR,7,4.000000
+			COL,1,COLOR,11,COLOR,11,5.000000
+			COL,1,COLOR,5,COLOR,5,6.000000
+			COL,1,COLOR,11,COLOR,11,7.000000
+			COL,1,COLOR,16,COLOR,16,8.000000
+			COL,1,COLOR,17,COLOR,17,0.000000
+			COL,0,COLOR,18,COLOR,18,0.000000
+			COL,0,COLOR,19,COLOR,19,0.000000
+			COL,0,COLOR,18,COLOR,18,0.000000
+			COL,0,COLOR,20,COLOR,20,0.000000
+			COL,0,COLOR,21,COLOR,21,0.000000
+			COL,0,COLOR,16,COLOR,16,0.000000
+			COL,0,COLOR,21,COLOR,21,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,22,COLOR,22,0.000000
+		A,END
+	O,END
+	O,BEGIN,P,"Poly34"
+		B,2662,535,2631,676,2634,535,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,11,0,COLOR,11,0,COLOR,2,0,COLOR,2
+		PP,2631,535,2634,536,2662,675,2659,676
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"GlobalGAMAStatus.Value"
+			COL,1,COLOR,11,COLOR,11,1.000000
+			COL,1,COLOR,3,COLOR,3,2.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,11,COLOR,11,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+		A,END
+	O,END
+	O,BEGIN,T,"Text6"
+		B,2636,534,2655,540,2636,540,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,1,2636,534,3,0,FONT,1,"30",38,FONT,1,"30",38
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"30",FONT,1,38
+			LANG,END
+			LANG,BEGIN,1046
+				ROLE_DEFAULT,-1
+				ROLE,-1,"30",FONT,1,38
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,-1
+				ROLE,-1,"10",FONT,1,38
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"@LCS_10241.TSRAppliedInit.Value"
+			COL,0,COLOR,23,COLOR,23,1.000000
+			COL,0,COLOR,2,COLOR,2,2.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,24,COLOR,24,0.000000
+			COL,0,COLOR,24,COLOR,24,0.000000
+			COL,1,COLOR,9,COLOR,9,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+	O,BEGIN,P,"Poly35"
+		B,2659,536,2623,676,2657,679,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,2623,536,2631,536,2659,675,2651,676
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"@LCS_10241.TSRAppliedInit.Value"
+			COL,1,COLOR,9,COLOR,9,1.000000
+			COL,1,COLOR,3,COLOR,3,2.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+	O,BEGIN,R,"Shape13"
+		B,2688,674,2669,658,2687,673,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"@LCS_10241.TSRAppliedInit.Value"
+			COL,1,COLOR,17,COLOR,17,1.000000
+			COL,1,COLOR,3,COLOR,3,2.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,1,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,2,COLOR,2,0.000000
+			COL,0,COLOR,8,COLOR,8,0.000000
+			COL,0,COLOR,3,COLOR,3,0.000000
+		A,END
+	O,END
+O,END

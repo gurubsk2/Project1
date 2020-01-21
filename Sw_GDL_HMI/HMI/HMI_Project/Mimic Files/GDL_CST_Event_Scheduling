@@ -1,0 +1,425 @@
+ASCII32,26,4,2017,10:12,12,1.1
+W,BEGIN,"GDL_CST_Event_Scheduling","GDL_CST_Event_Scheduling"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,10,100
+	SIZE,780,400,780,400,0,0,0,1680,1050,780,400
+	BACKCOLOR,240,240,240,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mimic1"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,100,100,100,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_CST_Event_Scheduling.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2016. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      GDL_Command_Creation_Window
+	'* *******************************************************************************************
+	'* Purpose:     To maintain User profile information:
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Dec '16
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* *******************************************************************************************
+	Option Explicit
+
+	Private Const c_CommandSequenceCommitInfo As String = "MainGDLL3.CSTModule.CSTMgr.CommitSchedulingInfo"
+	Private Const c_sCommandSequenceScheduling As String = "MainGDLL3.CSTModule.CSTMgr.GetSequencesScheduling"
+	'********Constants declared for  attributes of the XML*********
+		
+	Private Const c_sEvent As String = "@EVENT"
+	Private Const c_sSeqName As String = ".SeqName%"
+	Private Const c_strCommandNode As String = "CommandsSequencesScheduling"
+	
+	Private Const c_strEqpType As String = "EqpType"
+	Private Const c_strEqpID As String = "EqpID"
+	Private Const c_strStateName As String = "StateName"
+	Private Const c_strStationAttr As String = "Station"
+	Private Const c_strNameAttr As String = "SeqName"
+	Private Const c_strSeqStateScheduleNode As String = "SequenceStateChangeTrigger"
+	
+	
+	
+	Dim m_OPC_CmdSeqScheduleCommit As Variable
+	Dim m_strSequenceList As String
+	Dim WithEvents m_OPC_CommandSeqScheduling As Variable
+	
+	Private Sub btnCancel_Click()
+	On Error GoTo ErrorHandler
+	CloseMimic ("GDL_Command_Sequence_Scheduling_Window")
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnCancel_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub btnSaveEventSeqScheduling_Click()
+	On Error GoTo ErrorHandler
+	
+	
+	Dim oDoc As DOMDocument
+	Dim oRootNode As IXMLDOMNode
+	Dim oAttributeStateInfoNode As IXMLDOMElement
+	Dim oAttributeEflavour As IXMLDOMAttribute
+	Dim oAttributeEqpID As IXMLDOMAttribute
+	Dim oAttributeEqpName As IXMLDOMAttribute
+	Dim oAttributeSeqName As IXMLDOMAttribute
+	Dim oAttributeIndex As IXMLDOMAttribute
+	Dim oAttributeStateName As IXMLDOMAttribute
+	Dim oAttributeStateValue As IXMLDOMAttribute
+	Dim oAttributeStation As IXMLDOMAttribute
+	Dim m_XML_String As String
+	
+	
+	
+	
+	Set oDoc = New DOMDocument
+	
+	Set oRootNode = oDoc.createElement("CommandsSequenceSchedulingInfo")
+	oDoc.appendChild oRootNode
+	Set oAttributeStateInfoNode = oDoc.createElement("StateChangeTriggerInfo")
+	oRootNode.appendChild oAttributeStateInfoNode
+	Set oAttributeEflavour = oDoc.createAttribute("EqpFlavour")
+	     
+	oAttributeEflavour.Value = CbxStationName.Value
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeEflavour
+	     
+	Set oAttributeEqpID = oDoc.createAttribute("EqpID")
+	oAttributeEqpID.Value = CbxEqpID.Value
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeEqpID
+	     
+	Set oAttributeEqpName = oDoc.createAttribute("EqpName")
+	oAttributeEqpName.Value = CbxEqpType.Value
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeEqpName
+	
+	Set oAttributeIndex = oDoc.createAttribute("Index")
+	oAttributeIndex.Value = ""
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeIndex
+	     
+	Set oAttributeSeqName = oDoc.createAttribute("SeqName")
+	oAttributeSeqName.Value = Variables.Item("@SeqName%").Value
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeSeqName
+	     
+	Set oAttributeStateName = oDoc.createAttribute("StateName")
+	oAttributeStateName.Value = CbxStateName.Value
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeStateName
+	
+	Set oAttributeStateValue = oDoc.createAttribute("StateValue")
+	oAttributeStateValue.Value = ""
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeStateValue
+	    
+	Set oAttributeStateValue = oDoc.createAttribute("Station")
+	oAttributeStation.Value = ""
+	oAttributeStateInfoNode.Attributes.setNamedItem oAttributeStation
+	
+	oRootNode.appendChild oAttributeStateInfoNode
+	m_XML_String = oDoc.xml
+	
+	Set oDoc = Nothing
+	Set oRootNode = Nothing
+	Set oAttributeStateInfoNode = Nothing
+	Set oRootNode = Nothing
+	 If Variables.Item("@CommitSchedule%").Value = "" Then
+	 
+	 Variables.Item("@CommitSchedule%").Value = m_XML_String
+	 
+	 End If
+	 CloseMimic ("GDL_Command_Sequence_Scheduling_Window")
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnSaveSeqScheduling_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	Set m_OPC_CmdSeqScheduleCommit = Variables.Add(c_strClusterLevel2 & c_CommandSequenceCommitInfo, fvVariableTypeText)
+	Set m_OPC_CommandSeqScheduling = Variables.Add(c_strClusterLevel2 & c_sCommandSequenceScheduling, fvVariableTypeText)
+	Variables.Item("@CommitSchedule%").Value = ""
+	
+	If Variables.Item("@NewScheduleSequence%").Value = 1 Then
+	           CbxStationName.Value = ""
+	           CbxEqpType.Value = ""
+	           CbxEqpID.Value = ""
+	           CbxStateName.Value = ""
+	           
+	ElseIf Variables.Item("@NewScheduleSequence%").Value = 2 Then
+	             
+	             If ((m_OPC_CommandSeqScheduling.Status = fvVariableStatusGood) And (m_OPC_CommandSeqScheduling.EnableEvents = True)) Then
+	                    m_OPC_CommandSeqScheduling_ValueChange
+	             Else
+	                    m_OPC_CommandSeqScheduling.EnableEvents = True
+	             End If
+	End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_CommandSeqScheduling_ValueChange()
+	On Error GoTo ErrorHandler
+	    If Check_OPC_Variable(m_OPC_CommandSeqScheduling) Then
+	        m_strSequenceList = m_OPC_CommandSeqScheduling.Value
+	        ReadXML
+	    End If
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "m_OPC_CommandSeqScheduling_ValueChange", Err.Description)
+	End Sub
+	
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	
+	    Dim oDoc As DOMDocument
+	    Dim oSequenceList As IXMLDOMNodeList
+	    Dim oSequence As IXMLDOMElement
+	    Dim strSequenceName As String
+	    Dim iCount As Integer
+	    
+	    
+	    Dim oSequenceStateStamp As IXMLDOMElement
+	    Dim oSequenceStateStampList As IXMLDOMNodeList
+	    Dim sSelectedSeqName As String
+	    
+	 
+	    
+	    sSelectedSeqName = Variables.Item("@SelectedScheduleEventSeq%").Value
+	   
+	   sSelectedSeqName = Variables.Item(c_sEvent & sSelectedSeqName & c_sSeqName).Value
+	  
+	   If (m_strSequenceList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strSequenceList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oSequenceList = oDoc.documentElement.selectNodes("/" & c_strCommandNode)
+	                    If Not (oSequenceList Is Nothing) Then
+	                        If (oSequenceList.length > 0) Then
+	                         iCount = 1
+	                         For Each oSequence In oSequenceList
+	                        Set oSequenceStateStampList = oSequence.getElementsByTagName(c_strSeqStateScheduleNode)
+	                        
+	                        For Each oSequenceStateStamp In oSequenceStateStampList
+	                        If sSelectedSeqName = oSequenceStateStamp.getAttribute(c_strNameAttr) Then
+	                                CbxStationName.Value = Format(oSequenceStateStamp.getAttribute(c_strStationAttr))
+	                                CbxEqpType.Value = Format(oSequenceStateStamp.getAttribute(c_strEqpType))
+	                                CbxEqpID.Value = Format(oSequenceStateStamp.getAttribute(c_strEqpID))
+	                                CbxStateName.Value = Format(oSequenceStateStamp.getAttribute(c_strStateName))
+	                        End If
+	                                CbxStationName.AddItem (Format(oSequenceStateStamp.getAttribute(c_strStationAttr)))
+	                                CbxEqpType.AddItem (Format(oSequenceStateStamp.getAttribute(c_strEqpType)))
+	                                CbxEqpID.AddItem (Format(oSequenceStateStamp.getAttribute(c_strEqpID)))
+	                                CbxStateName.AddItem (Format(oSequenceStateStamp.getAttribute(c_strStateName)))
+	                       
+	                      Next oSequenceStateStamp
+	                            
+	                     
+	                     Next oSequence
+	                        End If
+	                        Set oSequenceList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,174,174,174,0,0,0
+	COLOR,4,105,105,105,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,122,122,122,0,0,0
+	COLOR,7,240,240,240,0,0,0
+	COLOR,8,192,192,192,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape9"
+	B,768,192,24,10,768,192,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text18"
+	B,40,24,118,48,40,48,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,40,24,0,0,FONT,1,"Hora",36,FONT,1,"Hora",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Por Evento",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape1"
+	B,208,112,40,64,208,112,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"CbxStationName"
+	B,54,88,196,108,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,40,66,206,82,40,82,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,40,66,0,0,FONT,1,"Por Evento",36,FONT,1,"Por Evento",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estacion",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape3"
+	B,381,111,213,63,381,111,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"CbxEqpType"
+	B,227,87,369,107,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text2"
+	B,213,65,379,81,213,81,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,213,65,0,0,FONT,1,"Estacion",37,FONT,1,"Estacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tipo Equipo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape4"
+	B,552,111,384,63,552,111,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"CbxEqpID"
+	B,398,87,540,107,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text3"
+	B,384,65,550,81,384,81,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,384,65,0,0,FONT,1,"Estacion",37,FONT,1,"Estacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Equipo",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"Shape5"
+	B,723,111,555,63,723,111,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+O,END
+O,BEGIN,OCX,"CbxStateName"
+	B,569,87,711,107,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text4"
+	B,555,65,721,81,555,81,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,555,65,0,0,FONT,1,"Estacion",37,FONT,1,"Estacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estados",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,R,"btnSaveEventSeqScheduling"
+	B,272,256,160,232,272,256,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	AST,4,2,COLOR,1,COLOR,8,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text22"
+	B,160,231,271,255,160,255,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,160,231,0,0,FONT,1,"Guardar",37,FONT,1,"Guardar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guardar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"btnCancel"
+	B,472,231,584,255,472,255,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"txtCancel"
+		B,584,255,472,231,584,255,65535,0,6400,0,2,1,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,8,0,COLOR,2,0,COLOR,2,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,T,"Text23"
+		B,480,234,576,250,480,250,65535,0,6400,0,2,1,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		PP,1,480,234,0,0,FONT,1,"Cancelar",37,FONT,1,"Cancelar",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Cancelar",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+O,END

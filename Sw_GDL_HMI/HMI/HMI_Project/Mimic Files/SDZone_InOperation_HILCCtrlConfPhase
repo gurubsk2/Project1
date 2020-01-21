@@ -1,0 +1,634 @@
+ASCII32,6,4,2016,18:57,33,1.1
+W,BEGIN,"SDZone_InOperation_HILCCtrlConfPhase","SDZoneInOperationHILCCtrlConfPhase"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,0
+	SIZE,265,100,265,100,0,0,0,1280,1024,265,100
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"SDZone_InOperation_HILCCtrlConfPhase.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  SDZone InOperation HILC Ctrl ConfPhase
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*      - the combo box containing the list of names of secondary detection zones belonging
+	'*        to the track plan
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                July '08
+	'* Change:              All
+	
+	'* Author:              Danish Draboo
+	'* Date:                Oct '08
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              Fix anomalies
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              CR ALPHA 118291
+	'*                      Modify FillComboBox subroutine
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                Dec '08
+	'* Change:              CR ALPHA 119218
+	'*                      Remove OPC_HILCConfirmation and OPC_HILCConfirmationreturnCode variables
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '10
+	'* Change:              CR ALPHA 185097
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION (Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* *********************
+	Option Explicit
+	
+	'* Constants
+	'*******************************************************
+	Private Const c_strServerSeparator As String = ":"
+	Private Const c_strSeparator As String = "\n"
+	
+	Private Const c_strHILCType As String = "TrackSection"
+	Private Const c_strID As String = "ID"
+	Private Const c_strName As String = "Name"
+	Private Const c_strArea As String = "Area"
+	
+	Private Const c_strDevicesListTag As String = "IconisHMI.TrackSectionsList.Value"
+	Private Const c_strHILCCtrlName As String = ".HILC."
+	
+	'* OPC variables
+	'*******************************************************
+	Dim WithEvents m_OPC_DevicesNamesList As Variable
+	
+	Dim WithEvents m_OPC_ZoneID As Variable
+	Dim WithEvents m_OPC_DestinationSSTy As Variable
+	Dim WithEvents m_OPC_DestinationLogID As Variable
+	Dim WithEvents m_OPC_DestinationSSID As Variable
+	
+	'* SubRoutine: Mimic_Open
+	'*      Adds the OPC variable to the collection of all permanently subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	   
+	    Dim strClusterName As String
+	    
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    '* Add a variable containing the OPC variable name of the device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%", fvVariableTypeText
+	    
+	    '* Add and init a variable containing the UEID of the device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseZoneID%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneID%").Value = -1
+	    
+	    '* Add and init a variable containing the DestinationSSTy associated to device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseDestinationSSTy%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSTy%").Value = -1
+	     
+	    '* Add and init a variable containing the DestinationLogID associated to device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseDestinationLogID%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationLogID%").Value = -1
+	    
+	    '* Add and init a variable containing the DestinationSSID associated to device
+	    '* selected by the operator in the combo box
+	    Variables.Add ThisMimic.Branch & ".ConfPhaseDestinationSSID%", fvVariableTypeRegister
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSID%").Value = -1
+	    
+	    '* Add a variable containing the OPC variable names of each device
+	    '* belonging to the track plan
+	    Variables.Add ThisMimic.Branch & ".ListOfOPCVarNames%", fvVariableTypeText
+	   
+	    '* Add variable containing the list of devices to the list of variables
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    
+	    Set m_OPC_DevicesNamesList = Variables.Add(strClusterName & c_strDevicesListTag, fvVariableTypeText)
+	    If ((m_OPC_DevicesNamesList.Status = fvVariableStatusGood) And (m_OPC_DevicesNamesList.EnableEvents = True)) Then
+	        m_OPC_DevicesNamesList_ValueChange
+	    Else
+	        m_OPC_DevicesNamesList.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'*      Unsubscribe the OPC variables previously subscribed
+	'* ******************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseZoneID%")
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%")
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseDestinationSSTy%")
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseDestinationLogID%")
+	    Variables.Remove (ThisMimic.Branch & ".ConfPhaseDestinationSSID%")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".ListOfOPCVarNames%")
+	       
+	    If Not (m_OPC_DevicesNamesList Is Nothing) Then
+	        Variables.Remove (m_OPC_DevicesNamesList.Name)
+	        Set m_OPC_DevicesNamesList = Nothing
+	    End If
+	
+	    If Not (m_OPC_ZoneID Is Nothing) Then
+	        Variables.Remove (m_OPC_ZoneID.Name)
+	        Set m_OPC_ZoneID = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationSSTy Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationSSTy.Name)
+	        Set m_OPC_DestinationSSTy = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationLogID Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationLogID.Name)
+	        Set m_OPC_DestinationLogID = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationSSID Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationSSID.Name)
+	        Set m_OPC_DestinationSSID = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Function: IsValidData
+	'*      Check if value of all OPC variables has been received
+	'* ******************************************************************************************
+	Private Function IsValidData() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "IsValidData", "Begin Function")
+	    
+	    IsValidData = ((Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%").Value <> "") And _
+	                   (Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneID%").Value > -1) And _
+	                   (Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSTy%").Value > -1) And _
+	                   (Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationLogID%").Value > -1) And _
+	                   (Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSID%").Value > -1))
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "IsValidData", Err.Description)
+	End Function
+	
+	'* SubRoutine: EnableOKButton
+	'*      Enable the OK button if conditions are fullfilled
+	'* ******************************************************************************************
+	Private Sub EnableOKButton()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "EnableOKButton", "Begin Subroutine")
+	    
+	    '* Check if values of all OPC variables have been received
+	    If (IsValidData = True) Then
+	        '* Enable the OK button
+	        Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = False
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableOKButton", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_DevicesNamesList_ValueChange
+	'*      Manages filling of the Combo box
+	'* ******************************************************************************************
+	Private Sub m_OPC_DevicesNamesList_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	    If (m_OPC_DevicesNamesList.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "The status of " & m_OPC_DevicesNamesList.Name & " is Waiting")
+	    ElseIf (m_OPC_DevicesNamesList.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "The status of " & m_OPC_DevicesNamesList.Name & " is Config Error")
+	    ElseIf (m_OPC_DevicesNamesList.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "The status of " & m_OPC_DevicesNamesList.Name & " is Not Connected")
+	    ElseIf (m_OPC_DevicesNamesList.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", "The Quality of " & m_OPC_DevicesNamesList.Name & " is not good")
+	    Else '* Fill the combo box
+	        FillComboBox
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DevicesNamesList_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: AddOPCVariables
+	'*      Add OPC variables used in the building of the confirmation message
+	'*      and decoding of the Confirmation Return Code message
+	'* ******************************************************************************************
+	Private Sub AddOPCVariables(ByVal strOPCVarName As String)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "AddOPCVariables", "Begin Subroutine")
+	  
+	    Dim strClusterName As String
+	    Dim strOPCVarPath As String
+	   
+	    If Not (m_OPC_ZoneID Is Nothing) Then
+	        Variables.Remove (m_OPC_ZoneID.Name)
+	        Set m_OPC_ZoneID = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationSSTy Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationSSTy.Name)
+	        Set m_OPC_DestinationSSTy = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationLogID Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationLogID.Name)
+	        Set m_OPC_DestinationLogID = Nothing
+	    End If
+	    
+	    If Not (m_OPC_DestinationSSID Is Nothing) Then
+	        Variables.Remove (m_OPC_DestinationSSID.Name)
+	        Set m_OPC_DestinationSSID = Nothing
+	    End If
+	            
+	   '* Extract the cluster name from the branch of the mimic
+	    strClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    
+	    '* Add the variable UEID.Value
+	    Set m_OPC_ZoneID = Variables.Add(strClusterName & strOPCVarName & ".UEID.Value", fvVariableTypeRegister)
+	    If ((m_OPC_ZoneID.Status = fvVariableStatusGood) And (m_OPC_ZoneID.EnableEvents = True)) Then
+	        m_OPC_ZoneID_ValueChange
+	    Else
+	        m_OPC_ZoneID.EnableEvents = True
+	    End If
+	    
+	    '* Build the common path of the following OPC variables
+	    strOPCVarPath = strClusterName & strOPCVarName & c_strHILCCtrlName
+	    
+	    '* Add the variable HILC.DestinationSSTy.Value
+	    Set m_OPC_DestinationSSTy = Variables.Add(strOPCVarPath & "DestinationSSTy.Value", fvVariableTypeText)
+	    If ((m_OPC_DestinationSSTy.Status = fvVariableStatusGood) And (m_OPC_DestinationSSTy.EnableEvents = True)) Then
+	        m_OPC_DestinationSSTy_ValueChange
+	    Else
+	        m_OPC_DestinationSSTy.EnableEvents = True
+	    End If
+	    
+	    '* Add the variable HILC.DestinationLogID.Value
+	    Set m_OPC_DestinationLogID = Variables.Add(strOPCVarPath & "DestinationLogID.Value", fvVariableTypeText)
+	    If ((m_OPC_DestinationLogID.Status = fvVariableStatusGood) And (m_OPC_DestinationLogID.EnableEvents = True)) Then
+	        m_OPC_DestinationLogID_ValueChange
+	    Else
+	        m_OPC_DestinationLogID.EnableEvents = True
+	    End If
+	    
+	    '* Add the variable HILC.DestinationSSID.Value
+	    Set m_OPC_DestinationSSID = Variables.Add(strOPCVarPath & "DestinationSSID.Value", fvVariableTypeText)
+	    If ((m_OPC_DestinationSSID.Status = fvVariableStatusGood) And (m_OPC_DestinationSSID.EnableEvents = True)) Then
+	        m_OPC_DestinationSSID_ValueChange
+	    Else
+	        m_OPC_DestinationSSID.EnableEvents = True
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "AddOPCVariables", Err.Description)
+	End Sub
+	
+	'* SubRoutine: ComboBoxDeviceNames_Change
+	'*      Manages getting the value selected in the combo box
+	'* ******************************************************************************************
+	Private Sub ComboBoxDeviceNames_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxDeviceNames_Change", "Begin Subroutine")
+	    
+	    '* Disable the OK button
+	    Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%").Value = True
+	     
+	    '* Reset memorized value of all OPC variables
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%").Value = ""
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneID%").Value = -1
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSTy%") = -1
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationLogID%") = -1
+	    Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSID%") = -1
+	    
+	    If (ComboBoxDeviceNames.ListIndex > -1) Then
+	        Dim OPCVarNamesArray() As String
+	        Dim strOPCVarName As String
+	    
+	        '* Build an arry with the list of OPC variable names associated to devices
+	        OPCVarNamesArray = Split(Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value, c_strSeparator)
+	        If (UBound(OPCVarNamesArray) > 0) Then
+	            '* Retrieve the OPC variable name associated to the device selected by the operator
+	            strOPCVarName = OPCVarNamesArray(ComboBoxDeviceNames.ListIndex)
+	            
+	            '* Memorize the OPC variable name of the selected device
+	            Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneOPCVarName%").Value = strOPCVarName
+	           
+	            '* Add OPC variables used in the building of the Confirmation message
+	            '* and decoding of the Confirmation Return Code message
+	            AddOPCVariables strOPCVarName
+	           
+	            '* Enable the "OK" button
+	            EnableOKButton
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxDeviceNames_Change", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: FillComboBox
+	'*    Read the xml string containing the names of the devices belonging to the track plan
+	'*    Fill the combo box
+	'*    Memorizes the list of OPC variable names of each device belonging to the track plan
+	'* ******************************************************************************************
+	Private Sub FillComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBox", "Begin Subroutine")
+	    
+	    Dim strXML As String
+	    
+	    '* Clear the combo box
+	    ComboBoxDeviceNames.Clear
+	    '* Reset the property Value of the combo box
+	    ComboBoxDeviceNames.Value = ""
+	    '* Disable the combo box
+	    ComboBoxDeviceNames.Enabled = False
+	    
+	    strXML = m_OPC_DevicesNamesList.Value
+	    If (strXML <> "") Then
+	        Dim oDoc As DOMDocument
+	  
+	        Set oDoc = New DOMDocument
+	        '* Open the XMl file
+	        If (oDoc.loadXML(strXML)) Then
+	            Dim FirstNodeLevel As IXMLDOMNodeList
+	           
+	            Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strHILCType)
+	            If (FirstNodeLevel.length <> 0) Then
+	                Dim oNodeClass As IXMLDOMNode
+	                Dim strName As String
+	                Dim strVariableName As String
+	                Dim strAreaName As String
+	                    
+	                For Each oNodeClass In FirstNodeLevel
+	                    Dim oAttrDevice As IXMLDOMAttribute
+	                
+	                    strName = ""
+	                    strVariableName = ""
+	                    strAreaName = ""
+	                    For Each oAttrDevice In oNodeClass.Attributes
+	                        If (StrComp(oAttrDevice.nodeName, c_strName, vbTextCompare) = 0) Then
+	                            strName = oAttrDevice.nodeValue
+	                        ElseIf (StrComp(oAttrDevice.nodeName, c_strID, vbTextCompare) = 0) Then
+	                            strVariableName = oAttrDevice.nodeValue
+	                        ElseIf (StrComp(oAttrDevice.nodeName, c_strArea, vbTextCompare) = 0) Then
+	                            strAreaName = oAttrDevice.nodeValue
+	                        End If
+	                    Next
+	                    If ((strName <> "") And (strVariableName <> "") And (strAreaName <> "")) Then
+	                        If (StrComp(strAreaName, Variables.Item(ThisMimic.Branch & ".PrepPhaseZoneAreaName%").Value, vbTextCompare) = 0) Then
+	                            ComboBoxDeviceNames.AddItem (strName)
+	                            Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value = Variables.Item(ThisMimic.Branch & ".ListOfOPCVarNames%").Value & _
+	                                                                                             strVariableName & c_strSeparator
+	                        End If
+	                    End If
+	                Next
+	                If (ComboBoxDeviceNames.ListCount > 0) Then
+	                    '* Enable the combo box (if it exists at least one item)
+	                    ComboBoxDeviceNames.Enabled = True
+	                End If
+	            End If
+	            Set FirstNodeLevel = Nothing
+	        End If
+	        Set oDoc = Nothing
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBox", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_ZoneID_ValueChange
+	'*      For the variable associated to the OPC variable : UEID.Value
+	'* *******************************************************************************************
+	Private Sub m_OPC_ZoneID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_ZoneID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", "The Status of " & m_OPC_ZoneID.Name & " is waiting")
+	    ElseIf (m_OPC_ZoneID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", "The Status of " & m_OPC_ZoneID.Name & " is config Error")
+	    ElseIf (m_OPC_ZoneID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", "The Status of " & m_OPC_ZoneID.Name & " is not connected")
+	    ElseIf (m_OPC_ZoneID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", "The Quality of " & m_OPC_ZoneID.Name & " is not Good")
+	    Else '* Status and Quality are good
+	         Dim strTraceMsg As String
+	    
+	        strTraceMsg = "Value of ID : " & Format(m_OPC_ZoneID.Value)
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", strTraceMsg)
+	        
+	        '* Memorize the value
+	        Variables.Item(ThisMimic.Branch & ".ConfPhaseZoneID%").Value = m_OPC_ZoneID.Value
+	        
+	        '* Enable the "OK" button
+	        EnableOKButton
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ZoneID_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_DestinationSSTy_ValueChange
+	'*      For the variable associated to the OPC variable : HILC.DestinationSSTy.Value
+	'* *******************************************************************************************
+	Private Sub m_OPC_DestinationSSTy_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", "Begin Subroutine")
+	     
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_DestinationSSTy.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", "The Status of " & m_OPC_DestinationSSTy.Name & " is waiting")
+	    ElseIf (m_OPC_DestinationSSTy.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", "The Status of " & m_OPC_DestinationSSTy.Name & " is config Error")
+	    ElseIf (m_OPC_DestinationSSTy.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", "The Status of " & m_OPC_DestinationSSTy.Name & " is not connected")
+	    ElseIf (m_OPC_DestinationSSTy.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", "The Quality of " & m_OPC_DestinationSSTy.Name & " is not Good")
+	    Else '* Status and Quality are good
+	        Dim strTraceMsg As String
+	    
+	        strTraceMsg = "Value of DestinationSSTy : " & Format(m_OPC_DestinationSSTy.Value)
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", strTraceMsg)
+	        
+	        '* Memorize the value
+	        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSTy%") = m_OPC_DestinationSSTy.Value
+	        
+	        '* Enable the "OK" button
+	        EnableOKButton
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSTy_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_DestinationLogID_ValueChange
+	'*      For the variable associated to the OPC variable : HILC.DestinationLogID.Value
+	'* *******************************************************************************************
+	Private Sub m_OPC_DestinationLogID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_DestinationLogID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", "The Status of " & m_OPC_DestinationLogID.Name & " is waiting")
+	    ElseIf (m_OPC_DestinationLogID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", "The Status of " & m_OPC_DestinationLogID.Name & " is config Error")
+	    ElseIf (m_OPC_DestinationLogID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", "The Status of " & m_OPC_DestinationLogID.Name & " is not connected")
+	    ElseIf (m_OPC_DestinationLogID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", "The Quality of " & m_OPC_DestinationLogID.Name & " is not Good")
+	    Else '* Status and Quality are good
+	         Dim strTraceMsg As String
+	    
+	        strTraceMsg = "Value of DestinationLogID : " & Format(m_OPC_DestinationLogID.Value)
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", strTraceMsg)
+	        
+	        '* Memorize the value
+	        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationLogID%") = m_OPC_DestinationLogID.Value
+	        
+	        '* Enable the "OK" button
+	        EnableOKButton
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationLogID_ValueChange", Err.Description)
+	End Sub
+	
+	'* SubRoutine: m_OPC_DestinationSSID_ValueChange
+	'*      For the variable associated to the OPC variable : HILC.DestinationSSID.Value
+	'* *******************************************************************************************
+	Private Sub m_OPC_DestinationSSID_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_DestinationSSID.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", "The Status of " & m_OPC_DestinationSSID.Name & " is waiting")
+	    ElseIf (m_OPC_DestinationSSID.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", "The Status of " & m_OPC_DestinationSSID.Name & " is config Error")
+	    ElseIf (m_OPC_DestinationSSID.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", "The Status of " & m_OPC_DestinationSSID.Name & " is not connected")
+	    ElseIf (m_OPC_DestinationSSID.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", "The Quality of " & m_OPC_DestinationSSID.Name & " is not Good")
+	    Else '* Status and Quality are good
+	        Dim strTraceMsg As String
+	    
+	        strTraceMsg = "Value of DestinationSSID : " & Format(m_OPC_DestinationSSID.Value)
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", strTraceMsg)
+	        
+	        '* Memorize the value
+	        Variables.Item(ThisMimic.Branch & ".ConfPhaseDestinationSSID%") = m_OPC_DestinationSSID.Value
+	        
+	        '* Enable the "OK" button
+	        EnableOKButton
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DestinationSSID_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,256,92,7,8,256,92,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"Text1"
+	B,14,0,111,16,14,16,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,14,0,0,0,FONT,1,"Confirmation",37,FONT,1,"Confirmation",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmaci¢n",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text2"
+	B,40,27,133,43,40,43,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,40,27,0,0,FONT,1,"Zone",37,FONT,1,"Zone",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre DDS",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"ComboBoxDeviceNames"
+	B,40,45,214,69,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

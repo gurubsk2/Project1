@@ -1,0 +1,1077 @@
+ASCII32,26,9,2018,7:30,59,1.1
+W,BEGIN,"Signal_ContextualMenu_Depot","Signal_ContextualMenu"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,646,475
+	SIZE,228,220,228,220,0,0,0,1280,1024,228,220
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Signal_ContextualMenu"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Signal_ContextualMenu_Depot.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	Private Const c_Signal_Block_HILCCtrl As String = "Signal_Block_HILCCtrl"
+	Private Const c_Signal_Unblock_HILCCtrl As String = "Signal_Unblock_HILCCtrl"
+	
+	'* Declarations
+	'* ******************************************************
+	Private Const c_strRouteNameTag As String = ".HMIRouteRelease.Template.Name"
+	Private Const c_strBlockingTag As String = ".HMIBlocking.Template.iEqpState"
+	Private Const c_strSecurityTag As String = ".Detection.Template.Security"
+	Private Const c_strRouteTag As String = ".HMINormalRoute.Template.iEqpState"
+	    
+	    '* List of the local OPC variables
+	    '* ------------------------------------------------------
+	    
+	    '* List of the OPC plugs from the server
+	    '* ------------------------------------------------------
+	    Dim WithEvents m_OPC_Command As Variable
+	    Dim WithEvents m_OPCSet_Command As Iconis_CLS_OPCSet
+	    Dim m_OPC_Blocking As Variable
+	    Dim m_OPC_Security As Variable
+	    Dim m_OPC_RouteTag As Variable
+	    '* Variables
+	    '* ------------------------------------------------------
+	    Dim m_localbranch As String
+	    Dim m_ButtonClicked_Step1 As Boolean
+	    Dim m_ButtonClicked_Step2 As Boolean
+	    Dim m_RouteCount As Long
+	    
+	    '---------------------------------------------------------------------------------------
+	    ' Name:         Symbol_ClickEx
+	    ' Input:        none
+	    ' Output:       none
+	    ' Description:  manage the click event on the symbol
+	    '---------------------------------------------------------------------------------------
+	        
+	Private Sub btnMenuItem5_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdRouteCancel_Click", "Begin Subroutine")
+	        
+	        m_RouteCount = 0
+	        m_localbranch = ThisMimic.Branch
+	        
+	        m_ButtonClicked_Step1 = True
+	        m_ButtonClicked_Step2 = True
+	        
+	        ' Add the variable in the collection of all permanently subscribed variables
+	        Set m_OPC_Command = Variables.Add(m_localbranch & ".Destinations.Value", fvVariableTypeText)
+	        
+	        '* To Check the Security Plug
+	        If m_OPC_Security.Value = 63 Then Exit Sub
+	    
+	        If m_OPC_Command.EnableEvents = True Then
+	            m_OPC_Command_ValueChange
+	        Else
+	            m_OPC_Command.EnableEvents = True
+	        End If
+	     
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & ":" & m_localbranch, "cmdRouteCancel_ClickEx", Err.Description)
+	End Sub
+	
+	    '---------------------------------------------------------------------------------------
+	    ' Name:         m_OPC_Command_ValueChange
+	    ' Input:        none
+	    ' Output:       none
+	    ' Description:  Display of the Signal name in the title bar of the message box
+	    '---------------------------------------------------------------------------------------
+	    Private Sub m_OPC_Command_ValueChange()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name & ":" & m_localbranch, "m_OPC_Command_ValueChange", "Begin Subroutine")
+	    
+	        ' Check the status and the quality of the variable
+	        If Check_OPC_Variable(m_OPC_Command) Then
+	           Call Routedestruct
+	           Variables.Remove (m_localbranch & ".Destinations.Value")
+	        End If
+	    Exit Sub
+	    
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & ":" & m_localbranch, "m_OPC_Command_ValueChange", Err.Description)
+	    End Sub
+	    
+	    
+	    '---------------------------------------------------------------------------------------
+	    ' Name:         Routedestruct
+	    ' Input:        none
+	    ' Output:       none
+	    ' Description:  connect to the OPC set to send the command
+	    '---------------------------------------------------------------------------------------
+	    Private Sub Routedestruct()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name & ":" & m_localbranch, "Routedestruct", "Begin Subroutine")
+	    
+	        Dim oDoc As DOMDocument
+	        Dim oList As IXMLDOMNodeList
+	        Dim oSignalClass As IXMLDOMElement
+	        
+	        If (m_ButtonClicked_Step1 = True) Then
+	            m_ButtonClicked_Step1 = False
+	            
+	            If Not (m_OPCSet_Command Is Nothing) Then
+	                m_OPCSet_Command.Destroy
+	                Set m_OPCSet_Command = Nothing
+	            End If
+	            Set m_OPCSet_Command = Iconis_MOD_General.CreateNew_Iconis_CLS_OPCSet
+	        
+	            Dim strXml As String
+	            strXml = m_OPC_Command.Value
+	    
+	            Set oDoc = New DOMDocument
+	            If oDoc.loadXML(strXml) Then
+	                m_OPCSet_Command.Destroy
+	                Set oList = oDoc.documentElement.selectNodes("//Signal")
+	                m_RouteCount = 0
+	                For Each oSignalClass In oList
+	                    Dim strRouteID As String
+	                    strRouteID = oSignalClass.getAttribute("RouteID")
+	                    m_OPCSet_Command.AddItem MOD_Deployment.CBTCLevel1Cluster & strRouteID & ".Releasable.Template.iEqpState", fvVariableTypeRegister, c_OPCReadOnly
+	                    m_OPCSet_Command.AddItem MOD_Deployment.CBTCLevel1Cluster & strRouteID & ".Detection.Template.iCommand", fvVariableTypeRegister, c_OPCWriteOnly
+	                    m_RouteCount = m_RouteCount + 1
+	                Next oSignalClass
+	            End If
+	            Set oDoc = Nothing
+	            
+	            m_OPCSet_Command.DoConnect ("RoutesFromSignal_" + m_localbranch)
+	        End If
+	               
+	        
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & ":" & m_localbranch, "Routedestruct", Err.Description)
+	    End Sub
+	       
+	    '---------------------------------------------------------------------------------------
+	    ' Name:         m_OPCSet_Command_OnConnection
+	    ' Input:        none
+	    ' Output:       none
+	    ' Description:  manage the connection of the OPC set to send the command
+	    '---------------------------------------------------------------------------------------
+	    Private Sub m_OPCSet_Command_OnConnection(arrValue() As Variant, arrStatus() As fvVariableStatus)
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name & ":" & m_localbranch, "m_OPCSet_Command_OnConnection", "Begin Subroutine")
+	    
+	        Dim i As Long
+	        
+	        If (m_ButtonClicked_Step2 = True) Then
+	            m_ButtonClicked_Step2 = False
+	            For i = 0 To (m_RouteCount - 1)
+	                'Check if the information is a Route or a Route Sequence
+	                If (m_OPCSet_Command.Item(2 * i).Value = 0) Then
+	                    m_OPCSet_Command.Item((2 * i) + 1).Value = 0
+	                End If
+	            Next i
+	        End If
+	       ThisMimic.Close fvDoNotSaveChanges
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name & ":" & m_localbranch, "m_OPCSet_Command_OnConnection", Err.Description)
+	    End Sub
+	
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	Variables.Item(ThisMimic.Branch & ".blinking%").Value = False
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose()", Err.Description)
+	End Function
+	
+	Private Sub Mimic_Open()
+	    Dim iMonitor As Integer
+	    Dim iItem As Integer
+	    Dim iItemTop As Integer
+	    Dim iItemLine As Integer
+	    On Error GoTo ErrorHandler
+	
+	    iMonitor = Abs(Int((Me.Windows(1).Left / System.HorizontalResolution) * -1))
+	    If Me.Windows(1).Top > System.VerticalResolution - Me.Windows(1).Height - 10 Then _
+	       Me.Windows(1).Top = System.VerticalResolution - Me.Windows(1).Height - 10
+	    If Me.Windows(1).Left > (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10 Then _
+	       Me.Windows(1).Left = (System.HorizontalResolution * iMonitor) - Me.Windows(1).Width - 10
+	
+	If Variables.Item("Useracesscommand%") Is Nothing Then Variables.Add "Useracesscommand%", fvVariableTypeBit
+	    [Useracesscommand%] = True
+	  
+	    'Hide all itens
+	    ThisMimic.Graphics("btnMenuLine1").Top = -100
+	    ThisMimic.Graphics("btnMenuLine2").Top = -100
+	    For iItem = 1 To 5
+	        ThisMimic.Graphics("btnMenuItem" & iItem).Top = -100
+	    Next
+	
+	    'Show itens
+	    If Variables.Item("Useracesscommand%").Value = True Then
+	        iItemTop = 24
+	        iItemLine = 1
+	        For iItem = 1 To 5
+	            If iItem = 3 Or iItem = 5 Then
+	                ThisMimic.Graphics("btnMenuLine" & iItemLine).Top = iItemTop
+	                iItemTop = iItemTop + 4
+	                iItemLine = iItemLine + 1
+	            End If
+	            ThisMimic.Graphics("btnMenuItem" & iItem).Top = iItemTop
+	            iItemTop = iItemTop + 28
+	        Next
+	    End If
+	  
+	    'Show inspector panel and line
+	    ThisMimic.Graphics("btnMenuInspPanelLine").Top = iItemTop + 15
+	    iItemTop = iItemTop + 18
+	    ThisMimic.Graphics("btnMenuInspPanel").Top = iItemTop
+	    Me.Windows(1).Height = iItemTop + 30
+	
+	
+	
+	
+	    Call Variables.Add(ThisMimic.Branch & ".Detection.Template.iEqpState", fvVariableTypeRegister)
+	    '[@UserAccessCommand%] = True
+	'    lblMenuTitle.Text = "Se¤al " & Variables(ThisMimic.Branch & ".Name%").Value
+	    lblMenuTitle.Text = "Se¤al " & Variables(ThisMimic.Branch & ".shortname%").Value
+	    Set m_OPC_Blocking = Variables.Add(ThisMimic.Branch & c_strBlockingTag, fvVariableTypeRegister)
+	    Set m_OPC_Security = Variables.Add(ThisMimic.Branch & c_strSecurityTag, fvVariableTypeRegister)
+	    Set m_OPC_RouteTag = Variables.Add(ThisMimic.Branch & c_strRouteTag, fvVariableTypeRegister)
+	    Variables.Add(ThisMimic.Branch & ".Blocking%").Value = 1
+	    'Set Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	    
+	    If Check_OPC_Variable(m_OPC_Blocking) And Variables.Item(ThisMimic.Branch & ".HMIBlocking.Template.iEqpState").Value = 1 Then
+	        Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	        ThisMimic.btnMenuItem1.Text = "Bloquear..."
+	    ElseIf Variables.Item(ThisMimic.Branch & ".HMIBlocking.Template.iEqpState").Value = 2 Then
+	        Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	        ThisMimic.btnMenuItem1.Text = "Desbloquear..."
+	    End If
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 1
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Blocking%").Value = True
+	     Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = True
+	     
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Blocking%").Value = False
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = False
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem1_Click()
+	    On Error GoTo ErrorHandler
+	 Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem1_Click", "Begin Subroutine")
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	    If Check_OPC_Variable(m_OPC_Security) Then
+	        If m_OPC_Security.Value = 63 Then Exit Sub
+	    End If
+	    If m_OPC_Blocking.Value = 1 Then
+	        Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	        Call OpenMimicInCenter(c_Signal_Block_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	       
+	    ElseIf m_OPC_Blocking.Value = 2 Then
+	        Variables.Item(ThisMimic.Branch & ".Blocking%").Value = 1
+	        Call OpenMimicInCenter(c_Signal_Unblock_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	      
+	    End If
+	    ThisMimic.Close
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem1_Click", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 2
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem2_Click()
+	    On Error GoTo ErrorHandler
+	
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	'    If Variables.Item(ThisMimic.Branch & ".Detection.Template.Security").Value <> 0 Or Not [@UserAccessCommand%] Then Exit Sub
+	'    MOD_SP_Funcoes.OpenMimicCommand "Route_SetCtrl", Me.Branch, 415, 260, True
+	
+	'* To Check the Security Plug
+	        If m_OPC_Security.Value = 63 Then Exit Sub
+	        If Check_OPC_Variable(m_OPC_RouteTag) Then
+	            If m_OPC_RouteTag.Value = 0 Then
+	                Call OpenMimicInCenter("Route_SetCtrl_Depot", ThisMimic.Branch, Getmousepointerpossition)
+	            End If
+	        End If
+	        'Mimics.OpenInCenter "Route_SetCtrl_Depot", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_Click", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 3
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem3_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item3Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem3_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem3_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item3Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem3_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem3_Click()
+	    On Error GoTo ErrorHandler
+	
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	'    If Variables.Item(ThisMimic.Branch & ".Detection.Template.Security").Value <> 0 Or Not [@UserAccessCommand%] Then Exit Sub
+	'    MOD_SP_Funcoes.OpenMimicCommand "Route_BlockCtrl", Me.Branch, 415, 250, True
+	'    ActiveMimic.Tag = "Block"
+	'    ThisMimic.Close fvDoNotSaveChanges
+	
+	    m_bRouteBlockingCmd = True
+	    If m_OPC_Security.Value = 63 Then Exit Sub
+	     'Mimics.OpenInCenter "Route_BlockCtrl_Depot", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	     Call OpenMimicInCenter("Route_BlockCtrl_Depot", ThisMimic.Branch, Getmousepointerpossition)
+	    'ThisMimic.Caption = "Bloquear Itinerario"
+	    ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem3_Click", Err.Description)
+	End Sub
+	
+	
+	
+	'* Menu Item 4
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem4_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item4Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem4_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem4_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item4Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem4_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem4_Click()
+	    On Error GoTo ErrorHandler
+	    
+	    '=(@Plug% == 0) and (@UserAccessCommand%)
+	'    If Variables.Item(ThisMimic.Branch & ".Detection.Template.Security").Value <> 0 Or Not [@UserAccessCommand%] Then Exit Sub
+	'    MOD_SP_Funcoes.OpenMimicCommand "Route_BlockCtrl", Me.Branch, 415, 250, True
+	'    ActiveMimic.Tag = "UnBlock"
+	'    ThisMimic.Close fvDoNotSaveChanges
+	
+	m_bRouteBlockingCmd = False
+	If m_OPC_Security.Value = 63 Then Exit Sub
+	'Mimics.OpenInCenter "Route_BlockCtrl_Depot", ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	Call OpenMimicInCenter("Route_BlockCtrl_Depot", ThisMimic.Branch, Getmousepointerpossition)
+	'ThisMimic.Caption = "De-Bloquear Itinerario"
+	ThisMimic.Close fvDoNotSaveChanges
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem4_Click", Err.Description)
+	End Sub
+	
+	'* Menu Item 5
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem5_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item5Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem5_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem5_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item5Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem5_MouseLeave", Err.Description)
+	End Sub
+	
+	'* Menu Item 6
+	'* ---------------------------------------------------
+	Private Sub btnMenuItem6_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Item6Visible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem6_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem6_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item6Visible%").Value = False
+	   
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem6_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem6_Click()
+	    On Error GoTo ErrorHandler
+	    'Exit if no TAS
+	    If m_OPC_Security.Value = 63 Then Exit Sub
+	    
+	    If Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0 Then
+	        If ModalQuestion("¨Confirma que desea poner" & Chr(10) & "la se¤al en mantenimiento?", "Senal " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 1
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIApproachLocking.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIFilament.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILampCommand.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILampCommandPermissive.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILampCommandRestrictive.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILampProvedPermissive.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILampProvedRestrictive.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMINormalRoute.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIPermanentRoute.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIRouteRelease.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIRouteSignal.Template.bIsOn").Value = 0
+	        End If
+	    Else
+	        If ModalQuestion("¨Confirma que desea retirar" & Chr(10) & "la se¤al del mantenimiento?", "Senal " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIApproachLocking.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIFilament.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILampCommand.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILampCommandPermissive.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILampCommandRestrictive.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILampProvedPermissive.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILampProvedRestrictive.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMINormalRoute.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIPermanentRoute.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIRouteRelease.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIRouteSignal.Template.bIsOn").Value = 1
+	        End If
+	    End If
+	    ThisMimic.Close fvDoNotSaveChanges
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem6_Click", Err.Description)
+	End Sub
+	
+	
+	'* Inspector panel
+	'* --------------------------------------------------
+	Private Sub btnMenuInspPanel_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".ItemInspectorPanelVisible%").Value = True
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuInspPanel_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuInspPanel_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    
+	    Variables.Item(ThisMimic.Branch & ".ItemInspectorPanelVisible%").Value = False
+	
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuInspPanel_MouseLeave", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuInspPanel_Click()
+	    On Error GoTo ErrorHandler
+	
+	    MOD_SP_Funcoes.OpenMimicCommand "Signal_InspectorPanel_Depot", Me.Branch, 427, 285, True
+	    ThisMimic.Close fvDoNotSaveChanges
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuInspPanel_MouseLeave", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,0,0,255,0,0,0
+	COLOR,4,122,122,122,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,0,0,0,0,38,0
+	COLOR,7,0,0,0,0,40,0
+	COLOR,8,191,191,191,0,0,0
+	COLOR,9,238,238,238,0,0,0
+	COLOR,10,192,192,192,0,0,0
+	COLOR,11,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,T,"btnMenuItem5"
+	B,3,144,224,168,3,168,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,144,5,0,FONT,1,"QNRE...",36,FONT,1,"QNRE...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar itinerario",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Cancelar itinerario",FONT,1,36
+			ROLE,0,"Cancelar itinerario",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=(HMIRouteRelease.Template.Security<63)And((HMINormalRoute.Template.iEqpState==2))","Item5Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem1"
+	B,3,24,224,48,3,48,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,24,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Desbloquear...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Desbloquear...",FONT,1,36
+			ROLE,0,"Desbloquear...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"SignalExtremityType%",1,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim1",0,0,"",""
+		PP,"=((Blocking%)AND(Detection.Template.Security<63))","Item1Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,8,COLOR,8,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"btnMenuLine1"
+	B,0,80,280,81,0,81,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,81,280,81,0,81,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,81,280,81
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,80,280,80,0,80,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,11,COLOR,11,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,80,280,80
+	O,END
+O,END
+O,BEGIN,T,"lblMenuTitle"
+	B,18,5,103,21,18,21,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+	PP,0,18,5,5,0,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36,FONT,1,"Autoriza‡Ýo de Partida (AP)...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Se¤al 02RS",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Se¤al 02RS",FONT,1,36
+			ROLE,0,"Se¤al 02RS",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnMenuItem4"
+	B,3,112,224,136,3,136,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,112,5,0,FONT,1,"Avisa Partida Iminente (Sin.Son.)",36,FONT,1,"Avisa Partida Iminente (Sin.Son.)",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Desbloquear itinerario...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Desbloquear itinerario..",FONT,1,36
+			ROLE,0,"Desbloquear itinerario..",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item4Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"btnMenuLine2"
+	B,0,140,280,141,0,141,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,141,280,141,0,141,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,141,280,141
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,140,280,140,0,140,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,11,COLOR,11,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,140,280,140
+	O,END
+O,END
+O,BEGIN,T,"btnMenuItem2"
+	B,3,52,224,76,3,76,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,52,5,0,FONT,1,"Tempo de Parada...",36,FONT,1,"Tempo de Parada...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Establecer itinerario...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Establecer itinerario...",FONT,1,36
+			ROLE,0,"Establecer itinerario...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=((HMINormalRoute.Template.iEqpState==0)AND(Detection.Template.Security<63))","Item2Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem3"
+	B,3,84,224,108,3,108,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,84,5,0,FONT,1,"Pr¢xima Partida (Motivo)",36,FONT,1,"Pr¢xima Partida (Motivo)",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Bloquear itinerario...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Bloquear itinerario..",FONT,1,36
+			ROLE,0,"Bloquear itinerario..",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item3Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuInspPanel"
+	B,3,190,224,214,3,214,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,3,190,5,0,FONT,1,"Painel de Inspe‡Ýo...",36,FONT,1,"Painel de Inspe‡Ýo...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Panel de inspecci¢n...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Panel de inspecci¢n...",FONT,1,36
+			ROLE,0,"Panel de inspecci¢n...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"ItemInspectorPanelVisible%"
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,1,COLOR,1
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem6"
+	B,2,166,223,190,2,190,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,2,166,5,0,FONT,1,"Cancelar itinerario",36,FONT,1,"Cancelar itinerario",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mantenimiento poner...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Mantenimiento poner...",FONT,1,36
+			ROLE,0,"Mantenimiento poner...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"INHIBIT.Status.Value",""
+		ADVFORMAT,2,"[=0]\'Mantenimiento poner...\';\'Mantenimiento retirar...\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'Mantenimiento poner...\';\'Mantenimiento retirar...\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Not used%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,CBW,"Anim4",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item6Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"btnMenuInspPanelLine"
+	B,0,187,280,188,0,188,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,188,280,188,0,188,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,9,COLOR,9,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,188,280,188
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,187,280,187,0,187,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,11,COLOR,11,0,0,COLOR,10,0,COLOR,10,0,COLOR,1,0,COLOR,1
+		PP,0,187,280,187
+	O,END
+O,END

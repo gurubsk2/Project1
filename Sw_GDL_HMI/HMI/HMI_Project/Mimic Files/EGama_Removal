@@ -1,0 +1,318 @@
+ASCII32,12,6,2018,12:47,21,1.1
+W,BEGIN,"EGama_Removal","EGama_Removal"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,820,474
+	SIZE,278,248,278,248,0,0,0,1280,1024,272,223
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Zona Gama"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,1
+	GRID,1,0,8,8,0,0,0,0,35,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"EGama_Removal.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	Private Const c_strEGamaValue As String = ".ElementaryGamaList.String.Value"
+	Private Const c_strEGamaRemoval_Value As String = ".EGAMARemoval.Value"
+	Private Const c_command As Integer = 1
+	Private Const c_strButtonCloseTag As String = "ButtonCloseVisible%"
+	Private Const c_strButtonOKTag As String = ".ButtonOKDisabled%"
+	
+	Dim WithEvents m_OPC_EGamaValue As Variable
+	Dim WithEvents m_OPC_EGamaRemoval As Variable
+	Dim m_EGama_Value As String
+	
+	
+	Private Sub btnOK_Click()
+	On Error GoTo ErrorHandler
+	
+	        If (Check_Variable(m_OPC_EGamaRemoval)) Then
+	            
+	                m_OPC_EGamaRemoval.Value = 1
+	                         Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%") = False
+	                        Variables.Item(ThisMimic.Branch & ".ButtonCloseVisible%") = True
+	                         Variables.Item(ThisMimic.Branch & ".ButtonOKDisabled%") = True
+	            
+	        End If
+	        ThisMimic.Close
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdInverted_Click", Err.Description)
+	End Sub
+	
+	Private Sub m_OPC_EGamaValue_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_EGamaValue_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the Quality of the Variable
+	    If Check_Variable(m_OPC_EGamaValue, ThisMimic.Name) Then
+	       
+	        Set m_OPC_EGamaRemoval = Variables.Add(ThisMimic.Branch & "." & m_OPC_EGamaValue.Value & c_strEGamaRemoval_Value, fvVariableTypeText)
+	       
+	    End If
+	    
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_EGamaValue_ValueChange", Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	            Remove_OPC_Variable (m_OPC_EGamaValue)
+	            Remove_OPC_Variable (m_OPC_EGamaRemoval)
+	
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	    End Function
+	
+	
+	'* SubRoutine: Mimic_Open
+	    '* ******************************************************************************************
+	    Private Sub Mimic_Open()
+	    On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	  
+	        Dim objMimic As Mimic
+	        '* Close any other Inspector Panel mimic opened for another switch
+	        For Each objMimic In Application.ActiveProject.Mimics
+	            If (objMimic.FileName Like ThisMimic.FileName) Then
+	                If Not (objMimic.Branch = ThisMimic.Branch) Then
+	                    objMimic.Close
+	                End If
+	            End If
+	        Next
+	        
+	        Variables.Item(ThisMimic.Branch & ".ButtonCancelDisabled%") = True
+	        Set m_OPC_EGamaValue = Variables.Add(ThisMimic.Branch & c_strEGamaValue, fvVariableTypeText)
+	    If ((m_OPC_EGamaValue.Status = fvVariableStatusGood) And (m_OPC_EGamaValue.EnableEvents = True)) Then
+	        m_OPC_EGamaValue_ValueChange
+	    Else
+	        m_OPC_EGamaValue.EnableEvents = True
+	    End If
+	     
+	        
+	               
+	Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	    End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-11,0,400,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,215,215,215,0,0,0
+	COLOR,5,113,111,100,0,0,0
+	COLOR,6,191,191,191,0,0,0
+	COLOR,7,128,128,128,0,0,0
+	COLOR,8,122,122,122,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,261,117,2,15,261,117,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,1,3,COLOR,3,3,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtOriginSignal"
+	B,16,31,256,47,16,47,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,16,31,0,0,FONT,1,"Origin signal",37,FONT,1,"Origin signal",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirma la desactivaci¢n de GAMA",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtSignalName"
+	B,8,80,254,104,8,104,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,2,COLOR,4,0,COLOR,1,0,COLOR,1,0,COLOR,5,0,COLOR,5
+	PP,1,8,80,0,0,FONT,1," ",37,FONT,1," ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," ",FONT,3,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"OPCCluster:ElementaryGamaList.String.Value"
+	A,END
+O,END
+O,BEGIN,T,"txtOriginSignal1"
+	B,18,51,119,67,18,67,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,18,51,0,0,FONT,2,"Confirma la inhibicion de GAMA",37,FONT,2,"Confirma la inhibicion de GAMA",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"de esta zona?",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"txtOriginSignal2"
+	B,12,123,66,139,12,139,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,0,12,123,0,0,FONT,2,"de esta zona?",37,FONT,2,"de esta zona?",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estado",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Startsein",FONT,3,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,24,186,98,209,24,209,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,6,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,24,186,0,0,FONT,2,"Aceptar",37,FONT,2,"Aceptar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"OK",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonOKDisabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,8,COLOR,8
+		COL,1,COLOR,3,COLOR,3
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnCancelClose"
+	B,162,186,236,209,162,209,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,6,0,COLOR,7,0,COLOR,7,0,COLOR,1,0,COLOR,1
+	PP,1,162,186,0,0,FONT,2,"  ",37,FONT,2,"  ",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0," ",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"Notused%",0,0,0,0,0.000000
+	A,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"EGama_Removal","*"
+	A,END
+O,END
+O,BEGIN,T,"txtCancel"
+	B,169,186,230,209,169,209,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,169,186,0,0,FONT,2,"Cancelar",37,FONT,2,"Cancelar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Annuleer",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonCancelDisabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END
+O,BEGIN,T,"txtClose"
+	B,170,186,228,209,170,209,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,170,186,0,0,FONT,2,"Cerrar",37,FONT,2,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,2,37
+		LANG,END
+		LANG,BEGIN,1043
+			ROLE_DEFAULT,0
+			ROLE,0,"Sluiten",FONT,3,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonCloseVisible%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,3,COLOR,3
+	A,END
+O,END

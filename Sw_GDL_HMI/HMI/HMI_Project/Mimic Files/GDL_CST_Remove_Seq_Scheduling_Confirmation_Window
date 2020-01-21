@@ -1,0 +1,295 @@
+ASCII32,24,4,2017,15:31,16,1.1
+W,BEGIN,"GDL_CST_Remove_Seq_Scheduling_Confirmation_Window","GDL_CST_Remove_Sequence_Confirmation_Window"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,604,359
+	SIZE,380,190,380,190,0,0,0,1680,1050,374,162
+	BACKCOLOR,216,216,216,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Eliminar Linea"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,0,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,1,612,400
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_CST_Remove_Seq_Scheduling_Confirmation_Window.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2016. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      CST remove sequence confirmation window
+	'* *******************************************************************************************
+	'* Purpose:     To confirm the removing of sequence
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                April '17
+	'* Change:              All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* *******************************************************************************************
+	
+	Option Explicit
+	Dim sCurItem As String
+	Dim sCurEventItem As String
+	Const c_sStation As String = "@SEQUENCE"
+	Const c_sEvent As String = "@EVENT"
+	
+	Private Sub Button1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	 On Error GoTo ErrorHandler
+	    Variables.Item(Me.Branch & ".Button1Hover%").Value = True
+	 Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "mimic_Initialize", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Button1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	 On Error GoTo ErrorHandler
+	    Variables.Item(Me.Branch & ".Button1Hover%").Value = False
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "mimic_Initialize", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Button2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	 On Error GoTo ErrorHandler
+	    Variables.Item(Me.Branch & ".Button2Hover%").Value = True
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "mimic_Initialize", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Button2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	 On Error GoTo ErrorHandler
+	    Variables.Item(Me.Branch & ".Button2Hover%").Value = False
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Button2_MouseLeave", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub btnYes_Click()
+	 On Error GoTo ErrorHandler
+	 
+	 Dim iCount As Integer
+	 sCurItem = Variables.Item("@SelectedScheduleSeq%").Value
+	 If sCurItem > 0 Then
+	        Variables.Item(c_sStation & sCurItem & ".SeqName%").Value = ""
+	        Variables.Item(c_sStation & sCurItem & ".ExecutionTime%").Value = ""
+	        Variables.Item(c_sStation & sCurItem & ".SequenceStop%").Value = ""
+	        Variables.Item(c_sStation & sCurItem & ".Frequency%").Value = ""
+	       For iCount = sCurItem To 9
+	        
+	        Variables.Item(c_sStation & iCount & ".SeqName%").Value = Variables.Item(c_sStation & (iCount + 1) & ".SeqName%").Value
+	        Variables.Item(c_sStation & iCount & ".ExecutionTime%").Value = Variables.Item(c_sStation & (iCount + 1) & ".ExecutionTime%").Value
+	        Variables.Item(c_sStation & iCount & ".SequenceStop%").Value = Variables.Item(c_sStation & (iCount + 1) & ".SequenceStop%").Value
+	        Variables.Item(c_sStation & iCount & ".Frequency%").Value = Variables.Item(c_sStation & (iCount + 1) & ".Frequency%").Value
+	              
+	    Next iCount
+	        Variables.Item(c_sStation & (10) & ".SeqName%").Value = ""
+	        Variables.Item(c_sStation & (10) & ".ExecutionTime%").Value = ""
+	        Variables.Item(c_sStation & (10) & ".SequenceStop%").Value = ""
+	        Variables.Item(c_sStation & (10) & ".Frequency%").Value = ""
+	        
+	 End If
+	 sCurEventItem = Variables.Item("@SelectedScheduleEventSeq%").Value
+	    If sCurEventItem > 0 Then
+	        Variables.Item(c_sEvent & sCurEventItem & ".SeqName%").Value = ""
+	        Variables.Item(c_sEvent & sCurEventItem & ".ExecutionTime%").Value = ""
+	        Variables.Item(c_sEvent & sCurEventItem & ".SequenceStop%").Value = ""
+	       
+	       For iCount = sCurEventItem To 9
+	        
+	        Variables.Item(c_sEvent & iCount & ".SeqName%").Value = Variables.Item(c_sEvent & (iCount + 1) & ".SeqName%").Value
+	        Variables.Item(c_sEvent & iCount & ".ExecutionTime%").Value = Variables.Item(c_sEvent & (iCount + 1) & ".ExecutionTime%").Value
+	        Variables.Item(c_sEvent & iCount & ".SequenceStop%").Value = Variables.Item(c_sEvent & (iCount + 1) & ".SequenceStop%").Value
+	       
+	              
+	    Next iCount
+	        Variables.Item(c_sEvent & (10) & ".SeqName%").Value = ""
+	        Variables.Item(c_sEvent & (10) & ".ExecutionTime%").Value = ""
+	        Variables.Item(c_sEvent & (10) & ".SequenceStop%").Value = ""
+	      
+	        
+	 End If
+	 
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnYes_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Sub Mimic_Open()
+	 On Error GoTo ErrorHandler
+	Dim sTemp() As String
+	    'Call Variables.Add("@UpdateTable%", fvVariableTypeRegister)
+	    sCurItem = Variables.Item("@SelectedScheduleSeq%").Value
+	    sCurEventItem = Variables.Item("@SelectedScheduleEventSeq%").Value
+	    'miSelectedUser = Variables.Item("@SelectedUser%").Value
+	    Variables.Item(ThisMimic.Branch & ".Label_1%").Value = Replace(Me.Graphics.Item("LblMsg1").Text, "[Sequence No.]", sCurItem)
+	   Me.Graphics.Item("LblMsg1").Text = "You are about to remove the Sequence no. " & sCurItem & ", Are you sure?"
+	  
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "Exception:" & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,400,0,0,"Segoe UI",0,0
+	FONT,2,-12,0,400,0,0,"Tahoma",0,0
+	FONT,3,-12,0,700,0,0,"Segoe UI",0,0
+	FONT,4,-13,0,700,0,0,"Arial",0,0
+	FONT,5,-13,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,128,128,128,0,0,0
+	COLOR,4,64,64,64,0,0,0
+	COLOR,5,255,0,255,0,0,0
+	COLOR,6,192,192,192,0,0,0
+	COLOR,7,0,255,0,0,0,0
+	COLOR,8,0,0,0,0,0,1
+	COLOR,9,240,240,240,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,372,109,-7,0,372,109,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"btnYes"
+	B,185,127,264,151,185,151,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,185,127,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Yes",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"Button1Hover%"
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,T,"btnNo"
+	B,280,127,359,151,280,151,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,280,127,0,0,FONT,1,"",37,FONT,1,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"*","*"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"Button2Hover%"
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,4,COLOR,4
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,5,COLOR,5
+	A,END
+O,END
+O,BEGIN,T,"LblMsg1"
+	B,70,20,363,55,70,55,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,70,20,0,0,FONT,3,"",84,FONT,3,"",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Do you confirm the selected sequence/command elimination?",FONT,4,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Label_1%"
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,70,70,319,91,70,91,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	PP,1,70,70,0,0,FONT,1,"",84,FONT,1,"",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Please confirm.",FONT,5,84
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,BM,"Bitmap2"
+	B,23,20,54,51,23,51,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,9,0,COLOR,9,0,COLOR,2,0,COLOR,2
+	PP,"Icon question.bmp",0,COLOR,5
+O,END
+O,BEGIN,GRP,"Group1"
+	B,0,303,439,304,0,304,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,303,439,303,0,303,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,303,439,303
+	O,END
+	O,BEGIN,L,"Poly3"
+		B,0,304,439,304,0,304,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,304,439,304
+	O,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,0,110,379,111,0,111,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,110,379,110,0,110,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,110,379,110
+	O,END
+	O,BEGIN,L,"Poly3"
+		B,0,111,379,111,0,111,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,2,0,COLOR,2
+		PP,0,111,379,111
+	O,END
+O,END

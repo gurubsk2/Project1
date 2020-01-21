@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Author Vasanthn Dated: 11 July Description:List of InterStations for both Names -->
+<!-- same file for both Name-->
+<!-- for Station, Interstation Occurrence list-->
+<ROOT>
+	<STATIONS>
+		<STATION Name="TZA"/>
+		<STATION Name="BEL"/>
+		<STATION Name="MAR"/>
+		<STATION Name="BAS"/>
+		<STATION Name="PAT"/>
+		<STATION Name="CIR"/>
+		<STATION Name="FED"/>
+		<STATION Name="NOR"/>
+		<STATION Name="SAN"/>
+		<STATION Name="CID"/>
+		<STATION Name="IND"/>
+		<STATION Name="BAN"/>
+		<STATION Name="QCI"/>
+		<STATION Name="REV"/>
+		<STATION Name="NIL"/>   
+		<STATION Name="TLQ"/>
+		<STATION Name="NOD"/>
+		<STATION Name="TCC"/>
+	</STATIONS>
+	<INTERSTATIONS>
+		<INTERSTATION Name="TZA-BEL"/>
+		<INTERSTATION Name="BEL-MAR"/>
+		<INTERSTATION Name="MAR-BAS"/>
+		<INTERSTATION Name="BAS-PAT"/>
+		<INTERSTATION Name="PAT-CIR"/>
+		<INTERSTATION Name="CIR-FED"/>
+		<INTERSTATION Name="FED-NOR"/>
+		<INTERSTATION Name="NOR-SAN"/>
+		<INTERSTATION Name="SAN-CID"/>
+		<INTERSTATION Name="CID-IND"/>
+		<INTERSTATION Name="IND-BAN"/>
+		<INTERSTATION Name="BAN-QCI"/>
+		<INTERSTATION Name="QCI-REV"/>
+		<INTERSTATION Name="REV-NIL"/>
+		<INTERSTATION Name="NIL-TLQ"/>
+		<INTERSTATION Name="TLQ-NOD"/>
+		<INTERSTATION Name="NOD-TCC"/>
+	</INTERSTATIONS>
+	<OCCURRENCES>
+		<!--OCCURRENCE Name="Evacuati�n del tren"/-->
+		<!--OCCURRENCE Name="Fuego en tren"/-->
+		<!--OCCURRENCE Name="Socorro requerido al tren"/-->
+	</OCCURRENCES>
+</ROOT>

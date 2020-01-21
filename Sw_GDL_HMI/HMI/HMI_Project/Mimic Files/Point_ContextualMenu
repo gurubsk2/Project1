@@ -1,0 +1,908 @@
+ASCII32,26,9,2018,3:3,48,1.1
+W,BEGIN,"Point_ContextualMenu","Point_ContextualMenu"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,798,807
+	SIZE,228,209,228,557,0,0,0,1280,1024,228,209
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Point  PT_01_V1_TZA"
+		LANG,END
+		LANG,BEGIN,1046
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Platform_ContextualMenu"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Point  PT_07_DEP"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,0,0.000000,64.000000,0,65535,0,0
+	INCLUDED,1,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"Point_ContextualMenu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  Point Contextual Menu
+	'* *******************************************************************************************
+	'* Purpose:     It manages display of:
+	'*                  - items of the contextual menu,
+	'*                  - title (type, name of device and name of the switch) of the contextual
+	'*                    menu
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Danish Draboo
+	'* Date:                May '08
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                February '09
+	'* Change:              CR ALPHA 122248 and CR ALPHA 122766
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '10
+	'* Change:              CR ALPHA 177380
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '11
+	'* Change:              CR ALPHA 232879
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                May '11
+	'* Change:              CR ALPHA 232888
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	
+	'* Constants
+	'* ******************************************************
+	
+	Private Const c_strcommandTag As String = ".HMI.Template.iCommand"
+	Private Const c_strSecurityTag As String = ".Detection.Template.Security"
+	Private Const c_HMIBlockingTag As String = ".HMIBlocking.Template.iEqpState"
+	'* Used in the text of the title bar
+	Private Const c_strPointSwitchSeparator As String = " / "
+	
+	
+	Private Const c_Point_Block_HILCCtrl As String = "Point_Block_HILCCtrl"
+	Private Const c_Point_Unblock_HILCCtrl As String = "Point_Unblock_HILCCtrl"
+	'* Tag of the OPC variables
+	Private Const c_strDeviceNameTag As String = ".HMI.Template.Name"
+	'Private Const c_strSwitchName As String = ".SwitchName.Value"
+	
+	'* File name of the Inspector panel mimic
+	Private Const c_strInspectorPanelMimic As String = "Point_InspectorPanel"
+	
+	'* Module variables
+	'* ******************************************************
+	'* OPC variable containing the switch name corresponding to the point
+	Dim m_OPC_Command As Variable
+	Dim m_OPC_Security As Variable
+	Dim m_OPC_HMIBlockingTag As Variable
+	Dim Temp
+	Dim WithEvents m_OPC_SwitchName As Variable
+	
+	
+	
+	
+	'* Inspector panel
+	'* --------------------------------------------------
+	'* Subroutine: btnInspectorPanel_MouseEnter
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          enters the label
+	'* *****************************************************************************************
+	
+	Private Sub btnMenuInspPanel_ClickEx(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnInspectorPanel_ClickEx", "Begin subroutine")
+	    
+	     If (Button = 1) Then '* If mouse is left clicked
+	        Dim i As Long
+	       
+	        '* Open the Inspector Panel mimic in the center of the parent mimic
+	''        For i = 1 To ThisMimic.Parent.Mimics.Count
+	''            If (StrComp(ThisMimic.Parent.Mimics.Item(i).Name, ThisMimic.Tag, vbTextCompare) = 0) Then
+	''                ThisMimic.Parent.Mimics.Item(i).Activate
+	                Call OpenMimicInCenter(c_strInspectorPanelMimic, ThisMimic.Branch, Getmousepointerpossition)
+	                'Mimics.OpenInCenter c_strInspectorPanelMimic, ThisMimic.Branch, , , "*", , , fvCenterOnParent
+	''                Exit For
+	''            End If
+	''        Next
+	       Me.Close fvDoNotSaveChanges
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuInspPanel_ClickEx", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuInspPanel_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnInspectorPanel_MouseEnter", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".ItemInspectorPanelVisible%").Value = True
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnInspectorPanel_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuInspPanel_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnInspectorPanel_MouseLeave", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".ItemInspectorPanelVisible%").Value = False
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnInspectorPanel_MouseLeave", Err.Description)
+	End Sub
+	
+	
+	Private Sub btnMenuItem1_Click()
+	On Error GoTo ErrorHandler
+	If (Check_Variable(m_OPC_Command)) And (Check_Variable(m_OPC_Security)) Then
+	           
+	                m_OPC_Command.Value = 0
+	               
+	           
+	        End If
+	 ThisMimic.Close fvDoNotSaveChanges
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_Click", Err.Description)
+	    
+	End Sub
+	
+	Private Sub btnMenuItem1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInNormal_MouseEnter", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInNormal_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInNormal_MouseEnter", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInNormal_MouseEnter", Err.Description)
+	End Sub
+	
+	
+	Private Sub btnMenuItem2_Click()
+	On Error GoTo ErrorHandler
+	
+	    
+	  If (Check_Variable(m_OPC_Command)) And (Check_Variable(m_OPC_Security)) Then
+	        m_OPC_Command.Value = 1
+	  End If
+	 ThisMimic.Close fvDoNotSaveChanges
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_Click", Err.Description)
+	    
+	End Sub
+	
+	Private Sub btnMenuItem2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem2_MouseEnter", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem2_MouseLeave", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem2_MouseLeave", Err.Description)
+	End Sub
+	
+	
+	Private Sub btnMenuItem3_Click()
+	On Error GoTo ErrorHandler
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdUnBlock_Click", "Begin Subroutine")
+	            If (Check_Variable(m_OPC_HMIBlockingTag)) Then
+	                If (m_OPC_Security < 63) And (m_OPC_HMIBlockingTag = 0) Then
+	                'If (m_OPC_HMIBlockingTag = 1) Then
+	                    ThisMimic.Activate
+	                    'Mimics.OpenInCenter c_Point_Unblock_HILCCtrl, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	                    Call OpenMimicInCenter(c_Point_Block_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	                    
+	                End If
+	            End If
+	            ThisMimic.Close
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdUnBlock_Click", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem4_Click()
+	On Error GoTo ErrorHandler
+	
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdBlock_Click", "Begin Subroutine")
+	            If (Check_Variable(m_OPC_HMIBlockingTag)) Then
+	                If (m_OPC_Security < 63) And (m_OPC_HMIBlockingTag = 1) Then
+	                'If (m_OPC_HMIBlockingTag = 0) Then
+	                    ThisMimic.Activate
+	                    'Mimics.OpenInCenter c_Point_Block_HILCCtrl, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, "", , fvCenterOnRegion
+	                    Call OpenMimicInCenter(c_Point_Unblock_HILCCtrl, ThisMimic.Branch, Getmousepointerpossition)
+	                    
+	                End If
+	            End If
+	            ThisMimic.Close
+	    Exit Sub
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdBlock_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose:
+	'*      - Update the text (in the title bar of the mimic) with the name of the point
+	'*      - Add OPC variable to the collection of all permanently subscribed variables
+	'* *****************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim objVariable As Variable
+	    Dim iItem As Integer
+	    Dim iItemTop As Integer
+	    Dim iItemLine As Integer
+	    iItemTop = 29
+	        
+	    '* Update the text in the title bar of the mimic with the point name
+	    Dim arrTemp() As String
+	    If InStr(1, ThisMimic.Branch, ":") Then
+	        arrTemp = Split(ThisMimic.Branch, ":")
+	        ThisMimic.Caption = "Point  " & arrTemp(UBound(arrTemp))
+	    End If
+	    Variables.Item(ThisMimic.Branch & ".caption%").Value = arrTemp(UBound(arrTemp))
+	   '* To resize the contextual menu based on the useraccess'
+	  
+	    '>>>>I`m adding the variable here only to test... you should add this variable at project startup
+	    If Variables.Item("Useracesscommand%") Is Nothing Then Variables.Add "Useracesscommand%", fvVariableTypeBit
+	    [Useracesscommand%] = True
+	  
+	    'Hide all itens
+	    ThisMimic.Graphics("btnMenuLine1").Top = -100
+	    ThisMimic.Graphics("btnMenuLine2").Top = -100
+	    For iItem = 1 To 5
+	        ThisMimic.Graphics("btnMenuItem" & iItem).Top = -100
+	    Next
+	  
+	    'Show itens
+	    If Variables.Item("Useracesscommand%").Value = True Then
+	        iItemTop = 29
+	        iItemLine = 1
+	        For iItem = 1 To 5
+	            If iItem = 3 Or iItem = 5 Then
+	                ThisMimic.Graphics("btnMenuLine" & iItemLine).Top = iItemTop
+	                iItemTop = iItemTop + 4
+	                iItemLine = iItemLine + 1
+	            End If
+	            ThisMimic.Graphics("btnMenuItem" & iItem).Top = iItemTop
+	            iItemTop = iItemTop + 28
+	        Next
+	    End If
+	    
+	    'Show inspector panel and line
+	    ThisMimic.Graphics("btnMenuInspPanelLine").Top = iItemTop
+	    iItemTop = iItemTop + 4
+	    ThisMimic.Graphics("btnMenuInspPanel").Top = iItemTop
+	    Me.Windows(1).Height = iItemTop + 28
+	    Set m_OPC_Command = Variables.Add(ThisMimic.Branch & c_strcommandTag, fvVariableTypeRegister)
+	    Set m_OPC_Security = Variables.Add(ThisMimic.Branch & c_strSecurityTag, fvVariableTypeRegister)
+	    Set m_OPC_HMIBlockingTag = Variables.Add(ThisMimic.Branch & c_HMIBlockingTag, fvVariableTypeRegister)
+	      
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Cleaning and removal of the OPC variable from the collection of all permanently
+	'*          subscribed variables
+	'* *****************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Subroutine")
+	
+	    If Not (m_OPC_SwitchName Is Nothing) Then
+	        Variables.Remove (m_OPC_SwitchName.Name)
+	        Set m_OPC_SwitchName = Nothing
+	    End If
+	    Variables.Item(ThisMimic.Branch & ".blinking%").Value = False
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Set in Normal position
+	'* ---------------------------------------------------
+	'* Subroutine: cmdSetInNormal_MouseEnter
+	'* Purpose: it manages changing the background and text color of the label when the mouse
+	'*          enters the label
+	'* *****************************************************************************************
+	Private Sub cmdSetInNormal_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInNormal_MouseEnter", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInNormal_MouseEnter", Err.Description)
+	End Sub
+	
+	'* Subroutine: cmdSetInNormal_MouseLeave
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          leaves the label
+	'* *****************************************************************************************
+	Private Sub cmdSetInNormal_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInNormal_MouseLeave", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item1Visible%").Value = False
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInNormal_MouseLeave", Err.Description)
+	End Sub
+	
+	'* Set in Reverse position
+	'* ---------------------------------------------------
+	'* Subroutine: cmdSetInReverse_MouseEnter
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          enters the label
+	'* *****************************************************************************************
+	Private Sub cmdSetInReverse_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInReverse_MouseEnter", "Begin Subroutine")
+	   
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInReverse_MouseEnter", Err.Description)
+	End Sub
+	
+	'* Subroutine: cmdSetInReverse_MouseLeave
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          leaves the label
+	'* *****************************************************************************************
+	Private Sub cmdSetInReverse_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cmdSetInReverse_MouseLeave", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item2Visible%").Value = False
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cmdSetInReverse_MouseLeave", Err.Description)
+	End Sub
+	
+	'* Block
+	'* ---------------------------------------------------
+	'* Subroutine: btnBlock_MouseEnter
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          enters the label
+	'* *****************************************************************************************
+	Private Sub btnMenuItem3_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnBlock_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Item3Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnBlock_MouseEnter", Err.Description)
+	End Sub
+	
+	'* Subroutine: btnBlock_MouseLeave
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          leaves the label
+	'* *****************************************************************************************
+	Private Sub btnMenuItem3_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnBlock_MouseLeave", "Begin Subroutine")
+	    
+	    Variables.Item(ThisMimic.Branch & ".Item3Visible%").Value = False
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnBlock_MouseLeave", Err.Description)
+	End Sub
+	
+	'* Un-block
+	'* ---------------------------------------------------
+	'* Subroutine: btnUnBlock_MouseEnter
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          enters the label
+	'* *****************************************************************************************
+	Private Sub btnMenuItem4_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnUnBlock_MouseEnter", "Begin Subroutine")
+	
+	    Variables.Item(ThisMimic.Branch & ".Item4Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnUnBlock_MouseEnter", Err.Description)
+	End Sub
+	
+	'* Subroutine: btnUnBlock_MouseLeave
+	'* Purpose: It manages changing the background and text color of the label when the mouse
+	'*          leaves the label
+	'* *****************************************************************************************
+	Private Sub btnMenuItem4_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnUnBlock_MouseLeave", "Begin Subroutine")
+	   
+	    Variables.Item(ThisMimic.Branch & ".Item4Visible%").Value = False
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnUnBlock_MouseLeave", Err.Description)
+	End Sub
+	
+	
+	
+	Private Sub btnMenuItem5_Click()
+	    On Error GoTo ErrorHandler
+	    
+	    'Exit if no TAS
+	    If (Variables(Me.Branch & ".Detection.Template.Security").Value = 63) Then Exit Sub
+	    
+	    If ((Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0)) Then
+	        If ModalQuestion("¨Confirma que desea poner" & Chr(10) & "la aguja en mantenimiento?", "Aguja " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 1
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMI.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIControl.Template.bIsOn").Value = 0
+	            'Variables(Me.Branch & ".HMILocal.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMILocked.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMINormal.Template.bIsOn").Value = 0
+	            Variables(Me.Branch & ".HMIReverse.Template.bIsOn").Value = 0
+	        End If
+	    Else
+	        If ModalQuestion("¨Confirma que desea retirar" & Chr(10) & "la aguja del mantenimiento?", "Aguja " & Variables(ThisMimic.Branch & ".shortname%").Value) Then
+	            Variables(Me.Branch & ".INHIBIT.Status.Value").Value = 0
+	            Variables(Me.Branch & ".Detection.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMI.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIBlocking.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIControl.Template.bIsOn").Value = 1
+	            'Variables(Me.Branch & ".HMILocal.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMILocked.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMINormal.Template.bIsOn").Value = 1
+	            Variables(Me.Branch & ".HMIReverse.Template.bIsOn").Value = 1
+	        End If
+	    End If
+	    Me.Close fvDoNotSaveChanges
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMaintenance_Click", Err.Description)
+	
+	End Sub
+	
+	Private Sub btnMenuItem5_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem5_MouseEnter", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item5Visible%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem5_MouseEnter", Err.Description)
+	End Sub
+	
+	Private Sub btnMenuItem5_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "btnMenuItem5_MouseLeave", "Begin Subroutine")
+	  
+	    Variables.Item(ThisMimic.Branch & ".Item5Visible%").Value = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "btnMenuItem5_MouseLeave", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,0,0,255,0,0,0
+	COLOR,4,122,122,122,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,0,0,0,0,38,0
+	COLOR,7,0,0,0,0,40,0
+	COLOR,8,238,238,238,0,0,0
+	COLOR,9,192,192,192,0,0,0
+	COLOR,10,160,160,160,0,0,0
+	COLOR,11,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,T,"btnMenuItem1"
+	B,4,29,225,53,4,53,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,4,29,5,0,FONT,1,"Posicionar normal",36,FONT,1,"Posicionar normal",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Normal Position",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Posicionar a normal",FONT,1,36
+			ROLE,0,"Posicionar a normal",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim2",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item1Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem2"
+	B,5,57,226,81,5,81,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,57,5,0,FONT,1,"Posicionar invertida",36,FONT,1,"Posicionar invertida",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Reverse Position",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Posicionar a desv¡o",FONT,1,36
+			ROLE,0,"Posicionar a desv¡o",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim2",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item2Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem3"
+	B,5,89,226,113,5,113,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,89,5,0,FONT,1,"Bloqueo...",36,FONT,1,"Bloqueo...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Blocked...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Bloquear...",FONT,1,36
+			ROLE,0,"Bloquear...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=((HMIBlocking.Template.iEqpState==0) And(HMIBlocking.Template.Security<63))","Item3Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem4"
+	B,5,117,226,141,5,141,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,117,5,0,FONT,1,"Desbloqueo...",36,FONT,1,"Desbloqueo...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Unblocked...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Desbloquear...",FONT,1,36
+			ROLE,0,"Desbloquear...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=((HMIBlocking.Template.iEqpState==1) And(HMIBlocking.Template.Security<63))","Item4Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"btnMenuInspPanelLine"
+	B,0,177,280,178,0,178,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,178,280,178,0,178,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,178,280,178
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,177,280,177,0,177,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,10,COLOR,10,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,177,280,177
+	O,END
+O,END
+O,BEGIN,T,"btnMenuInspPanel"
+	B,5,181,226,205,5,205,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,181,5,0,FONT,1,"Panel de inspecci¢n...",36,FONT,1,"Panel de inspecci¢n...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Panel de inspecci¢n...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Panel de inspecci¢n...",FONT,1,36
+			ROLE,0,"Panel de inspecci¢n...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ItemInspectorPanelVisible%"
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,1,COLOR,1
+	A,END
+O,END
+O,BEGIN,GRP,"btnMenuLine1"
+	B,0,85,280,86,0,86,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,86,280,86,0,86,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,86,280,86
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,85,280,85,0,85,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,10,COLOR,10,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,85,280,85
+	O,END
+O,END
+O,BEGIN,GRP,"btnMenuLine2"
+	B,0,145,280,146,0,146,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,146,280,146,0,146,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,146,280,146
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,145,280,145,0,145,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,10,COLOR,10,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,145,280,145
+	O,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,0,16,280,17,0,17,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,17,280,17,0,17,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,8,COLOR,8,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,17,280,17
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,16,280,16,0,16,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,10,COLOR,10,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+		PP,0,16,280,16
+	O,END
+O,END
+O,BEGIN,T,"btnUnBlock2"
+	B,8,2,56,26,8,26,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,8,2,5,0,FONT,1,"Aguja ",36,FONT,1,"Aguja ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aguja ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Aguja ",FONT,1,36
+			ROLE,0,"Aguja ",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnUnBlock3"
+	B,55,1,208,25,55,25,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,11,0,COLOR,11,0,COLOR,1,0,COLOR,1
+	PP,1,55,1,5,0,FONT,1,"  ",36,FONT,1,"  ",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"  ",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1," ",FONT,1,36
+			ROLE,0,"",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"caption%"
+	A,END
+O,END
+O,BEGIN,T,"btnMenuItem5"
+	B,5,149,226,173,5,173,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,5,149,5,0,FONT,1,"Mantenimiento poner...",36,FONT,1,"Mantenimiento poner...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mantenimiento poner...",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,-1,"Mantenimiento poner...",FONT,1,36
+			ROLE,0,"Mantenimiento poner...",FONT,1,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DR,"Anim1",0,0,"",""
+		PP,"INHIBIT.Status.Value",""
+		ADVFORMAT,2,"[=0]\'Poner en mantenimiento\';\'Retirar de mantenimiento\'@l"
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"[=0]\'Poner en mantenimiento\';\'Retirar de mantenimiento\'"
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"[=0]\'Poner en mantenimiento\';\'Retirar de mantenimiento\'"
+			LANG,END
+		MULTILANG,END
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"Item5Visible%"
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,3,COLOR,3
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,5,COLOR,5
+		COL,1,COLOR,1,COLOR,1
+	A,END
+	A,BEGIN,CBW,"Anim3",0,0,"",""
+		PP,"=(Detection.Template.Security<63)","Item5Visible%","","","","","",""
+		COL,1,COLOR,2,COLOR,2,1.000000
+		COL,1,COLOR,2,COLOR,2,2.000000
+		COL,1,COLOR,2,COLOR,2,3.000000
+		COL,1,COLOR,3,COLOR,3,4.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,1,COLOR,1,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+		COL,1,COLOR,5,COLOR,5,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,7,COLOR,7,0.000000
+		COL,0,COLOR,6,COLOR,6,0.000000
+		COL,0,COLOR,2,COLOR,2,0.000000
+		COL,1,COLOR,4,COLOR,4,0.000000
+	A,END
+O,END

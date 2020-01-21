@@ -1,0 +1,107 @@
+ASCII32,18,9,2018,0:44,2,1.1
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,192,192,192,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Symbol_Click()
+	On Error GoTo ErrorHandler
+	    
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Symbol_Click", "EXCEPTION: " & Err.Description)
+	End Sub
+	
+	Private Sub Symbol_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	    On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "BP_Modify_Train_Code_MouseEnter", "Begin Subroutine")
+	    
+	    Variables.Item(ThisSymbol.BranchContext & "." & ThisSymbol.LocalBranch & ".Hover%").Value = True
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Symbol_MouseEnter", "EXCEPTION: " & Err.Description)
+	End Sub
+	    
+	Private Sub Symbol_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "BP_Modify_Train_Code_MouseLeave", "Begin Subroutine")
+	        
+	    Variables.Item(ThisSymbol.BranchContext & "." & ThisSymbol.LocalBranch & ".Hover%").Value = False
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Symbol_MouseLeave", "EXCEPTION: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"btnOK"
+	B,140,112,225,137,140,137,65535,0,6400,0,1,1,1
+	O,BEGIN,T,"BP_Modify_Train_Code"
+		B,140,112,225,137,140,137,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		PP,1,140,112,0,0,FONT,1,"Modify...",37,FONT,1,"Modify...",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"-",FONT,2,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"-",FONT,2,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,CBG,"Anim1",0,0,"",""
+			PP,"Hover%","Active%","",""
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,5,COLOR,5
+			COL,0,COLOR,4,COLOR,4
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,4,COLOR,4
+			COL,1,COLOR,1,COLOR,1
+			COL,1,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+			COL,0,COLOR,1,COLOR,1
+		A,END
+		A,BEGIN,DT,"Anim2",0,0,"",""
+			PP,"Text%"
+		A,END
+	O,END
+O,END

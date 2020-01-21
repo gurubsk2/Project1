@@ -1,0 +1,142 @@
+ASCII32,1,4,2011,8:56,15,1.1
+W,BEGIN,"LineOperatingModeAutoWithoutTT_Setting","LineOperatingModeAutoWithoutTTSetting"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,408
+	SIZE,460,70,460,70,0,0,0,1280,1024,460,70
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithoutTT_Setting.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto Without TT Setting
+	'* *******************************************************************************************
+	'* Purpose:     Manages the regulation mode
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '11
+	'* Change:              All - CR ALPHA 225048
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	Option Explicit
+	'* Declarations
+	'* ******************************************************
+	
+	'* Subroutine: Mimic_Open
+	'* Puprose: Add and init variables
+	'* *****************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    '* Variable used to memorize the couple (Name of set of dwell times/Name of set of running times)
+	    '* selected in the combo box
+	    Variables.Add ThisMimic.Branch & ".SelectedDTSetRTSetCouple%", fvVariableTypeText
+	    Variables.Item(ThisMimic.Branch & ".SelectedDTSetRTSetCouple%").Value = ""
+	    
+	    '* Clear and disable the combo box
+	    cbDwellTimesRunningTimes.Clear
+	    cbDwellTimesRunningTimes.Value = ""
+	    cbDwellTimesRunningTimes.Enabled = False
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, remove the previously subscribed variable
+	'* **********************************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    Variables.Remove (ThisMimic.Branch & ".SelectedDTSetRTSetCouple%")
+	  
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	    
+	'* Subroutine: cbDwellTimesRunningTimes_Change
+	'* Purpose: Occur when the Value property of the combo box change -  Memorize the couple
+	'*          (Name of set of dwell times/Name of set of running times) in the corresponding
+	'*          variable
+	'* *****************************************************************************************
+	Private Sub cbDwellTimesRunningTimes_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "cbDwellTimesRunningTimes_Change", "Begin Subroutine")
+	    
+	    If (cbDwellTimesRunningTimes.ListIndex > -1) Then
+	        If Not (Variables.Item(ThisMimic.Branch & ".SelectedDTSetRTSetCouple%") Is Nothing) Then
+	            '* Memorize the couple (Name of set of dwell times/Name of set of running times)
+	            '* in the corresponding variable
+	            Variables.Item(ThisMimic.Branch & ".SelectedDTSetRTSetCouple%").Value = cbDwellTimesRunningTimes.Value
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "cbDwellTimesRunningTimes_Change", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,456,69,3,7,456,69,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,T,"txtSetOfDwellTimesSetOfRunningTimes"
+	B,8,0,266,16,-1,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,8,0,0,0,FONT,1,"Running times/dwell times setting",36,FONT,1,"Running times/dwell times setting",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Set of dwell times/Set of running times",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"cbDwellTimesRunningTimes"
+	B,30,33,429,57,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,2,COLOR,2,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END

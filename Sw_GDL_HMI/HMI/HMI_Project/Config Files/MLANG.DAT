@@ -1,0 +1,32 @@
+[General]
+FileVersion=1
+StartupLanguage=1
+StartupRole=1
+
+;;=====================================================================================
+;;  In versions of Client Builder before 3.0, mimics could be built for only 2 languages
+;;  The languages corresponding to Lang1 and Lang2 were defined in MUI.INI and 
+;;  not stored in the mimic.  Therefore, MUI.ini must match the mimics.  Starting in
+;;  Client Builder 3.0.xxxx, the language identifiers are stored in the mimics instead
+;;  of in MUI.ini.  For compatibility, Client Builder 3.0 can read mimics created with
+;;  earlier versions.  In order to know what languages were used in the mimic as
+;;  language 1 and 2, they are defined here.  Once the mimic has been saved with CB 3.0
+;;  it will not use these definitions.
+
+;;  French was defined as Lang1, English was defined as Lang2
+
+
+CompatibilityLang1=00080A
+CompatibilityLang2=000409
+
+;;=====================================================================================
+
+[Languages]
+Language1=00080A (ESM)
+Language2=000409 (ENU)
+
+[Role\1]
+Id=-1
+Name=OtherRole
+DisplayName.000409=OtherRole
+DisplayName.00080A=OtherRole

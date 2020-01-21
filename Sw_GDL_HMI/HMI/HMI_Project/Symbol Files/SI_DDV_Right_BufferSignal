@@ -1,0 +1,190 @@
+ASCII32,24,9,2018,3:11,30,1.1
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-11,0,400,0,0,"Arial",0,0
+	FONT,3,-11,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,192,192,192,0,0,0
+	COLOR,5,255,0,0,0,0,0
+	COLOR,6,238,238,238,0,0,0
+	COLOR,7,0,0,0,0,32,0
+	COLOR,8,194,0,0,0,0,0
+	COLOR,9,255,64,64,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Symbol Name: Buffer Signal Command
+	'* *******************************************************************************************
+	'* Purpose:     It manages Setting the route
+	'*
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                Dec '17
+	'* Change:              All
+	    
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION(Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	   
+	'* Declarations
+	'* ******************************************************
+	Option Explicit
+	   
+	'* Constants
+	'* ******************************************************
+	Dim m_colroute As Collection
+	Const c_strServerSeparator As String = ":"
+	Private sRouteCMD As String
+	Private Const c_iCommandValue As Integer = 1
+	Private Const c_strDestinationsTag As String = ".Destinations.Value"
+	Private Const c_strNormalRouteCommandTag As String = ".Detection.Template.iCommand"
+	Private m_OPC_DestSignal As Variable
+	Private m_OPC_RouteCommand As Variable
+	Dim strOrginSignalBranch As String
+	Dim strRoutename As String
+	Dim strDestSignalBranch As String
+	Dim strRoute As String
+	
+	Private Sub Shape1_Click()
+	Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Shape1_Click", "Begin subroutine")
+	If m_strSelectedOriginSignal = "" Then Exit Sub
+	If m_strSelectedOriginSignal <> "" Then
+	    strOrginSignalBranch = m_strSelectedOriginSignal
+	    strDestSignalBranch = GetSymbolBranch(Me)
+	End If
+	
+	    If strDestSignalBranch = "" Then Exit Sub
+	    Set m_OPC_DestSignal = Variables.Add(m_strSelectedOriginSignal & c_strDestinationsTag, fvVariableTypeText)
+	        If ReadXml = "" Then Exit Sub
+	  strRoutename = ReadXml
+	    strRoute = "OPCCluster:" & strRoutename & c_strNormalRouteCommandTag
+	    Set m_OPC_RouteCommand = Variables.Add(strRoute, fvVariableTypeRegister)
+	    
+	    If ((m_OPC_RouteCommand.Status = fvVariableStatusGood) And (m_OPC_RouteCommand.Quality = 192)) Then
+	     m_OPC_RouteCommand.Value = c_iCommandValue
+	     ResetDestinationAnimation
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Shape1_Click", Err.Description)
+	End Sub
+	 Private Function ReadXml() As String
+	
+	 Call CBTrace(CBTRACE_VBA, ThisSymbol.Name, "Shape1_Click", "Begin subroutine")
+	 Dim strDestSignal As String
+	 Dim xmlDoc              As DOMDocument
+	  Dim FirstNodeLevel      As IXMLDOMNodeList
+	  Dim oElementClass       As IXMLDOMElement
+	 ReadXml = ""
+	  Const strSignal As String = "Signal"
+	  Const strID As String = "ID"
+	    Dim strRoutename As String
+	 Set xmlDoc = New DOMDocument
+	 xmlDoc.loadXML (m_OPC_DestSignal)
+	strDestSignal = Split(strDestSignalBranch, ":")(1)
+	
+	Set oElementClass = xmlDoc.documentElement.selectSingleNode("//" & strSignal & "[@" & strID & "=""" & strDestSignal & """]")
+	If oElementClass Is Nothing Then Exit Function
+	ReadXml = oElementClass.getAttribute("RouteID")
+	
+	 Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Shape1_Click", Err.Description)
+	 End Function
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"SI_G101BS_DEP"
+	B,3726,2520,3771,2577,3726,2577,65535,0,6400,0,1,0,0
+	O,BEGIN,T,"Text156"
+		B,3727,2520,3768,2539,3727,2539,32,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,1,3727,2520,0,0,FONT,1,"S1",37,FONT,1,"S1",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,2058
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"XX",FONT,2,37
+			LANG,END
+			LANG,BEGIN,2058
+				ROLE_DEFAULT,0
+				ROLE,0,"XXX",FONT,3,37
+			LANG,END
+		MULTILANG,END
+		A,BEGIN,DT,"Anim1",0,0,"",""
+			PP,"shortname%"
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group92"
+		B,3754,2562,3728,2542,3754,2542,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,L,"Poly17"
+			B,3728,2562,3728,2542,3728,2562,64511,0,6400,0,4,0,0
+			ST,0,3,COLOR,4,COLOR,4,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+			PP,3728,2562,3728,2542
+		O,END
+		O,BEGIN,L,"Poly18"
+			B,3754,2552,3729,2552,3729,2552,64511,0,6400,0,4,0,0
+			ST,0,3,COLOR,4,COLOR,4,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+			PP,3729,2552,3754,2552
+		O,END
+	O,END
+	O,BEGIN,GRP,"Group93"
+		B,3743,2556,3736,2577,3743,2577,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,L,"Poly14"
+			B,3739,2556,3739,2577,3739,2556,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+			PP,3739,2556,3739,2577
+		O,END
+		O,BEGIN,R,"Shape25"
+			B,3736,2572,3743,2560,3736,2572,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+		O,END
+		O,BEGIN,L,"Poly21"
+			B,3742,2561,3736,2572,3742,2561,65535,0,6400,0,4,0,0
+			ST,0,1,COLOR,5,COLOR,5,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+			PP,3742,2561,3736,2572
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"=(HMIFilament.Template.iEqpState == 0 )"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,6,COLOR,6
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,5,COLOR,5
+			COL,1,COLOR,7,COLOR,7
+		A,END
+	O,END
+	O,BEGIN,E,"Shape4"
+		B,3771,2544,3755,2560,3771,2544,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,3,COLOR,3,0,0,COLOR,8,0,COLOR,8,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape1"
+		B,3771,2562,3726,2541,3771,2562,65535,0,6400,0,2,1,1
+		ST,0,2,COLOR,3,COLOR,3,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"DestinationSelectable%"
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,0,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,9,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+O,END

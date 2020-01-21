@@ -1,0 +1,63 @@
+ASCII32,15,10,2019,13:23,44,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,128,128,128,0,0,0
+	COLOR,5,0,0,0,0,34,0
+	COLOR,6,194,194,194,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	
+	Private Sub Symbol_Click()
+	    On Error GoTo ErrorHandler
+	    
+	    '* Open the user note mimic
+	'    Mimics.OpenInCenter "View_LineOperatingModes", Me.LocalBranch, , , "*", , , fvCenterOnParent
+	    'Mimics.OpenInCenter "View_LineOperatingModes", Me.LocalBranch
+	    If Variables.Item("@LineOperatingModeButtonEnabled%").Value = True Then
+	    Call OpenMimicInCenter("View_LineOperatingModes", "OPCClusterATSLV2:@CATS", Getmousepointerpossition)
+	    End If
+	    Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol9"
+	B,136,248,175,287,136,287,65535,0,6400,0,1,1,1
+	O,BEGIN,R,"Shape1"
+		B,175,287,136,248,175,287,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,2058
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Modo de operaci¢n en vigor"
+				LANG,END
+				LANG,BEGIN,2058
+					ROLE_DEFAULT,0
+					ROLE,-1,"@Modo de operaci¢n de la Linea"
+					ROLE,0,"@Modo de operaci¢n en vigor"
+				LANG,END
+			MULTILANG,END
+			PP,"Tip%",1,0,0,0,0.000000
+			AUTH,"= (ButtonsEnabled% == 0) OR (Button2Enabled% == 0) ",0,0,0
+		A,END
+	O,END
+	O,BEGIN,BM,"Bitmap11"
+		B,142,253,168,281,142,281,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+		PP,"bt02-1ModoOperRI.bmp",1,COLOR,6
+	O,END
+O,END

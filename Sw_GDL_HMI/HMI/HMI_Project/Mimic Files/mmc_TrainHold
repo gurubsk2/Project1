@@ -1,0 +1,507 @@
+ASCII32,19,9,2018,17:26,56,1.1
+W,BEGIN,"mmc_TrainHold","mmc_TrainHold"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,797,468
+	SIZE,380,170,380,170,0,0,0,1680,1050,374,148
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tren 008"
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Tren 008"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1
+	GRID,1,1,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,1,612,400
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"mmc_TrainHold.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Option Explicit
+	
+	'* *******************************************************************************************
+	'* Constants
+	'* *******************************************************************************************
+	
+	' OPC tags used for retrieving data
+	Private Const c_strTrainUniqueIDTag As String = ".HMITrain.iTrainID"
+	Private Const c_strTrainHMITrainIDTag As String = ".Attributes.HMITETrain.bstrPlug_6"
+	Private Const c_strTrainHoldSkipListTag As String = ".Attributes.HMITETrain.ustrPlug_1"
+	
+	' OPC tag used for command sending
+	Private Const c_strTrainInterposeCmdTag As String = "MainKernelBasic.TrainModule.BasicCmd.bstrInterposeBerth"
+	
+	' Constants used to read the XML string containing the list of holds and skips
+	Private Const c_strStopNode As String = "STOP"
+	Private Const c_strIDAttr As String = "ID"
+	Private Const c_strNameAttr As String = "NAME"
+	Private Const c_strHoldAttr As String = "HOLD"
+	
+	'* *******************************************************************************************
+	'* Variables
+	'* *******************************************************************************************
+	' OPC variables
+	Dim m_OPC_UniqueID As Variable
+	Dim WithEvents m_OPC_HMITrainID As Variable
+	Dim WithEvents m_OPC_HoldSkipList As Variable
+	Dim m_OPC_TrainInterposeCmd As Variable
+	
+	' Variables
+	Dim m_iUniqueID As Integer
+	Dim m_strHMITrainID As String
+	Dim m_strPlatformID As String
+	Dim m_strPlatformName As String
+	Dim m_bHold As Boolean
+	Dim m_strTrainInterposeCmd As String
+	Dim m_strClusterName As String
+	
+	'* *******************************************************************************************
+	'* Mimic_Open
+	'* *******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	    ' Set the HMITrainID
+	    SetHMITrainID ("[ID]")
+	    
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	    
+	    ' Enable the cancellation button
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Active%").Value = True
+	    
+	    
+	    ' Extract the cluster name from the branch of the mimic
+	    m_strClusterName = GetOPCClusterFromBranch(ThisMimic.Branch)
+	    
+	    Set m_OPC_UniqueID = Variables.Add(ThisMimic.Branch & c_strTrainUniqueIDTag, fvVariableTypeRegister)
+	    Set m_OPC_HMITrainID = Variables.Add(ThisMimic.Branch & c_strTrainHMITrainIDTag, fvVariableTypeText)
+	    Set m_OPC_HoldSkipList = Variables.Add(ThisMimic.Branch & c_strTrainHoldSkipListTag, fvVariableTypeText)
+	
+	    If (m_OPC_HMITrainID.EnableEvents = True) Then
+	        m_OPC_HMITrainID_ValueChange
+	    Else
+	        m_OPC_HMITrainID.EnableEvents = True
+	    End If
+	    
+	    If (m_OPC_HoldSkipList.EnableEvents = True) Then
+	        m_OPC_HoldSkipList_ValueChange
+	    Else
+	        m_OPC_HoldSkipList.EnableEvents = True
+	    End If
+	    
+	    ThisMimic.Caption = "Tren " & m_OPC_HMITrainID.Value
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* ManageConfirmationButton: Enable or disable confirmation button
+	'* *******************************************************************************************
+	Private Sub ManageConfirmationButton()
+	On Error GoTo ErrorHandler
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value = ((m_strPlatformID <> ""))
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ManageConfirmationButton", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Manage the click on OK button
+	'* *******************************************************************************************
+	Private Sub Button_1_Click()
+	On Error GoTo ErrorHandler
+	
+	    If Variables.Item(ThisMimic.Branch & ".Button_1_Active%").Value Then
+	        If m_bHold Then
+	            Call ButtonCommand("btnTrainHoldSet", ThisMimic.Branch, "%UniqueID%|" & m_OPC_UniqueID.Value & "|" & "HSMHoldList" & "|" & m_strPlatformID)
+	        Else
+	            Call ButtonCommand("btnTrainHoldRelease", ThisMimic.Branch, "%UniqueID%|" & m_OPC_UniqueID.Value & "|" & "HSMNoHoldList" & "|" & m_strPlatformID)
+	        End If
+	        
+	        Me.Close
+	    
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "Button_1_Click", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* m_OPC_HMITrainID_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_HMITrainID_ValueChange()
+	On Error GoTo ErrorHandler
+	    
+	    ' Check the status and the quality of the variable
+	    If Check_OPC_Variable(m_OPC_HMITrainID) Then
+	        
+	        ' Set the HMITrainID
+	        SetHMITrainID (m_OPC_HMITrainID.Value)
+	        
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* m_OPC_HoldSkipList_ValueChange
+	'* *******************************************************************************************
+	Private Sub m_OPC_HoldSkipList_ValueChange()
+	On Error GoTo ErrorHandler
+	    
+	    ' Check the status and the quality of the variable
+	    If Check_OPC_Variable(m_OPC_HoldSkipList) Then
+	        
+	        ' Read the XML string
+	        ReadXML (m_OPC_HoldSkipList.Value)
+	        
+	        ' Change the label of the command, according if it is a hold setting or hold release
+	        Variables.Item(ThisMimic.Branch & ".TrainHold%").Value = m_bHold
+	        
+	    End If
+	    
+	    ' Enable or disable confirmation button
+	    ManageConfirmationButton
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_HMITrainID_ValueChange", Err.Description)
+	End Sub
+	
+	'* *******************************************************************************************
+	'* ReadXML: Read the XML string
+	'* *******************************************************************************************
+	Private Sub ReadXML(strHoldSkipList As String)
+	On Error GoTo ErrorHandler
+	
+	    Dim oDoc As DOMDocument
+	    
+	    Dim oStopsList As IXMLDOMNodeList
+	    Dim oStop As IXMLDOMElement
+	    Dim strStopID As String
+	    Dim strStopName As String
+	    Dim bHold As Boolean
+	    
+	    If (strHoldSkipList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(strHoldSkipList)) Then
+	            
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oStopsList = oDoc.documentElement.selectNodes(c_strStopNode)
+	                    If Not (oStopsList Is Nothing) Then
+	                    
+	                        If (oStopsList.length > 0) Then
+	                        
+	                            For Each oStop In oStopsList
+	                                strStopID = Format(oStop.getAttribute(c_strIDAttr))
+	                                strStopName = Format(oStop.getAttribute(c_strNameAttr))
+	                                bHold = (Format(oStop.getAttribute(c_strHoldAttr)) = "0")
+	                                
+	                                If (strStopID <> "" And strStopName <> "") Then
+	                                    m_strPlatformID = strStopID
+	                                    m_strPlatformName = strStopName
+	                                    m_bHold = bHold
+	                                End If
+	                                Exit For
+	                            Next oStop
+	                            
+	                        End If
+	                        Set oStopsList = Nothing
+	                        
+	                    End If
+	                    
+	                End If
+	                
+	            End If
+	            Set oDoc = Nothing
+	            
+	        End If
+	        
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+	
+	
+	'* *******************************************************************************************
+	'* SetHMITrainID
+	'* *******************************************************************************************
+	Private Sub SetHMITrainID(strHMITrainID As String)
+	
+	    Variables.Item(ThisMimic.Branch & ".Label_1%").Value = Replace(Label_1.Text, "[ID]", strHMITrainID)
+	    Variables.Item(ThisMimic.Branch & ".Label_2%").Value = Replace(Label_2.Text, "[ID]", strHMITrainID)
+	    
+	End Sub
+	
+	'* *******************************************************************************************
+	'* Buttons hovering management
+	'* *******************************************************************************************
+	Private Sub Button_1_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = True
+	
+	End Sub
+	
+	Private Sub Button_1_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_1_Hover%").Value = False
+	
+	End Sub
+	
+	Private Sub Button_2_MouseEnter(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = True
+	
+	End Sub
+	
+	Private Sub Button_2_MouseLeave(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As Long, ByVal y As Long)
+	
+	    Variables.Item(ThisMimic.Branch & ".Button_2_Hover%").Value = False
+	
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,240,240,240,0,0,0
+	COLOR,4,160,160,160,0,0,0
+	COLOR,5,255,255,255,0,0,0
+	COLOR,6,128,128,128,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,64,64,64,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape_1"
+	B,379,109,0,0,379,109,65535,0,6400,1,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,GRP,"Line_1"
+	B,0,303,439,304,0,304,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,L,"Poly1"
+		B,0,303,439,303,0,303,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+		PP,0,303,439,303
+	O,END
+	O,BEGIN,L,"Poly2"
+		B,0,304,439,304,0,304,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+		PP,0,304,439,304
+	O,END
+O,END
+O,BEGIN,T,"Label_1"
+	B,52,38,332,78,52,78,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,52,38,0,0,FONT,1,"",84,FONT,1,"",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"每onfirma la detenci▋ de emergencia de este tren?",FONT,2,84
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"每onfirma la detenci▋ de emergencia de este tren?",FONT,2,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Label_1%"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"TrainHold%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"Label_2"
+	B,52,38,332,78,52,78,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,1,52,38,0,0,FONT,1,"",84,FONT,1,"",84
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"每onfirma la retirada de la detenci▋ de emergencia de este tren?",FONT,2,84
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"每onfirma la retirada de la detenci▋ de emergencia de este tren?",FONT,2,84
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"Label_2%"
+	A,END
+	A,BEGIN,CB,"Anim2",0,0,"",""
+		PP,"TrainHold%"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,1,COLOR,1
+		COL,1,COLOR,2,COLOR,2
+	A,END
+O,END
+O,BEGIN,T,"Button_1"
+	B,60,107,140,132,60,132,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,1,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,60,107,0,0,FONT,3,"",37,FONT,3,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Si",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Si",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim3",0,0,"",""
+		PP,"Button_1_Hover%","Button_1_Active%","",""
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Button_2"
+	B,240,107,320,132,240,132,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,1,0,COLOR,6,0,COLOR,6,0,COLOR,5,0,COLOR,5
+	PP,1,240,107,0,0,FONT,3,"",37,FONT,3,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"No",FONT,2,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"No",FONT,2,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CBG,"Anim1",0,0,"",""
+		PP,"Button_2_Hover%","Button_2_Active%","",""
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,6,COLOR,6
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+		COL,0,COLOR,2,COLOR,2
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"mmc_TrainHold","*"
+	A,END
+O,END

@@ -1,0 +1,472 @@
+ASCII32,11,10,2019,4:31,38,1.1
+W,BEGIN,"GDL_Historico","GDL_Historico"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,243
+	SIZE,1920,948,1920,948,0,0,0,3840,1080,1920,948
+	BACKCOLOR,192,192,192,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Mimic2"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0
+	GRID,1,0,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_Historico.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Initialize()
+	'On Error GoTo Error
+	    
+	    ' Populate the listbox with the names of the pens in the Trend
+	    General.LoadPenNamesToListBox TREND1, SelectedDatasourceListBox
+	    TREND1.TurnOnRealtime
+	    
+	Error:
+	Exit Sub
+	
+	End Sub
+	
+	
+	Private Sub AddDSButton_Click()
+	
+	    '* Need to pass these parameters in the "Branch" string: mimic file name,
+	    'listbox, and trend name
+	    Dim strParams As String
+	    strParams = ThisMimic.FileName & General.STR_TREND_DELIM _
+	                    & TREND1.Name & General.STR_TREND_DELIM _
+	                    & SelectedDatasourceListBox.Name & General.STR_TREND_DELIM _
+	                    & General.INT_MAXPENS_MONO & General.STR_TREND_DELIM _
+	                    & General.STR_DONT_CLOSE_AFTER_ADD
+	    
+	'    If ThisProject.ActiveMimic.Windows(1).Left = 0 Then
+	        TheseMimics.Open "Add_Equipments", strParams, , , , , , , 290, 250, True
+	'    Else
+	'        TheseMimics.Open "Add_Equipments", strParams, , , , , , , 2210, 250, True
+	'    End If
+	
+	'
+	'    TheseMimics.Open "Add_Equipments", strParams
+	    
+	    DescriptionTextBox.Text = ""
+	    
+	End Sub
+	
+	Private Sub DescriptionTextBox_Change()
+	
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	ThisMimic.Cache = False
+	End Function
+	
+	Private Sub RemoveDSButton_Click()
+	    If SelectedDatasourceListBox.ListIndex > -1 Then
+	        DescriptionTextBox.Text = ""
+	        General.Remove_DataSource_Pen TREND1, SelectedDatasourceListBox
+	        
+	    End If
+	End Sub
+	
+	
+	Private Sub bt_Apply_Click()
+	On Error GoTo Error
+	Dim i As Integer
+	    If TREND1.PenSet.Count > 0 Then
+	        i = 1
+	        With TREND1
+	            .TurnOffRealtime
+	            While i <= .PenSet.Count
+	            .PenSet(i).StartDate = [txtDataIniCurvasMonopista%] & " " & [txtHoraIniCurvasMonopista%]
+	            .RefreshData
+	            i = i + 1
+	            Wend
+	        End With
+	    
+	    End If
+	Error:
+	Exit Sub
+	    
+	End Sub
+	
+	
+	Private Sub bt_date_ini_Click()
+	'        TheseMimics.OpenInCenter "mmc_DataHoraEventsIni_GTE", ThisMimic.Name
+	        
+	'        If ThisProject.ActiveMimic.Windows(1).Left = 0 Then
+	            TheseMimics.Open ("mmc_DataHoraEventsIni_GTE"), , , , , , , , 290, 510, True
+	'        Else
+	'            TheseMimics.Open ("mmc_DataHoraEventsIni_GTE"), , , , , , , , 2210, 510, True
+	'
+	'    End If
+	End Sub
+	
+	Private Sub bt_Save_Click()
+	    ThisMimic.Save
+	End Sub
+	
+	Private Sub Mimic_Open()
+	'    Variables.Item("Active_Mimic_Title%").Value = UCase(ThisMimic.Caption)
+	    If [txtDataIniCurvasMonopista%].Value = "" Then [txtDataIniCurvasMonopista%].Value = "__/__/____"
+	    If [txtHoraIniCurvasMonopista%].Value = "" Then [txtHoraIniCurvasMonopista%].Value = "__:__:__"
+	    ThisMimic.Cache = True
+	    Initialize
+	
+	End Sub
+	
+	Private Sub Mimic_Run()
+	'    Variables.Item("Active_Mimic_Title%").Value = UCase(ThisMimic.Caption)
+	    If [txtDataIniCurvasMonopista%].Value = "" Then [txtDataIniCurvasMonopista%].Value = "__/__/____"
+	    If [txtHoraIniCurvasMonopista%].Value = "" Then [txtHoraIniCurvasMonopista%].Value = "__:__:__"
+	    Initialize
+	
+	End Sub
+	
+	'* Display the description based on the selected equipment
+	Private Sub SelectedDatasourceListBox_Change()
+	    DescriptionTextBox.Text = ""
+	    DescriptionTextBox.Text = General.GetEquipmentDescription(SelectedDatasourceListBox.List(SelectedDatasourceListBox.ListIndex))
+	End Sub
+	
+	Private Sub Timer1_Timer()
+	    TREND1.RefreshData
+	End Sub
+	
+	Private Sub Shape4_Click()
+	    ''TREND1.Refresh
+	    ''TREND1.RefreshData
+	    TREND1.TurnOnRealtime
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"TRENDLib", 1, 0, "{78D13555-527F-11D2-88F8-000000000000}"
+	"S2KActiveXTimerCtl", 1, 0, "{DAD4F6BF-F802-4EDE-8656-8FA42BE86017}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"Scripting", 1, 0, "{420B2830-E718-11CF-893D-00A0C9054228}"
+	"S2KALARMVIEWERLib", 1, 0, "{C00192E6-EC1E-44DE-9682-72F559DF1569}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+	FONT,2,-16,0,700,0,0,"Arial",0,0
+	FONT,3,-21,0,400,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,130,130,130,0,0,0
+	COLOR,3,76,74,70,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,192,192,192,0,0,0
+	COLOR,6,0,0,0,0,0,1
+	COLOR,7,128,128,128,0,0,0
+	COLOR,8,0,0,128,0,0,0
+	COLOR,9,191,191,191,0,0,0
+	COLOR,10,160,160,160,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape3"
+	B,259,536,4,405,259,536,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,R,"Shape1"
+	B,259,358,3,37,259,358,65535,0,6400,0,1,0,0
+	ST,5,2,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	AST,5,2,COLOR,1,COLOR,2,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,R,"Shape18"
+	B,256,488,4,410,256,488,65535,0,6400,0,1,0,0
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,5,1,COLOR,1,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text20"
+	B,106,425,167,439,29,457,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,106,425,0,0,FONT,1,"Fecha",37,FONT,1,"Fecha",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text21"
+	B,177,425,238,439,48,457,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,177,425,0,0,FONT,1,"Hora",37,FONT,1,"Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Hora",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"bt_date_ini"
+	B,10,430,78,455,0,466,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,10,430,0,0,FONT,1,"Principio",37,FONT,1,"Principio",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Principio",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Principio",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"Text29"
+	B,6,411,256,425,6,425,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,4,COLOR,4,0,0,COLOR,8,0,COLOR,8,0,COLOR,1,0,COLOR,1
+	PP,1,6,411,0,0,FONT,1,"Fecha y Hora",37,FONT,1,"Fecha y Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha y Hora",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"bt_Apply"
+	B,98,460,166,485,88,496,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,98,460,0,0,FONT,1,"Aplicar",37,FONT,1,"Aplicar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aplicar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"bt_Save"
+	B,72,492,189,531,56,548,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,72,492,0,0,FONT,1,"Guardar Cambios",37,FONT,1,"Guardar Cambios",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guardar Cambios",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Guardar Cambios",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"tip%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,OCX,"SelectedDatasourceListBox"
+	B,5,39,256,215,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"AddDSButton"
+	B,46,370,111,394,46,394,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,46,370,0,0,FONT,1,"A¤adir",37,FONT,1,"A¤adir",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"A¤adir",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"RemoveDSButton"
+	B,157,370,207,394,157,394,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,4,0,COLOR,4
+	PP,1,157,370,0,0,FONT,1,"Borrar",37,FONT,1,"Borrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Borrar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,R,"Shape2"
+	B,58,979,58,980,58,979,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"DescriptionTextBox"
+	B,3,218,256,321,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"TREND1"
+	B,264,37,1909,936,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text1"
+	B,736,0,1093,37,736,37,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,736,0,0,0,FONT,2,"Historical Curves",37,FONT,2,"Historical Curves",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Historical Curves",FONT,2,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text24"
+	B,102,439,169,455,102,455,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,102,439,0,0,FONT,1,"__/__/____",37,FONT,1,"__/__/____",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"__/__/____",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"__/__/____",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtDataIniCurvasMonopista%"
+	A,END
+O,END
+O,BEGIN,T,"Text25"
+	B,180,439,242,455,180,455,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,6,0,COLOR,6,0,COLOR,1,0,COLOR,1
+	PP,1,180,439,0,0,FONT,1,"__:__:__",37,FONT,1,"__:__:__",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"__:__:__",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"__:__:__",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,DT,"Anim1",0,0,"",""
+		PP,"@txtHoraIniCurvasMonopista%"
+	A,END
+O,END
+O,BEGIN,T,"Text2"
+	B,74,870,169,894,74,894,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,9,0,COLOR,9,0,COLOR,1,0,COLOR,1
+	AST,7,1,COLOR,1,COLOR,9,0,COLOR,10,0,COLOR,10,0,COLOR,4,0,COLOR,4
+	PP,1,74,870,0,0,FONT,3,"",37,FONT,3,"",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LC,"Anim1",0,0,"",""
+		PP,"GDL_Historico",""
+	A,END
+O,END

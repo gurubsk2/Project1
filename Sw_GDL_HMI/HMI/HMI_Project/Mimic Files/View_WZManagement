@@ -1,0 +1,612 @@
+ASCII32,11,9,2019,23:30,53,1.1
+W,BEGIN,"View_WZManagement","ViewWZManagement"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,0,196
+	SIZE,1920,1000,1920,1000,0,0,0,1600,1200,1916,978
+	BACKCOLOR,215,215,215,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Workzone Session  - LC_01_TCC"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,1,1,0,1,0,0,0,0,0,0,0,1,0,1
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,0,156
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"View_WZManagement.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:  View WZ Management
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*              - the opening of the corresponding "Track plan of WZ in session" mimic
+	'*              - OPC variables related to the WZ In session
+	'*              - Button animation, and edition Mimics display
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Eric FOISSEY
+	'* Date:                January '13
+	'* Change:              CR- 333272 : All
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION (Y3-64 A428320)
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	'* Declarations
+	'* ***********************************************
+	Option Explicit
+	
+	'* Constants
+	'* ***********************************************
+	Private Const c_strTrackPlanWZInSessionMimicName As String = "_View_WZInSessionTrackPlan"
+	Private Const c_strCreateWZHILCCtrlMimicName As String = "WZ_Create_HILCCtrl"
+	Private Const c_strModifyWZHILCCtrlMimicName As String = "WZ_Modify_HILCCtrl"
+	Private Const c_strRemoveWZHILCCtrlMimicName As String = "WZ_Remove_HILCCtrl"
+	Private Const c_strRemoveInitHILCCtrlMimicName As String = "WZ_RemoveInit_HILCCtrl"
+	Private Const c_strCloseSessionHILCCtrlMimicName As String = "TSR_SessionClose_HILCCtrl"
+	Private Const c_strWZConsultMimicName As String = "WZ_BlockConsult"
+	
+	'* Used to display the name of the LC Client
+	Private Const c_strDeviceNameTag As String = ".RemainingTime.name"
+	Private Const c_strRemainingTimeTag As String = ".RemainingTime.Value"
+	
+	Private Const c_strServerSeparator As String = ":"
+	    
+	'* Used to display dialog boxes
+	Private Const c_lInterval As Long = 2
+	
+	'* Used to manage the control buttons
+	Private Const c_strWZMgntButtonsDisabledTag As String = "@CmdButtonsDisabled%"
+	'* Used to memorize the branch of the block selected in the
+	' "Track plan of workzones in session" mimic for consultation
+	Private Const c_strWZBlockConsultTag As String = "@WZSelectedBlockConsult%"
+	
+	'* OPC Variables
+	'* ***********************************************
+	Dim WithEvents m_OPC_RemainingTimeInSession As Variable
+	Dim WithEvents m_OPC_DeviceName As Variable
+	
+	'* Module variables
+	'* ***********************************************
+	'* Name of the OPC cluster
+	Dim m_strOCPClusterName As String
+	
+	'* Variable containing the OPC variable name of the LC current sector
+	Dim m_strLCClientOPCVarName As String
+	
+	
+	
+	Private Sub ButtonClose_Click()
+	
+	End Sub
+	
+	'* Subroutine: Mimic_Open()
+	'* Purpose: It manages:
+	'*      - Default opening of the corresponding "Track plan of Workzones in session" mimic
+	'*      - Add OPC variables in the collection of subscribed variables
+	'* ******************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim lPos As Long
+	    Dim WorkZoneManager As Iconis_CLS_WorkZones
+	    
+	    '* Retreive the OPC cluster name and OPC variable of the current sector
+	    lPos = InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare)
+	    m_strOCPClusterName = Left(ThisMimic.Branch, lPos)
+	    m_strLCClientOPCVarName = Mid(ThisMimic.Branch, lPos + 1)
+	    
+	    '* Initialisation of the workzone manager for the current client ID
+	    Set WorkZoneManager = Iconis_MOD_General.GetWorkzoneManager
+	   
+	        If (m_strLCClientOPCVarName <> "") Then
+	        Dim oTrackPlanWZMimic As Mimic
+	        Dim xPos As Integer
+	        Dim yPos As Integer
+	        
+	        '* Open the corresponding "Track plan of workzones in session" mimic
+	        xPos = 10
+	        yPos = 15
+	        ThisMimic.Activate
+	        'Stop
+	        '\View_WZInSessionTrackPlan
+	        If InStr(ThisSystem.ComputerName, "MTMD") > 0 Then
+	        
+	            Mimics.Open m_strLCClientOPCVarName & c_strTrackPlanWZInSessionMimicName + "_Testtrack", , _
+	                    ThisMimic.ReferenceSet, ThisMimic.Region, "*", ThisMimic.Branch, , , xPos, yPos, True
+	        Else
+	            Mimics.Open m_strLCClientOPCVarName & c_strTrackPlanWZInSessionMimicName + "_Mainline", , _
+	                    ThisMimic.ReferenceSet, ThisMimic.Region, "*", ThisMimic.Branch, , , xPos, yPos, True
+	        
+	        End If
+	    End If
+	    
+	 
+	    WorkZoneManager.SetCurrentLC (m_strLCClientOPCVarName)
+	    Set WorkZoneManager = Nothing
+	    
+	    '* Add the variable containing the branch of the block selected in the
+	    ' "Track plan of workzones in session" mimic for consultation
+	    Variables.Add c_strWZBlockConsultTag, fvVariableTypeText
+	    
+	    '* Variable containing the name of the device (LC client)
+	    Set m_OPC_DeviceName = Variables.Add(ThisMimic.Branch & c_strDeviceNameTag, fvVariableTypeText)
+	    If ((m_OPC_DeviceName.Status = fvVariableStatusGood) And (m_OPC_DeviceName.EnableEvents = True)) Then
+	        m_OPC_DeviceName_ValueChange
+	    Else
+	        m_OPC_DeviceName.EnableEvents = True
+	    End If
+	     
+	    '* Variable containing the remaining time in session
+	    Set m_OPC_RemainingTimeInSession = Variables.Add(ThisMimic.Branch & c_strRemainingTimeTag, fvVariableTypeRegister)
+	     
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Funtion: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, remove variables
+	'* *****************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	    
+	    '* Notify the Navigation system that the Workzone Management view is going to close
+	    Iconis_MOD_Navigation.NotifyClosingView ThisMimic.FileName, ThisMimic.Branch, ThisMimic.Region
+	   
+	    '* Remove the variable
+	    Variables.Remove (c_strWZBlockConsultTag)
+	   
+	    '* Remove subscribed variables
+	    If Not (m_OPC_DeviceName Is Nothing) Then
+	        Variables.Remove (m_OPC_DeviceName.Name)
+	        Set m_OPC_DeviceName = Nothing
+	    End If
+	    
+	    If Not (m_OPC_RemainingTimeInSession Is Nothing) Then
+	        Variables.Remove (m_OPC_RemainingTimeInSession.Name)
+	        Set m_OPC_RemainingTimeInSession = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	
+	'* Subroutine: DisplayMimic
+	'* Purpose:
+	'* - If the "WZ consultation" mimic is opened for a given block, close it
+	'* - Display the given dialog box (Create WZ, Delete WZ, Modify WZ,
+	'*   Release init WZ, Close session)
+	'* *****************************************************************************
+	Private Sub DisplayMimic(ByVal strMimicName)
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "DisplayMimic", "Begin Subroutine")
+	    
+	    Dim lLeftPos As Long
+	    Dim lTopPos As Long
+	    Dim strBlockBranch As String
+	    
+	    '* If the "WZ consultation" mimic is opened for a given block , close it
+	    If (Not Variables.Item(c_strWZBlockConsultTag) Is Nothing) Then
+	        strBlockBranch = Variables.Item(c_strWZBlockConsultTag).Value
+	        If (Mimics.IsOpened(c_strWZConsultMimicName, strBlockBranch) = True) Then
+	            Mimics.Item(c_strWZConsultMimicName, strBlockBranch).Close
+	        End If
+	    End If
+	    
+	    '* Open the given dialog box
+	    lLeftPos = ShapeDialog.Left + c_lInterval
+	    lTopPos = ShapeDialog.Top + c_lInterval
+	    Mimics.Open strMimicName, ThisMimic.Branch, ThisMimic.ReferenceSet, ThisMimic.Region, _
+	                "*", , , , lLeftPos, lTopPos, True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "DisplayMimic", Err.Description)
+	End Sub
+	
+	'* Subroutine: ButtonCreateWZ_Click
+	'* Purpose: Manage the Click event on the "Create WZ" button
+	'* *****************************************************************************
+	Private Sub ButtonCreateWZ_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonCreateWZ_Click", "Begin Subroutine")
+	    
+	    If ((CBool(Variables.Item(c_strWZMgntButtonsDisabledTag).Value) = True) Or _
+	        (m_OPC_RemainingTimeInSession.Status <> fvVariableStatusGood) Or _
+	        (m_OPC_RemainingTimeInSession.Value <= 0)) Then Exit Sub
+	    
+	    '* Open the "Create WZ HILC Ctrl" mimic on the right side of this mimic
+	   DisplayMimic c_strCreateWZHILCCtrlMimicName
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonCreateWZ_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: ButtonModifyWZ_Click
+	'* Purpose: Manage the Click event on the "Modify WZ" button
+	'* *****************************************************************************
+	Private Sub ButtonModifyWZ_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonModifyWZ_Click", "Begin Subroutine")
+	    
+	    If ((CBool(Variables.Item(c_strWZMgntButtonsDisabledTag).Value) = True) Or _
+	        (m_OPC_RemainingTimeInSession.Status <> fvVariableStatusGood) Or _
+	        (m_OPC_RemainingTimeInSession.Value <= 0)) Then Exit Sub
+	    
+	    '* Open the "Modify WZ HILC Ctrl" mimic on the right side of this mimic
+	   DisplayMimic c_strModifyWZHILCCtrlMimicName
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonModifyWZ_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: ButtonDeleteWZ_Click
+	'* Purpose: Manage the Click event on the "Delete WZ" button
+	'* *****************************************************************************
+	Private Sub ButtonDeleteWZ_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonDeleteWZ_Click", "Begin Subroutine")
+	    
+	    If ((CBool(Variables.Item(c_strWZMgntButtonsDisabledTag).Value) = True) Or _
+	        (m_OPC_RemainingTimeInSession.Status <> fvVariableStatusGood) Or _
+	        (m_OPC_RemainingTimeInSession.Value <= 0)) Then Exit Sub
+	    
+	    '* Open the "Delete WZ HILC Ctrl" mimic on the right side of this mimic
+	   DisplayMimic c_strRemoveWZHILCCtrlMimicName
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonDeleteWZ_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: ButtonReleaseInitWZ_Click
+	'* Purpose: Manage the Click event on the "Remove Init WZ" button
+	'* *****************************************************************************
+	Private Sub ButtonReleaseInitWZ_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonReleaseInitWZ_Click", "Begin Subroutine")
+	    
+	    If ((CBool(Variables.Item(c_strWZMgntButtonsDisabledTag).Value) = True) Or _
+	        (m_OPC_RemainingTimeInSession.Status <> fvVariableStatusGood) Or _
+	        (m_OPC_RemainingTimeInSession.Value <= 0)) Then Exit Sub
+	    
+	    '* Open the "Remove Init WZ HILC Ctrl" mimic on the right side of this mimic
+	   DisplayMimic c_strRemoveInitHILCCtrlMimicName
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonReleaseInitWZ_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: ButtonCloseSession_Click
+	'* Purpose: Manage the Click event on the "Close Session" button
+	'* *****************************************************************************
+	Private Sub ButtonCloseSession_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonCloseSession_Click", "Begin Subroutine")
+	    
+	    If ((CBool(Variables.Item(c_strWZMgntButtonsDisabledTag).Value) = True) Or _
+	        (m_OPC_RemainingTimeInSession.Status <> fvVariableStatusGood) Or _
+	        (m_OPC_RemainingTimeInSession.Value <= 0)) Then Exit Sub
+	    
+	    '* Open the "Close Session Ctrl" mimic on the right side of this mimic
+	   DisplayMimic c_strCloseSessionHILCCtrlMimicName
+	   
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonCloseSession_Click", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_DeviceName_ValueChange
+	'* Purpose: Add the device name (LC client) to the text displayed in the
+	'*          title bar
+	'* ***************************************************************************
+	Private Sub m_OPC_DeviceName_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", "Begin Subroutine")
+	        
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_DeviceName.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", "The Status of " & m_OPC_DeviceName.Name & " is waiting")
+	    ElseIf (m_OPC_DeviceName.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", "The Status of " & m_OPC_DeviceName.Name & " is config Error")
+	    ElseIf (m_OPC_DeviceName.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", "The Status of " & m_OPC_DeviceName.Name & " is not connected")
+	    ElseIf (m_OPC_DeviceName.Quality <> 192) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", "The Quality of " & m_OPC_DeviceName.Name & " is not Good")
+	    Else '* Status and Quality are good
+	        '* Add the device name to the text displayed in the title bar
+	        ThisMimic.Caption = "Workzone Session  - " & m_OPC_DeviceName.Value
+	    End If
+	        
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_DeviceName_ValueChange", Err.Description)
+	End Sub
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,215,215,215,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,113,111,100,0,0,0
+	COLOR,4,255,255,255,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,172,168,153,0,0,0
+	COLOR,7,128,128,128,0,0,0
+COLORS,END
+O,BEGIN,R,"ShapeWESession"
+	B,344,940,128,896,344,940,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,R,"ShapeButtons"
+	B,1189,940,357,896,1189,940,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"ButtonClose"
+	B,1821,908,1880,937,1821,937,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,1821,908,0,0,FONT,1,"Cerrar",37,FONT,1,"Cerrar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= (ButtonCloseEnabled%) OR (RemainingTime.Value <= 0)"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,LC,"Anim3",0,0,"",""
+		PP,"*","*"
+		AUTH,"= (ButtonCloseEnabled%) OR (RemainingTime.Value <= 0)",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"ButtonDeleteWZ"
+	B,524,904,663,933,524,933,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,524,904,0,0,FONT,1,"Remover RV",37,FONT,1,"Remover RV",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remover RV",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"@BlockIsSelectable%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"@CmdButtonsDisabled%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"ButtonReleaseInitWZ"
+	B,844,904,1023,933,844,933,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,844,904,0,0,FONT,1,"Remover RV Inicial",37,FONT,1,"Remover RV Inicial",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Remover RV Inicial",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ((RemainingTime.Value > 0) AND  (@CmdButtonsDisabled% == 0))"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"@CmdButtonsDisabled%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+O,END
+O,BEGIN,R,"ShapeInitTSR"
+	B,120,940,8,896,120,940,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,S,"Symbol4"
+	B,136,905,335,932,136,932,64511,0,6400,0,1,0,0
+	PP,"TSR_SessionStatus","",136,905,335,932,1,0, 0, 1
+	A,BEGIN,ORL,"Anim1",0,0,"",""
+		PP,"RemainingTime.Value","",804,720,1003,747,1,"TSR_SessionStatus_NoSession",1.000000,1,"TSR_SessionStatus_RemainingTime",2.000000,1,"TSR_SessionStatus_RemainingTime",1800.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,0,"",0.000000,1,"TSR_SessionStatus_Undefined",0.000000,1,"TSR_SessionStatus_RemainingTime",0.000000
+	A,END
+O,END
+O,BEGIN,T,"LabelTrackPlanOfTSR"
+	B,10,0,216,13,10,13,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,0,10,0,0,0,FONT,1,"Track plan of workzones in session",37,FONT,1,"Track plan of workzones in session",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Track plan of workzones in session",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"ButtonCreateWZ"
+	B,364,904,503,933,364,933,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,364,904,0,0,FONT,1,"Crear RV",37,FONT,1,"Crear RV",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Crear RV",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"@CmdButtonsDisabled%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"ButtonCloseSession"
+	B,1044,904,1180,933,1044,933,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,1044,904,0,0,FONT,1,"Cerrar sesi¢n",37,FONT,1,"Cerrar sesi¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cerrar sesi¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"@CmdButtonsDisabled%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+O,END
+O,BEGIN,R,"ShapeDialog"
+	B,1886,864,1354,20,1886,864,64511,0,6400,0,1,1,1
+	ST,5,1,COLOR,5,COLOR,5,1,3,COLOR,5,3,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,5,1,COLOR,5,COLOR,5,0,COLOR,4,0,COLOR,4,0,COLOR,3,0,COLOR,3
+O,END
+O,BEGIN,T,"LabelTSRSessionStatus1"
+	B,136,887,340,900,136,900,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,1,0,COLOR,1,0,COLOR,2,0,COLOR,2
+	PP,0,136,887,0,0,FONT,1,"Tiempo remaneciente de la sesi¢n",37,FONT,1,"Tiempo remaneciente de la sesi¢n",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tiempo remaneciente de la sesi¢n",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"ButtonModifyWZ"
+	B,684,904,823,933,684,933,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,1,COLOR,5,0,COLOR,6,0,COLOR,6,0,COLOR,4,0,COLOR,4
+	PP,1,684,904,0,0,FONT,1,"Modificar RV",37,FONT,1,"Modificar RV",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Modificar RV",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))"
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,0,COLOR,5,COLOR,5
+		COL,1,COLOR,7,COLOR,7
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,7,COLOR,7
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"@BlockIsSelectable%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+	A,BEGIN,SB,"Anim3",0,0,"",""
+		PP,"@CmdButtonsDisabled%",2,0,0,0,0.000000
+		AUTH,"= ((RemainingTime.Value > 0) AND (@CmdButtonsDisabled% == 0))",1,0,0
+	A,END
+O,END
+O,BEGIN,S,"Symbol3"
+	B,25,906,103,930,25,930,65535,0,6400,0,1,0,0
+	PP,"TSR_InitWZ_Status","",25,906,103,930,1,0, 0, 1
+O,END

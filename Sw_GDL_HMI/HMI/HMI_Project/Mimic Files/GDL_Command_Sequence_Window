@@ -1,0 +1,521 @@
+ASCII32,14,10,2019,11:35,22,1.1
+W,BEGIN,"GDL_Command_Sequence_Window","GDL_Command_Sequence_Window"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,304,443
+	SIZE,880,350,880,350,0,0,0,1920,1144,874,326
+	BACKCOLOR,238,238,238,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Secuencias de Comandos Disponibles"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,1,0,1,1,0,0,0,0,1,1,1,0,0,1,0,0
+	GRID,1,1,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_Command_Sequence_Window.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic name:      GDL Command Sequence Window
+	'* *******************************************************************************************
+	'* Purpose:     '*It manages:
+	'*                  - creating the new sequence
+	'*                  - modify the existing sequence
+	'*                  - delete the sequence
+	'*                  - Execute the existing Sequence
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra Purohit
+	'* Date:                April '17
+	'* Change:              All
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	Option Explicit
+	
+	'* Constant Variables declared for the internal variables used in mimic
+	Private Const c_sSequence As String = "@SEQUENCE"
+	Private Const c_sSerialNumber As String = ".Number%"
+	Private Const c_sSeqName As String = ".SeqName%"
+	Private Const c_sSeqCreationTime As String = ".CreationTime%"
+	Private Const c_sConfirmationReq As String = ".Confirmation%"
+	Private Const c_sDAnswer As String = ".DAnswer%"
+	Private Const c_sUser As String = ".User%"
+	
+	
+	'* OPC Plugs that are used for CST Module
+	Private Const c_CommandSequence As String = "MainGDLL3.CSTModule.CSTMgr.GetSequences"
+	Private Const c_CommandExecuteSequence As String = "MainGDLL3.CSTModule.CSTMgr.ExecuteSequence"
+	Private Const c_CommandDetailsSequence As String = "MainGDLL3.CSTModule.CSTMgr.GetSequenceDetails"
+	Private Const c_Command As String = "YES"
+	
+	'* Constants that are declared for the nodes/attributes of XML
+	
+	Private Const c_strCommandNode As String = "CommandsSequence"
+	Private Const c_strDanswerAttr As String = "DefaultAnswer"
+	Private Const c_strNameAttr As String = "Name"
+	Private Const c_strConfirmation As String = "NeedConfirmation"
+	Private Const c_strCreatedOn As String = "CreatedOn"
+	Private Const c_strUsername As String = "UserName"
+	
+	'* Global Variables
+	Dim sCurItem As String
+	Dim m_strSequenceList As String
+	Dim m_OPC_ExecuteSequence As Variable
+	Dim WithEvents m_OPC_CmdSequence As Variable
+	Dim WithEvents m_OPC_CmdDetailsSeq As Variable
+	
+	'* Function used to delete the Selected Sequence
+	Private Sub btnDelete_Click()
+	On Error GoTo ErrorHandler
+	If Variables.Item("@SelectedSeq%").Value > 0 Then
+	            Call Mimics.OpenInCenter("GDL_CST_Remove_Sequence_Confirmation_Window", Variables.Item("@SelectedSeq%").Value) ', Getmousepointerpossition)
+	End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnDelete_Click", "Exception:" & Err.Description)
+	End Sub
+	'* Function used to display data of the Selected Sequence
+	Private Sub btnDetails_Click()
+	On Error GoTo ErrorHandler
+	
+	 
+	 sCurItem = Variables.Item("@SelectedSeq%").Value
+	If Check_OPC_Variable(m_OPC_CmdDetailsSeq) And sCurItem <> "" Then
+	    m_OPC_CmdDetailsSeq.Value = Variables.Item(c_sSequence & sCurItem & c_sSeqName).Value
+	OpenMimicInCenter "GDL_Command_Sequence_Creation_Window", Variables.Item("@SelectedSeq%").Value, Getmousepointerpossition
+	End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnExecute_Click", "Exception:" & Err.Description)
+	End Sub
+	'* Function used to Execute the Selected Sequence
+	Private Sub btnExecute_Click()
+	On Error GoTo ErrorHandler
+	 If Not m_strSequenceList <> "" Then Exit Sub
+	 sCurItem = Variables.Item("@SelectedSeq%").Value
+	    If Check_OPC_Variable(m_OPC_ExecuteSequence) And sCurItem <> "" Then
+	        m_OPC_ExecuteSequence.Value = Variables.Item(c_sSequence & sCurItem & c_sSeqName).Value
+	    End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "btnExecute_Click", "Exception:" & Err.Description)
+	End Sub
+	
+	
+	Private Sub m_OPC_CmdSequence_ValueChange()
+	On Error GoTo ErrorHandler
+	
+	If Check_OPC_Variable(m_OPC_CmdSequence) Then
+	
+	    If m_OPC_CmdSequence.Value = "" Then
+	        m_OPC_CmdSequence.Value = c_Command
+	    ElseIf (m_OPC_CmdSequence.Value <> c_Command) Then
+	        m_strSequenceList = m_OPC_CmdSequence.Value
+	        ReadXML
+	    End If
+	End If
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "m_OPC_CmdSequence_ValueChange", "Exception:" & Err.Description)
+	End Sub
+	
+	Private Function Mimic_BeforeClose() As Boolean
+	
+	End Function
+	
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	Dim iCount As Integer
+	  
+	    Set m_OPC_CmdSequence = Variables.Add(c_strClusterLevel1 & c_CommandSequence, fvVariableTypeText)
+	    Set m_OPC_ExecuteSequence = Variables.Add(c_strClusterLevel1 & c_CommandExecuteSequence, fvVariableTypeText)
+	    Set m_OPC_CmdDetailsSeq = Variables.Add(c_strClusterLevel1 & c_CommandDetailsSequence, fvVariableTypeText)
+	    Call Variables.Add("@CreateSequence%", fvVariableTypeText)
+	    Call Variables.Add("@SelectedSeq%", fvVariableTypeRegister)
+	    sCurItem = Variables.Item("@SelectedSeq%").Value
+	    
+	    'If Check_OPC_Variable(m_OPC_CmdSequence) Then
+	'         m_OPC_CmdSequence.Value = c_Command
+	    'End If
+	   If ((m_OPC_CmdSequence.Status = fvVariableStatusGood) And (m_OPC_CmdSequence.EnableEvents = True)) Then
+	            m_OPC_CmdSequence_ValueChange
+	   Else
+	            m_OPC_CmdSequence.EnableEvents = True
+	   End If
+	  
+	    For iCount = 1 To 10
+	         Variables.Item(c_sSequence & iCount & ".CommandIndex%").Value = iCount
+	     Next
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, Me.FileName, "Mimic_Open", "Exception:" & Err.Description)
+	End Sub
+	Private Sub ReadXML()
+	On Error GoTo ErrorHandler
+	    Dim oDoc As DOMDocument
+	    Dim oSequenceList As IXMLDOMNodeList
+	    Dim oSequence As IXMLDOMElement
+	    Dim strSequenceName As String
+	    Dim iCount As Integer
+	    
+	 
+	
+	    If (m_strSequenceList <> "") Then
+	    
+	        Set oDoc = New DOMDocument
+	        If Not (oDoc Is Nothing) Then
+	            
+	            If (oDoc.loadXML(m_strSequenceList)) Then
+	                If Not (oDoc.documentElement Is Nothing) Then
+	                    
+	                    Set oSequenceList = oDoc.documentElement.selectNodes(c_strCommandNode)
+	                    If Not (oSequenceList Is Nothing) Then
+	                        If (oSequenceList.length > 0) Then
+	     
+	                         iCount = 1
+	                            For Each oSequence In oSequenceList
+	                                Variables.Item(c_sSequence & iCount & c_sSeqName).Value = Format(oSequence.getAttribute(c_strNameAttr))
+	                                Variables.Item(c_sSequence & iCount & c_sSeqCreationTime).Value = Format(oSequence.getAttribute(c_strCreatedOn))
+	                              
+	                                Variables.Item(c_sSequence & iCount & c_sDAnswer).Value = Format(oSequence.getAttribute(c_strDanswerAttr))
+	                                Variables.Item(c_sSequence & iCount & c_sConfirmationReq).Value = Format(oSequence.getAttribute(c_strConfirmation))
+	                                Variables.Item(c_sSequence & iCount & c_sUser).Value = Format(oSequence.getAttribute(c_strUsername))
+	                                'Variables.Item(c_sSequence & iCount & c_sUser).Value = Format(oSequence.getAttribute(c_strNameAttr))
+	                              
+	                                Variables.Item(c_sSequence & iCount & c_sSerialNumber).Value = iCount
+	
+	                             iCount = iCount + 1
+	                             Next oSequence
+	                        End If
+	                        Set oSequenceList = Nothing
+	                    End If
+	                End If
+	            End If
+	            Set oDoc = Nothing
+	        End If
+	    End If
+	 
+	Exit Sub
+	ErrorHandler:
+	Call CBTrace(CBTRACEF_ALWAYS, Me.Name, "ReadXML", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,122,122,122,0,0,0
+	COLOR,3,255,255,255,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,212,208,200,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape1"
+	B,40,36,8,4,40,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape2"
+	B,280,36,40,4,280,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape3"
+	B,436,36,280,4,436,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape5"
+	B,576,36,435,4,576,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape6"
+	B,714,36,576,4,714,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,R,"Shape8"
+	B,859,36,714,4,859,36,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text2"
+	B,10,7,34,31,10,31,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,10,7,0,0,FONT,1," N.",37,FONT,1," N.",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1," N.",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text3"
+	B,42,8,280,32,42,32,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,42,8,0,0,FONT,1,"Nombre de la Secuencia de Commandos",37,FONT,1,"Nombre de la Secuencia de Commandos",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Nombre de la Secuencia de Commandos",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text4"
+	B,283,0,419,24,283,24,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,283,0,0,0,FONT,1,"Fecha/Hora",37,FONT,1,"Fecha/Hora",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Fecha/Hora",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text5"
+	B,301,20,400,34,301,34,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,301,20,0,0,FONT,1,"de Creacion",37,FONT,1,"de Creacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"de Creacion",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text8"
+	B,447,7,546,21,447,21,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,447,7,0,0,FONT,1,"Necesidad de",37,FONT,1,"Necesidad de",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Necesidad de",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text9"
+	B,446,21,545,35,446,35,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,446,21,0,0,FONT,1,"Confirmacion",37,FONT,1,"Confirmacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Confirmacion",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text10"
+	B,592,7,691,21,592,21,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,592,7,0,0,FONT,1,"Respuesta",37,FONT,1,"Respuesta",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Respuesta",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text11"
+	B,593,21,692,35,593,35,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,593,21,0,0,FONT,1,"Estandar",37,FONT,1,"Estandar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Estandar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text12"
+	B,736,13,835,27,736,27,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,3,COLOR,3,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+	PP,1,736,13,0,0,FONT,1,"Usuario",37,FONT,1,"Usuario",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Usuario",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,GRP,"btnExecute"
+	B,40,298,154,322,40,322,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape11"
+		B,154,322,40,298,154,322,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,T,"Text13"
+		B,56,298,135,322,56,322,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,1,56,298,0,0,FONT,1,"Ejecutar",37,FONT,1,"Ejecutar",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Ejecutar",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUSed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,GRP,"Group2"
+	B,401,298,521,322,401,322,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape14"
+		B,521,322,401,298,521,322,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,T,"Text15"
+		B,422,298,501,322,422,322,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,1,422,298,0,0,FONT,1,"Crear",37,FONT,1,"Crear",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Crear",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		PP,"GDL_Command_Sequence_Creation_Window","*",1,0,1,0,"","",1
+	A,END
+	A,BEGIN,SR,"Anim2",0,0,"",""
+		PP,"@NewSequence%",0,"",0,0,3,1,0,0,1.000000,0,0,1
+		ADVSENDVALUE,2,1
+	A,END
+O,END
+O,BEGIN,GRP,"btnDetails"
+	B,679,298,793,322,679,322,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape15"
+		B,793,322,679,298,793,322,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,T,"Text16"
+		B,697,298,776,322,697,322,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,1,697,298,0,0,FONT,1,"Detalles",37,FONT,1,"Detalles",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Detalles",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"notused%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,S,"SequenceDetails1"
+	B,4,44,861,69,4,69,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE1",4,44,861,69,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails2"
+	B,4,69,861,94,4,94,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE2",4,69,861,94,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails3"
+	B,4,94,861,119,4,119,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE3",4,94,861,119,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails4"
+	B,4,119,861,144,4,144,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE4",4,119,861,144,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails5"
+	B,4,144,861,169,4,169,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE5",4,144,861,169,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails6"
+	B,4,169,861,194,4,194,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE6",4,169,861,194,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails7"
+	B,4,194,861,219,4,219,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE7",4,194,861,219,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails8"
+	B,4,219,861,244,4,244,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE8",4,219,861,244,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails9"
+	B,4,244,861,269,4,269,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE9",4,244,861,269,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,S,"SequenceDetails10"
+	B,4,269,861,294,4,294,65535,0,6400,0,1,0,0
+	PP,"GDL_SequenceDetails","@SEQUENCE10",4,269,861,294,1,0, 0, 1
+	SUB
+O,END
+O,BEGIN,GRP,"btnDelete"
+	B,200,298,314,322,200,322,65535,0,6400,0,1,1,1
+	PP,0
+	O,BEGIN,R,"Shape13"
+		B,314,322,200,298,314,322,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,1,3,COLOR,5,3,COLOR,5,0,COLOR,1,0,COLOR,1
+		AST,4,2,COLOR,1,COLOR,1,0,COLOR,4,0,COLOR,4,0,COLOR,4,0,COLOR,4
+	O,END
+	O,BEGIN,T,"Text14"
+		B,218,298,297,322,218,322,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,4,0,COLOR,4,0,COLOR,1,0,COLOR,1
+		PP,1,218,298,0,0,FONT,1,"Borrar",37,FONT,1,"Borrar",37
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,"Borrar",FONT,1,37
+			LANG,END
+		MULTILANG,END
+	O,END
+	A,BEGIN,SB,"Anim1",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END

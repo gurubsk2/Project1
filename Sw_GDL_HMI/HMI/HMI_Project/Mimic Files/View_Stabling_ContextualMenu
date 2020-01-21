@@ -1,0 +1,159 @@
+ASCII32,28,6,2017,5:23,0,1.1
+W,BEGIN,"View_Stabling_ContextualMenu","ViewLineControlsWithGAMA"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,1521,257
+	SIZE,270,85,270,85,0,0,0,1680,1050,270,85
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Stabling\\Unstabling"
+		LANG,END
+	MULTILANG,END
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,8,8,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,6,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"View_Stabling_ContextualMenu.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	''* *******************************************************************************************
+	''* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	''* The software is to be treated as confidential and it may not be copied, used or disclosed
+	''* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	''* *******************************************************************************************
+	''* Mimic Name:      View Line Controls With GAMA
+	''* *******************************************************************************************
+	''* Purpose:     It manages display of items of the menu
+	''* *******************************************************************************************
+	''* Modification History:
+	''* Author:              Venkateshwar Vivek
+	''* Date:                November 2014
+	''* Change:              All
+	''* *******************************************************************************************
+	''* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	''*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	''* *******************************************************************************************
+	'
+	Private Sub btnStablingView_Click()
+	On Error GoTo ErrorHandler
+	
+	Call OpenMimicInCenter("mmc_Stabling_SO", ThisMimic.Branch, GetmousepointerPossition)
+	ThisMimic.Close
+	
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "View_Stabling_ContextualMenu", "btnStablingView_Click", Err.Description)
+	End Sub
+	
+	Private Sub btnUnStabling_Click()
+	On Error GoTo ErrorHandler
+	
+	Call OpenMimicInCenter("mmc_Unstabling_SO", ThisMimic.Branch, GetmousepointerPossition)
+	ThisMimic.Close
+	
+	ErrorHandler:
+	        Call CBTrace(CBTRACEF_ALWAYS, "View_Stabling_ContextualMenu", "btnUnStabling_Click", Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-11,0,400,0,0,"Tahoma",0,0
+	FONT,2,-13,0,700,0,0,"Arial",0,0
+	FONT,3,-13,0,700,0,0,"Tahoma",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,174,174,174,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,0,0,0,0,0,1
+	COLOR,5,191,191,191,0,0,0
+COLORS,END
+O,BEGIN,L,"Poly3"
+	B,1,19,267,21,1,19,65535,0,6400,0,1,0,0
+	ST,0,2,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	PP,1,19,267,21
+O,END
+O,BEGIN,T,"btnStablingView"
+	B,5,31,225,54,5,54,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,5,31,0,0,FONT,1,"Global GAMA authorization...",36,FONT,1,"Global GAMA authorization...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tablas de Entrada de Trenes...",FONT,2,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Global GAMA authorization...",FONT,3,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,LO,"Anim1",0,0,"",""
+		MULTILANG,BEGIN
+			LANG_DEFAULT,1033
+			LANG,BEGIN,1033
+				ROLE_DEFAULT,-1
+				ROLE,-1,""
+			LANG,END
+		MULTILANG,END
+		PP,"mmc_Stabling_SO","*",1,0,1,-25,"","",1
+	A,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnUnStabling"
+	B,5,55,233,78,5,78,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,1,5,55,0,0,FONT,1,"Global GAMA removal...",36,FONT,1,"Global GAMA removal...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tablas de Salida de Trenes...",FONT,2,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Global GAMA removal...",FONT,3,36
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,SB,"Anim2",0,0,"",""
+		PP,"NotUsed%",0,0,0,0,0.000000
+	A,END
+O,END
+O,BEGIN,T,"btnGlobalGAMAAuthorization1"
+	B,10,7,250,30,10,30,65535,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+	PP,1,10,7,0,0,FONT,2,"Tablas de Entrada de Trenes...",36,FONT,2,"Tablas de Entrada de Trenes...",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Tablas de Entrada y Salida de Trenes",FONT,2,36
+		LANG,END
+		LANG,BEGIN,13322
+			ROLE_DEFAULT,0
+			ROLE,0,"Global GAMA authorization...",FONT,3,36
+		LANG,END
+	MULTILANG,END
+O,END

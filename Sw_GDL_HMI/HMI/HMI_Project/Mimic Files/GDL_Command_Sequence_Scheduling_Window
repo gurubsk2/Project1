@@ -1,0 +1,210 @@
+ASCII32,25,4,2017,16:15,46,1.1
+W,BEGIN,"GDL_Command_Sequence_Scheduling_Window","GDL_Command_Sequence_Scheduling_Window"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,517,315
+	SIZE,800,400,800,400,0,0,0,1920,1144,790,372
+	BACKCOLOR,238,238,238,0,0,0
+	TITLE,1
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Planificar Secuencia"
+		LANG,END
+	MULTILANG,END
+	STYLE,1,0,0,1,1,1,0,0,0,1,0,1,0,0,1,0,0
+	GRID,1,1,1,1,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,0,0,0,0
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"GDL_Command_Sequence_Scheduling_Window.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2008. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Project: GDL3
+	'* *******************************************************************************************
+	'* Purpose: Opening different mimics based on Time and Event Selection
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra
+	'* Description:
+	'* Date:                Jan 2017
+	'* Change:              All
+	'* *******************************************************************************************
+	Option Explicit
+	Private Const c_sSequence As String = "@SEQUENCE"
+	Private Const c_sSeqName As String = ".SeqName%"
+	'***************Local/global variables used***********************
+	Dim sCurItem As String
+	Dim sCurEventItem As String
+	
+	
+	Private Sub btn_Event_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btn_Event_Click", "Call CloseLastMimic")
+	        
+	    CloseLastMimic
+	    
+	    Mimics.Open "GDL_CST_Event_Scheduling", , , ThisMimic.Region, ThisMimic.FileName, , , , 10, 100, True
+	    
+	    'Log the current mimic into LastOpenedMimic%
+	    Variables("LastOpenedMimic%").Value = "GDL_CST_Event_Scheduling"
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btn_Event_Click", Err.Description)
+	End Sub
+	
+	Private Sub btn_Time_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btn_Time_Click", "Call CloseLastMimic")
+	        
+	    CloseLastMimic
+	    
+	    Mimics.Open "GDL_CST_Time_Scheduling", , , ThisMimic.Region, ThisMimic.FileName, , , , 10, 100, True
+	    
+	    'Log the current mimic into LastOpenedMimic%
+	    Variables("LastOpenedMimic%").Value = "GDL_CST_Time_Scheduling"
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "btn_Time_Click", Err.Description)
+	End Sub
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	
+	 
+	  'Log the LastOpenedMimic%,close LastOpenedMimic% before open new mimic
+	     Variables.Add "LastOpenedMimic%", fvVariableTypeText
+	     btn_Time.Value = True
+	     btn_Event.Value = False
+	     'txtBoxSeqName.Value = Variables.Item(c_SeqName).Value
+	     Call Variables.Add("@NewScheduleSequence%", fvVariableTypeRegister)
+	          
+	    If Variables.Item("@NewScheduleSequence%").Value = 1 Then
+	       txtBoxSeqScheduleName.Enabled = True
+	       txtBoxSeqScheduleName.Value = ""
+	       btn_Time.Value = False
+	       btn_Event.Value = False
+	       btn_Time.Value = True
+	       Call btn_Time_Click
+	    ElseIf Variables.Item("@NewScheduleSequence%").Value = 2 Then
+	    
+	        If Variables.Item("@SelectedScheduleSeq%").Value > 0 Then
+	            sCurItem = Variables.Item("@SelectedScheduleSeq%").Value
+	            txtBoxSeqScheduleName.Value = Variables.Item(c_sSequence & sCurItem & c_sSeqName).Value
+	            btn_Time.Value = True
+	            Call btn_Time_Click
+	         Else
+	             sCurEventItem = Variables.Item("@SelectedScheduleEventSeq%").Value
+	            txtBoxSeqScheduleName.Value = Variables.Item(c_sSequence & sCurEventItem & c_sSeqName).Value
+	             btn_Event.Value = True
+	             Call btn_Event_Click
+	        End If
+	    Else
+	         
+	        txtBoxSeqScheduleName.Value = Variables.Item("@SeqName%").Value
+	        btn_Time.Value = True
+	     Call btn_Time_Click
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "Mimic_Open", Err.Description)
+	
+	End Sub
+	
+	Private Sub CloseLastMimic()
+	On Error GoTo ErrorHandler
+	Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "CloseLastMimic", "Enter: LastOpenedMimic%=" & Variables("LastOpenedMimic%").Value)
+	    
+	    If (Mimics.IsOpened(Variables("LastOpenedMimic%").Value, , , ThisMimic.Region)) Then
+	        Mimics.Item(Variables("LastOpenedMimic%").Value, , , ThisMimic.Region).Close fvDoNotSaveChanges
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "CloseLastMimic", Variables("LastOpenedMimic%").Value & " closed")
+	    End If
+	      
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.FileName, "CloseLastMimic", "ErrorHandler: " & Err.Description)
+	End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+	"MSComCtl2", 2, 0, "{86CF1D34-0C5F-11D2-A9FC-0000F8754DA1}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-12,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,1
+COLORS,END
+O,BEGIN,T,"Text11"
+	B,17,9,81,33,17,33,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,17,9,0,0,FONT,1,"Estacion",37,FONT,1,"Estacion",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Secuencia",FONT,1,37
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"txtBoxSeqScheduleName"
+	B,94,10,358,34,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,OCX,"btn_Time"
+	B,40,51,57,75,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END
+O,BEGIN,T,"Text16"
+	B,62,48,126,72,62,72,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,62,48,0,0,FONT,1,"Secuencia",37,FONT,1,"Secuencia",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Horario",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"Text17"
+	B,62,74,126,98,62,98,65535,0,6400,0,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+	PP,1,62,74,0,0,FONT,1,"Horario",36,FONT,1,"Horario",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,1033
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Evento",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,OCX,"btn_Event"
+	B,40,77,58,101,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,2,0,COLOR,2,0,COLOR,1,0,COLOR,1
+O,END

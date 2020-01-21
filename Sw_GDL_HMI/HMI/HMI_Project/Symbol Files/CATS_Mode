@@ -1,0 +1,86 @@
+ASCII32,19,8,2019,18:55,36,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,0,0,0,0,0,1
+	COLOR,2,255,255,255,0,0,0
+	COLOR,3,172,168,153,0,0,0
+	COLOR,4,0,0,0,0,0,0
+	COLOR,5,204,204,204,0,0,0
+	COLOR,6,0,149,37,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2013. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Module:      CATS_Mode_MGmt
+	'* *******************************************************************************************
+	'* Purpose:     It manages:
+	'*                  - Send value to plug on click
+	'* *******************************************************************************************
+	'* Modification History:
+	'* Author:              Chaitra
+	'* Date:                July '17
+	'* Change:              A11
+	
+	'* *******************************************************************************************
+	'* Ref:             1. REQUIREMENTS SPECIFICATION AND ARCHITECTURE DESCRIPTION
+	'*                  2. OPERATIONAL HMI INTERFACE DESCRIPTION
+	'* *******************************************************************************************
+	'* Declarations
+	'* ******************************************************
+	'Option Explicit
+	'
+	'Private Const c_strCatsModeMgmt As String = ".CATS.KB.ModeMgmt.Mode"
+	'
+	'Private Sub btnMode_Click()
+	'On Error GoTo ErrorHandler
+	'
+	'If Check_OPC_Variable(ThisProject.m_OPC_CATSMode) Then
+	'ThisProject.m_OPC_CATSMode.Value = 2
+	'End If
+	'ErrorHandler:
+	'        Call CBTrace(CBTRACEF_ALWAYS, "btnMode_Click", "btnMode_Click", Err.Description)
+	'End Sub
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol7"
+	B,18,160,52,194,18,194,65535,0,6400,0,1,0,0
+	O,BEGIN,R,"btnMode"
+		B,52,194,18,160,52,194,65535,0,6400,0,2,1,1
+		ST,5,1,COLOR,1,COLOR,1,0,3,COLOR,1,3,COLOR,1,0,COLOR,1,0,COLOR,1
+		AST,7,2,COLOR,1,COLOR,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape6"
+		B,45,187,24,166,45,187,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,5,0,COLOR,5,0,COLOR,4,0,COLOR,4
+		A,BEGIN,CRL,"Anim1",0,0,"",""
+			PP,"OPCCluster:CATS.KB.ModeMgmt.Mode"
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,1,COLOR,1,COLOR,1,2.000000
+			COL,1,COLOR,6,COLOR,6,3.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+			COL,0,COLOR,4,COLOR,4,0.000000
+		A,END
+	O,END
+O,END

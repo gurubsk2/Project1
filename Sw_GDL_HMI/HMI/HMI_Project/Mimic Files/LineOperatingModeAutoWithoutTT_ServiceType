@@ -1,0 +1,2396 @@
+ASCII32,19,9,2018,15:52,47,1.1
+W,BEGIN,"LineOperatingModeAutoWithoutTT_ServiceType","LineOperatingModeAutoWithoutTTServiceType"
+	TEMPLATE,"",0,0,0,0,0,0,0,0,0,0,0,0
+	POSITION,8,30
+	SIZE,610,355,610,355,0,0,0,1424,1034,610,355
+	BACKCOLOR,191,191,191,0,0,0
+	TITLE,0
+	STYLE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+	GRID,1,0,5,5,0,0,0,0,0,0
+	LAYERS,65535
+	RIGHTS,0,1,0.000000,64.000000,1,65535,0,0
+	INCLUDED,0,7,1,8,30
+	LINK,1,"",""
+	LINK,2,"",""
+	LINK,3,"",""
+	LINK,4,"",""
+	LINK,5,"",""
+	LINK,6,"",""
+	LINK,7,"",""
+	LINK,8,"",""
+	LINK,9,"",""
+	LINK,10,"",""
+	BACKBMP,"",0,0
+	BACKOBJECT,"",0,0
+	BEFORE,"","","",""
+	EVENTS,1
+	BINOBJ,"LineOperatingModeAutoWithoutTT_ServiceType.binary"
+W,END
+VBA_HOSTPROJECT,BEGIN
+	'* *******************************************************************************************
+	'* Copyright, ALSTOM Transport Information Solutions, 2009. All Rights Reserved.
+	'* The software is to be treated as confidential and it may not be copied, used or disclosed
+	'* to others unless authorised in writing by ALSTOM Transport Information Solutions.
+	'* *******************************************************************************************
+	'* Mimic Name:      Line Operating Mode Auto Without TT Service Type
+	'* *******************************************************************************************
+	'* Purpose:     Manages the selection of the service type
+	'* *******************************************************************************************
+	'* Modification History:
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              All
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                June '09
+	'* Change:              Complement
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '09
+	'* Change:              Implementation of the case where the line operating mode is already
+	'*                      in "Automatic without TT"
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                July '09
+	'* Change:              Complement of the implementation of the case where the line operating
+	'*                      mode is already in "Automatic without TT"
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                December '09
+	'* Change:              CR ALPHA 162362
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                January '10
+	'* Change:              CR ALPHA 166167
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                March '10
+	'* Change:              CR ALPHA 172697
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                April '11
+	'* Change:              CR ALPHA 224371
+	
+	'* Author:              Olivier TAYEG
+	'* Date:                July '11
+	'* Change:              Fixed a variable connection
+	
+	'* Author:              Nicole FLORIAN
+	'* Date:                September '11
+	'* Change:              CR ALPHA 250250
+	
+	'* Author:              VALVERDE Artur
+	'* Date:                March '17
+	'* Change:              All changes for Guadalajara Line 3
+	'* *******************************************************************************************
+	'* Ref:             1. OPERATIONAL HMI INTERFACE DESCRIPTION (Y3-64 A427846)
+	'* *******************************************************************************************
+	
+	Option Explicit
+	
+	'* Declarations
+	'* ******************************************************
+	
+	'* Constants
+	'* ******************************************************
+	'* Separator between the OPC cluster and the OPC tag
+	Private Const c_strServerSeparator As String = ":"
+	
+	'* Service types
+	Private Const c_strNominalService As String = "0"
+	Private Const c_strProvisionalService As String = "1"
+	Private Const c_iUnknownServiceType As String = 0
+	Private Const c_iNominalServiceType As String = 1
+	Private Const c_iProvisionalServiceType As String = 2
+	
+	'* Value of line operating mode : "Automatic without timetable"
+	Private Const c_iAutomaticWithoutTTMode As Integer = 1
+	
+	'* Used to read the XML format string
+	Private Const c_strNextModeNode As String = "NextMode"
+	Private Const c_strNextModeIndexAttr As String = "Index"
+	Private Const c_strNextModeNameAttr As String = "Name"
+	Private Const c_strNextModeTypeAttr As String = "Type"
+	
+	'* Path of local variables
+	Private Const c_strCommandOptionButtonTag As String = ".ServiceType.iCommandValue%"
+	Private Const c_strDisableOptionButtonTag As String = ".ServiceType.bDisabled%"
+	
+	'* Path of OPC variables
+	'Private Const c_strAvailableServicesTag As String = "MainUO.CarouselsConfiguration.NextOperatingModesList"
+	'Private Const c_strAvailableServicesTag As String = "IconisMain.TPMModule.ModeMgnt.NextOperatingModesList"
+	Private Const c_strServicePatternTag As String = "IconisMain.TPMModule.ModeMgnt.ModeVal"
+	'Private Const c_strLineOperatingModeTag As String = ".ModeVal"
+	Private Const c_strLineOperatingModeTag As String = ".ModeMgmt.Mode"
+	
+	'* OPC variables
+	'* ******************************************************
+	Dim WithEvents m_OPC_AvailableServices As Variable
+	Dim WithEvents m_OPC_ServicePattern As Variable
+	Dim WithEvents m_OPC_LineOperatingMode As Variable
+	
+	'* Module variables
+	'* ******************************************************
+	'* Flag indicating if the value of the OPC variable containing the list
+	'* of available services has been received
+	Private m_bAvailableServicesFlag As Boolean
+	'* Flag indicating if the value of the OPC variable containing the current
+	'* line operating mode has been received
+	Private m_bLineOperatingModeFlag As Boolean
+	'* Flag indicating if the value of the OPC variable containing the current
+	'* service pattern has been received
+	Private m_bServicePatternFlag As Boolean
+	
+	'* Boolean indicating if the current line operating mode is already in "Automatic without TT"
+	Private m_bIsInAutoWithoutTT As Boolean
+	Private m_iCurrentServiceType As Integer
+	
+	'* Variable containing couples (Index and Name) of each nominal service
+	Private m_collNominalServiceNames As Object
+	'* Variable containing couples (Index and Name) of each provisional service
+	Private m_collProvisionalServiceNames As Object
+	
+	Private bUpdating As Boolean
+	
+	
+	
+	
+	'* Subroutine: Mimic_Open
+	'* Purpose: On opening the mimic,
+	'*      - Init flags and variables,
+	'*      - Disable/Enable controls
+	'*      - Add the OPC variables to the list of permanently subscribed variables
+	'* ************************************************************************************************
+	Private Sub Mimic_Open()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_Open", "Begin Subroutine")
+	    
+	    Dim strOCPClusterName As String
+	    Dim i As Integer
+	    
+	    'Add local variables for the red lines
+	    For i = 1 To 14
+	        If Variables("@Service" & i & "%") Is Nothing Then Variables.Add "@Service" & i & "%", fvVariableTypeBit
+	        Variables("@Service" & i & "%").Value = False
+	    Next i
+	        
+	    '* Extract the cluster name from the branch of the mimic
+	    strOCPClusterName = Left(ThisMimic.Branch, InStr(1, ThisMimic.Branch, c_strServerSeparator, vbTextCompare))
+	    
+	    '* Init flags
+	    m_bAvailableServicesFlag = False
+	    m_bServicePatternFlag = False
+	    m_bLineOperatingModeFlag = False
+	    m_bIsInAutoWithoutTT = False
+	    
+	    '* Init Dictionary objects
+	    Set m_collNominalServiceNames = Nothing
+	    Set m_collNominalServiceNames = CreateObject("Scripting.Dictionary")
+	    Set m_collProvisionalServiceNames = Nothing
+	    Set m_collProvisionalServiceNames = CreateObject("Scripting.Dictionary")
+	    
+	''    '* Init variable associated to the selected service type (by default, no selected service type = 0)
+	''    Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iUnknownServiceType
+	    
+	'    '* Disable the buttons (Nominal service and Provisional service)
+	'    Variables.Item(ThisMimic.Branch & c_strDisableOptionButtonTag).Value = True
+	    
+	    '* Disable the "OK" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = False
+	    '* Enable the "Cancel" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonCancelEnabled%").Value = True
+	    
+	'    '* Variable containing the list of available services
+	'    Set m_OPC_AvailableServices = Variables.Add(strOCPClusterName & c_strAvailableServicesTag, fvVariableTypeText)
+	'    If ((m_OPC_AvailableServices.EnableEvents = True) And (m_OPC_AvailableServices.Status = fvVariableStatusGood)) Then
+	'        m_OPC_AvailableServices_ValueChange
+	'    Else
+	'        m_OPC_AvailableServices.EnableEvents = True
+	'    End If
+	    
+	'    '* Variable containing the current line operating mode
+	'    Set m_OPC_LineOperatingMode = Variables.Add(ThisMimic.Branch & c_strLineOperatingModeTag, fvVariableTypeRegister)
+	'    If ((m_OPC_LineOperatingMode.EnableEvents = True) And (m_OPC_LineOperatingMode.Status = fvVariableStatusGood)) Then
+	'        m_OPC_LineOperatingMode_ValueChange
+	'    Else
+	'        m_OPC_LineOperatingMode.EnableEvents = True
+	'    End If
+	'
+	'    '* Variable containing the current service pattern
+	'    '* (used only if the line operating mode is already in "Automatic without timetable")
+	'    Set m_OPC_ServicePattern = Variables.Add(strOCPClusterName & c_strServicePatternTag, fvVariableTypeRegister)
+	'    If ((m_OPC_ServicePattern.EnableEvents = True) And (m_OPC_ServicePattern.Status = fvVariableStatusGood)) Then
+	'        m_OPC_ServicePattern_ValueChange
+	'    Else
+	'        m_OPC_ServicePattern.EnableEvents = True
+	'    End If
+	    
+	    ' DoEvents
+	        
+	    'Disable Provisional services
+	    EnableProv False
+	    optNorm.Value = False
+	    optProv.Value = False
+	
+	    'Disdable VIA
+	    optTZAVia1.Enabled = False
+	    optTZAVia2.Enabled = False
+	    optTZAAnden.Enabled = False
+	    optTZAVia1.Value = False
+	    optTZAVia2.Value = False
+	    optTZAAnden.Value = False
+	
+	    optTCCVia1.Enabled = False
+	    optTCCVia2.Enabled = False
+	    optTCCAnden.Enabled = False
+	    optTCCVia1.Value = False
+	    optTCCVia2.Value = False
+	    optTCCAnden.Value = False
+	
+	    UpdateCurrentService
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_Open", Err.Description)
+	End Sub
+	
+	'* Function: Mimic_BeforeClose
+	'* Purpose: Before closing the mimic, remove
+	'*      - all key, item pairs from the Dictionary objects
+	'*      - the OPC variable previously subscribed
+	'* **************************************************************************
+	Private Function Mimic_BeforeClose() As Boolean
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "Mimic_BeforeClose", "Begin Function")
+	
+	    If Not (m_collNominalServiceNames Is Nothing) Then
+	        If (m_collNominalServiceNames.Count > 0) Then
+	            m_collNominalServiceNames.removeAll
+	        End If
+	    End If
+	    
+	    If Not (m_collProvisionalServiceNames Is Nothing) Then
+	        If (m_collProvisionalServiceNames.Count > 0) Then
+	            m_collProvisionalServiceNames.removeAll
+	        End If
+	    End If
+	
+	    If Not m_OPC_AvailableServices Is Nothing Then
+	        Variables.Remove (m_OPC_AvailableServices.Name)
+	        Set m_OPC_AvailableServices = Nothing
+	    End If
+	    
+	    If Not m_OPC_ServicePattern Is Nothing Then
+	        Variables.Remove (m_OPC_ServicePattern.Name)
+	        Set m_OPC_ServicePattern = Nothing
+	    End If
+	    
+	     If Not m_OPC_LineOperatingMode Is Nothing Then
+	        Variables.Remove (m_OPC_LineOperatingMode.Name)
+	        Set m_OPC_LineOperatingMode = Nothing
+	    End If
+	    
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "Mimic_BeforeClose", Err.Description)
+	End Function
+	
+	'* Subroutine: ManageComboBox
+	'* Purpose: Fill the combo boxes
+	'* ********************************************************************************
+	Private Sub ManageComboBox()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ManageComboBox", "Begin Subroutine")
+	    
+	    If ((m_bLineOperatingModeFlag = True) And (m_bAvailableServicesFlag = True) And (m_bServicePatternFlag = True)) Then
+	        '* Fill combo boxes
+	        FillComboBoxes
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ManageComboBox", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_AvailableServices_ValueChange
+	'* Purpose: Manages the list of available services
+	'* ********************************************************************************
+	Private Sub m_OPC_AvailableServices_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_AvailableServices.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", "The status of " & m_OPC_AvailableServices.Name & " is Waiting")
+	    ElseIf (m_OPC_AvailableServices.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", "The status of " & m_OPC_AvailableServices.Name & " is Config Error")
+	    ElseIf (m_OPC_AvailableServices.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", "The status of " & m_OPC_AvailableServices.Name & " is Not Connected")
+	    ElseIf (m_OPC_AvailableServices.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", "The Quality of " & m_OPC_AvailableServices.Name & " is not good")
+	    Else '* Status and quality of the OPC variable are valid
+	        If (m_bAvailableServicesFlag = False) Then
+	            '* Set the flag indicating that the value has been received
+	            m_bAvailableServicesFlag = True
+	            '* Fill the combo boxes
+	            ManageComboBox
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_AvailableServices_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_ServicePattern_ValueChange
+	'*  Memorize the current service (if the line operating mode is already in "Auto with TT")
+	'* *****************************************************************************************
+	Private Sub m_OPC_ServicePattern_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", "Begin Subroutine")
+	
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_ServicePattern.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", "The status of " & m_OPC_ServicePattern.Name & " is Waiting")
+	    ElseIf (m_OPC_ServicePattern.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", "The status of " & m_OPC_ServicePattern.Name & " is Config Error")
+	    ElseIf (m_OPC_ServicePattern.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", "The status of " & m_OPC_ServicePattern.Name & " is Not Connected")
+	    ElseIf (m_OPC_ServicePattern.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", "The Quality of " & m_OPC_ServicePattern.Name & " is not good")
+	    Else '* Status and quality of the OPC variable are valid
+	        If (m_bServicePatternFlag = False) Then
+	            '* Set the flag indicating that the value has been received
+	            m_bServicePatternFlag = True
+	            '* Memorize the ID of the current service
+	            Variables.Item("@CurrentServiceID%").Value = Format(m_OPC_ServicePattern.Value)
+	            '* Fill the combo boxes
+	            ManageComboBox
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ServicePattern_ValueChange", Err.Description)
+	End Sub
+	
+	'* Subroutine: m_OPC_LineOperatingMode_ValueChange
+	'* Purpose: Manage the list of proposed headways
+	'* ***************************************************************
+	Private Sub m_OPC_LineOperatingMode_ValueChange()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_LineOperatingMode_ValueChange", "Begin Subroutine")
+	    
+	    '* Check the status and the quality of the variable
+	    If (m_OPC_LineOperatingMode.Status = fvVariableStatusWaiting) Then
+	        Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "m_OPC_LineOperatingMode_ValueChange", "The status of " & m_OPC_LineOperatingMode.Name & " is Waiting")
+	    ElseIf (m_OPC_LineOperatingMode.Status = fvVariableStatusConfigError) Then
+	        Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_LineOperatingMode_ValueChange", "The status of " & m_OPC_LineOperatingMode.Name & " is Config Error")
+	    ElseIf (m_OPC_LineOperatingMode.Status = fvVariableStatusNotConnected) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_LineOperatingMode_ValueChange", "The status of " & m_OPC_LineOperatingMode.Name & " is Not Connected")
+	    ElseIf (m_OPC_LineOperatingMode.Quality <> 192) Then
+	        Call CBTrace(CBTRACE_VAR, ThisMimic.Name, "m_OPC_LineOperatingMode_ValueChange", "The Quality of " & m_OPC_LineOperatingMode.Name & " is not good")
+	    Else '* Status and quality of the variable are good
+	        If (m_bLineOperatingModeFlag = False) Then
+	            '* Set the flag indicating that the value has been received
+	            m_bLineOperatingModeFlag = True
+	            If (m_OPC_LineOperatingMode.Value = c_iAutomaticWithoutTTMode) Then
+	                '* Line operating mode is already in "Automatic without TT"
+	                m_bIsInAutoWithoutTT = True
+	            Else
+	                '* Enable the buttons
+	                Variables.Item(ThisMimic.Branch & c_strDisableOptionButtonTag).Value = False
+	            End If
+	            '* Fill the combo boxes
+	            ManageComboBox
+	        End If
+	    End If
+	
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "m_OPC_ProposedHeadways_ValueChange", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: FillComboBoxes
+	'*  Purpose: For each existing service, fill the corresponding combo box (nominal or provisional)
+	'*           with its name
+	'* ******************************************************************************************
+	Public Sub FillComboBoxes()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "FillComboBoxes", "Begin Subroutine")
+	    
+	
+	
+	    Dim oDoc As DOMDocument
+	   
+	    Set oDoc = New DOMDocument
+	    '* Load the XML string
+	    If (oDoc.loadXML(m_OPC_AvailableServices.Value) = True) Then
+	        Dim FirstNodeLevel As IXMLDOMNodeList
+	        
+	        '* Get all <NextMode ...> nodes
+	        Set FirstNodeLevel = oDoc.documentElement.getElementsByTagName(c_strNextModeNode)
+	        If (FirstNodeLevel.length > 0) Then
+	            Dim oNextModeNodeClass As IXMLDOMElement
+	            
+	            For Each oNextModeNodeClass In FirstNodeLevel
+	                Dim strName As String
+	                Dim strIndex As String
+	                Dim strType As String
+	                
+	                '* Get attributes (Index, Name and Type)of the service
+	                strName = Format(oNextModeNodeClass.getAttribute(c_strNextModeNameAttr))
+	                strIndex = Format(oNextModeNodeClass.getAttribute(c_strNextModeIndexAttr))
+	                strType = Format(oNextModeNodeClass.getAttribute(c_strNextModeTypeAttr))
+	                
+	                If ((strName <> "") And (strIndex <> "") And (strIndex <> "0")) Then
+	                    '* Note : if attribute type has not been configurated, the type of service by default is "Nominal"
+	                    If (StrComp(strType, c_strProvisionalService, vbTextCompare) = 0) Then '* Provisional service
+	                        '* Add the name of the service in the corresponding combo box
+	                        ComboBoxProvisionalServices.AddItem strName
+	                        '* Memorize couple (Index and Name) of the provisional service
+	                        m_collProvisionalServiceNames.Add strIndex, strName
+	                                
+	                        If ((m_bIsInAutoWithoutTT = True) And (StrComp(strIndex, Variables.Item("@CurrentServiceID%").Value, vbTextCompare) = 0)) Then
+	                            '* Select the name of the current service in the combo box
+	                            ComboBoxProvisionalServices.Value = strName
+	                            '* Memorize the type of the current service
+	                            m_iCurrentServiceType = c_iProvisionalServiceType
+	                            '* Select the corresponding button
+	                            Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iProvisionalServiceType
+	                        End If
+	                    Else
+	                        '* Add the name of the service in the corresponding combo box
+	                        ComboBoxNominalServices.AddItem strName
+	                        '* Memorize couple (Index and Name) of the nominal service
+	                        m_collNominalServiceNames.Add strIndex, strName
+	                                
+	                        If ((m_bIsInAutoWithoutTT = True) And (StrComp(strIndex, Variables.Item("@CurrentServiceID%").Value, vbTextCompare) = 0)) Then
+	                            '* Select the name of the current service in the combo box
+	                            ComboBoxNominalServices.Value = strName
+	                            '* Memorize the type of the current service
+	                            m_iCurrentServiceType = c_iNominalServiceType
+	                            '* Select the corresponding button
+	                            Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iNominalServiceType
+	                        End If
+	                    End If
+	                End If
+	            Next
+	        End If
+	        Set FirstNodeLevel = Nothing
+	    End If
+	    Set oDoc = Nothing
+	    
+	    '* Enable buttons (Nominal service and Provisional service)
+	    Variables.Item(ThisMimic.Branch & c_strDisableOptionButtonTag).Value = False
+	     
+	    If (m_bIsInAutoWithoutTT = True) Then
+	        If (Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iNominalServiceType) Then
+	            '* Enable the combo box
+	            ComboBoxNominalServices.Enabled = True
+	        ElseIf (Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iProvisionalServiceType) Then
+	            '* Enable the combo box
+	            ComboBoxProvisionalServices.Enabled = True
+	        End If
+	    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "FillComboBoxes", Err.Description)
+	End Sub
+	
+	'* Function: GetServiceID
+	'* Purpose: Retrieve the ID of the selected service in the combo box (nominal or provisional)
+	'* ******************************************************************************************
+	Private Function GetServiceID(ByVal iServiceType As Integer) As String
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "GetServiceID", "Begin Function")
+	    
+	    Dim IDsArray
+	    Dim NamesArray
+	    Dim i As Integer
+	    Dim strServiceID As String
+	        
+	    If (iServiceType = c_iNominalServiceType) Then '* Nominal service
+	        '* Get the array containing IDs of nominal services
+	        IDsArray = m_collNominalServiceNames.Keys
+	        '* Get the array containing Names of nominal services
+	        NamesArray = m_collNominalServiceNames.Items
+	        For i = 0 To m_collNominalServiceNames.Count - 1
+	            If (StrComp(NamesArray(i), ComboBoxNominalServices.Value, vbTextCompare) = 0) Then
+	                strServiceID = IDsArray(i)
+	                Exit For
+	            End If
+	        Next i
+	    ElseIf (iServiceType = c_iProvisionalServiceType) Then '* Provisional service
+	        '* Get the array containing IDs of provisional services
+	        IDsArray = m_collProvisionalServiceNames.Keys
+	        '* Get the array containing Names of provisional services
+	        NamesArray = m_collProvisionalServiceNames.Items
+	        For i = 0 To m_collProvisionalServiceNames.Count - 1
+	            If (StrComp(NamesArray(i), ComboBoxProvisionalServices.Value, vbTextCompare) = 0) Then
+	                strServiceID = IDsArray(i)
+	                Exit For
+	            End If
+	        Next i
+	    End If
+	        
+	    GetServiceID = strServiceID
+	        
+	Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "GetServiceID", Err.Description)
+	End Function
+	    
+	'*  SubRoutine: ButtonNominalService_Click
+	'*  Purpose: Manage selection of the "Nominal service" button
+	'* ******************************************************************************************
+	Private Sub ButtonNominalService_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonNominalService_Click", "Begin Subroutine")
+	    
+	'    If ((Variables.Item(ThisMimic.Branch & c_strDisableOptionButtonTag).Value = True) Or _
+	'        (Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iNominalServiceType)) Then
+	'        Exit Sub
+	'    End If
+	'
+	'    '* Disable the "OK" button
+	'    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = False
+	'
+	'    '* Reset the property Value of the "Provisional service" combo box
+	'    ComboBoxProvisionalServices.Value = ""
+	'    '* Disable the "Provisional service" combo box
+	'    ComboBoxProvisionalServices.Enabled = False
+	'
+	'    If (ComboBoxNominalServices.ListCount > 0) Then
+	'        '* If the line operating mode is already in "Automatic without TT" and if the type of current service is nominal,
+	'        '* select the current service in the list of nominal services
+	'        If ((m_bIsInAutoWithoutTT = True) And (m_iCurrentServiceType = c_iNominalServiceType)) Then
+	'            ComboBoxNominalServices.Value = m_collNominalServiceNames.Item(Variables.Item("@CurrentServiceID%").Value)
+	'        End If
+	'        '* Enable the "Nominal service" combo box
+	'        ComboBoxNominalServices.Enabled = True
+	'    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonNominalService_Click", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: ButtonProvisionalService_Click
+	'*  Purpose: Manage selection of the "Provisional service" button
+	'* ******************************************************************************************
+	Private Sub ButtonProvisionalService_Click()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ButtonProvisionalService_Click", "Begin Subroutine")
+	    
+	'    If ((Variables.Item(ThisMimic.Branch & c_strDisableOptionButtonTag).Value = True) Or _
+	'        (Variables.Item(ThisMimic.Branch & c_strCommandOptionButtonTag).Value = c_iProvisionalServiceType)) Then
+	'        Exit Sub
+	'    End If
+	'
+	'    '* Disable the "OK" button
+	'    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = False
+	'
+	'    '* Reset the property Value of the "Nominal service" combo box
+	'    ComboBoxNominalServices.Value = ""
+	'    '* Disable the "Nominal service" combo box
+	'    ComboBoxNominalServices.Enabled = False
+	'
+	'    If (ComboBoxProvisionalServices.ListCount > 0) Then
+	'        '* If the line operating mode is already in "Automatic without TT" and if the type of current service is provisional,
+	'        '* select the current service in the list of provisional services
+	'        If ((m_bIsInAutoWithoutTT = True) And (m_iCurrentServiceType = c_iProvisionalServiceType)) Then
+	'            ComboBoxProvisionalServices.Value = m_collProvisionalServiceNames.Item(Variables.Item("@CurrentServiceID%").Value)
+	'        End If
+	'
+	'        '* Enable the "Provisional service" combo box
+	'        ComboBoxProvisionalServices.Enabled = True
+	'    End If
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ButtonProvisionalService_Click", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: ComboBoxNominalServices_Change
+	'*  Purpose: Manage the combo box associated to the "Nominal service" field
+	'* ******************************************************************************************
+	Private Sub ComboBoxNominalServices_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxNominalServices_Change", "Begin Subroutine")
+	    
+	    If (ComboBoxNominalServices.ListIndex = -1) Then Exit Sub
+	    
+	    '* Memorize the ID of the selected service
+	    Variables.Item("@SelectedServiceID%").Value = GetServiceID(c_iNominalServiceType)
+	    '* Memorize the Name of the selected service
+	    Variables.Item("@SelectedServiceName%").Value = ComboBoxNominalServices.Value
+	    '* Enable the "OK" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxNominalServices_Change", Err.Description)
+	End Sub
+	
+	'*  SubRoutine: ComboBoxProvisionalServices
+	'*  Purpose: Manage the combo box associated to the "Provisional service" field
+	'* ******************************************************************************************
+	Private Sub ComboBoxProvisionalServices_Change()
+	On Error GoTo ErrorHandler
+	    Call CBTrace(CBTRACE_VBA, ThisMimic.Name, "ComboBoxProvisionalServices_Change", "Begin Subroutine")
+	    
+	    If (ComboBoxProvisionalServices.ListIndex = -1) Then Exit Sub
+	    
+	    '* Memorize the ID of the selected service
+	    Variables.Item("@SelectedServiceID%").Value = GetServiceID(c_iProvisionalServiceType)
+	    '* Memorize the Name of the selected service
+	    Variables.Item("@SelectedServiceName%").Value = ComboBoxProvisionalServices.Value
+	    '* Enable the "OK" button
+	    Variables.Item(ThisMimic.Branch & ".ButtonOKEnabled%").Value = True
+	    
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "ComboBoxProvisionalServices_Change", Err.Description)
+	End Sub
+	
+	
+	
+	
+	Private Sub optNorm_Click()
+	    EnableProv False
+	    EnableButtonOK
+	    
+	End Sub
+	
+	Private Sub optProv_Click()
+	    EnableProv True
+	    EnableButtonOK
+	    
+	End Sub
+	
+	Private Function EnableProv(ByVal bValue As Boolean)
+	    Dim i As Integer
+	        
+	    On Error GoTo ErrorHandler
+	        
+	    bUpdating = True
+	    For i = 1 To 14
+	        Me.Graphics("chkServProv" & i).Value = False
+	        Me.Graphics("chkServProv" & i).Enabled = bValue
+	    Next i
+	    bUpdating = False
+	
+	    'Enable VIA
+	    optTZAVia1.Enabled = Not bValue
+	    optTZAVia2.Enabled = Not bValue
+	    optTZAAnden.Enabled = Not bValue
+	    optTZAVia1.Value = False
+	    optTZAVia2.Value = False
+	    optTZAAnden.Value = False
+	
+	    optTCCVia1.Enabled = Not bValue
+	    optTCCVia2.Enabled = Not bValue
+	    optTCCAnden.Enabled = Not bValue
+	    optTCCVia1.Value = False
+	    optTCCVia2.Value = False
+	    optTCCAnden.Value = False
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableProv", Err.Description)
+	
+	End Function
+	
+	Private Function EnableCompatibleServices(ByVal iValue As Integer)
+	    Dim i As Integer, bAllEnabled As Boolean
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    If bUpdating Then Exit Function
+	    
+	    For i = 1 To 14
+	        Me.Graphics("chkServProv" & i).Enabled = Me.Graphics("chkServProv" & i).Value
+	    Next i
+	    
+	    If Me.Graphics("chkServProv" & iValue).Value Then
+	    
+	        Select Case iValue
+	    
+	            Case 1 'TZA_PAT
+	                Me.Graphics("chkServProv6").Enabled = Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv7").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv8").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv9").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv12").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv14").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False
+	            
+	            Case 2 'TZA_FED
+	                Me.Graphics("chkServProv7").Enabled = Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv8").Enabled = Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv12").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv14").Value = False
+	                Me.Graphics("chkServProv14").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                  And Me.Graphics("chkServProv7").Value = False _
+	                                                  And Me.Graphics("chkServProv8").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv12").Value = False
+	    
+	            Case 3 'TZA_QCI
+	                Me.Graphics("chkServProv8").Enabled = True
+	    
+	            Case 6 'FED_TCC
+	                Me.Graphics("chkServProv1").Enabled = True
+	    
+	            Case 7 'QCI_TCC
+	                Me.Graphics("chkServProv1").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv2").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv11").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv13").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False
+	    
+	            Case 8 'N1L_TCC
+	                Me.Graphics("chkServProv1").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv3").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv2").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv3").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv3").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv9").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv3").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv11").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv3").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv13").Value = False
+	                Me.Graphics("chkServProv13").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                  And Me.Graphics("chkServProv2").Value = False _
+	                                                  And Me.Graphics("chkServProv3").Value = False _
+	                                                  And Me.Graphics("chkServProv9").Value = False _
+	                                                  And Me.Graphics("chkServProv11").Value = False
+	    
+	            Case 9 'FED_QCI
+	                Me.Graphics("chkServProv1").Enabled = True
+	                Me.Graphics("chkServProv8").Enabled = True
+	    
+	            Case 11, 13 'TZA_CTD, 'PAT_CTD
+	                Me.Graphics("chkServProv7").Enabled = Me.Graphics("chkServProv8").Value = False
+	                Me.Graphics("chkServProv8").Enabled = Me.Graphics("chkServProv7").Value = False
+	    
+	            Case 12, 14 'CTD_TCC, 'CTD_N1L
+	                Me.Graphics("chkServProv1").Enabled = Me.Graphics("chkServProv2").Value = False
+	                Me.Graphics("chkServProv2").Enabled = Me.Graphics("chkServProv1").Value = False
+	                
+	        End Select
+	        
+	    Else
+	        
+	        For i = 1 To 14
+	            Select Case i And Me.Graphics("chkServProv" & i).Value
+	        
+	                Case 1 And True 'TZA_PAT
+	                    Me.Graphics("chkServProv6").Enabled = Me.Graphics("chkServProv7").Value = False _
+	                                                      And Me.Graphics("chkServProv8").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False
+	                    Me.Graphics("chkServProv7").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                      And Me.Graphics("chkServProv8").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False
+	                    Me.Graphics("chkServProv8").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                      And Me.Graphics("chkServProv7").Value = False
+	                    Me.Graphics("chkServProv9").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                      And Me.Graphics("chkServProv7").Value = False
+	                    Me.Graphics("chkServProv12").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                      And Me.Graphics("chkServProv7").Value = False _
+	                                                      And Me.Graphics("chkServProv8").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False
+	                    Me.Graphics("chkServProv14").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                      And Me.Graphics("chkServProv7").Value = False _
+	                                                      And Me.Graphics("chkServProv8").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False
+	                    Exit For
+	        
+	                Case 2 And True 'TZA_FED
+	                    Me.Graphics("chkServProv7").Enabled = Me.Graphics("chkServProv8").Value = False _
+	                                                     And Me.Graphics("chkServProv14").Value = False
+	                    Me.Graphics("chkServProv8").Enabled = Me.Graphics("chkServProv7").Value = False _
+	                                                     And Me.Graphics("chkServProv14").Value = False
+	                    Me.Graphics("chkServProv12").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                       And Me.Graphics("chkServProv7").Value = False _
+	                                                       And Me.Graphics("chkServProv8").Value = False _
+	                                                       And Me.Graphics("chkServProv9").Value = False _
+	                                                       And Me.Graphics("chkServProv14").Value = False
+	                    Me.Graphics("chkServProv14").Enabled = Me.Graphics("chkServProv6").Value = False _
+	                                                       And Me.Graphics("chkServProv7").Value = False _
+	                                                       And Me.Graphics("chkServProv8").Value = False _
+	                                                       And Me.Graphics("chkServProv9").Value = False _
+	                                                      And Me.Graphics("chkServProv12").Value = False
+	                    Exit For
+	        
+	                Case 3 And True 'TZA_QCI
+	                    Me.Graphics("chkServProv8").Enabled = True
+	                    Exit For
+	        
+	                Case 6 And True 'FED_TCC
+	                    Me.Graphics("chkServProv1").Enabled = True
+	                    Exit For
+	        
+	                Case 7 And True 'QCI_TCC
+	                    Me.Graphics("chkServProv1").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv11").Value = False
+	                    Me.Graphics("chkServProv2").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv11").Value = False
+	                    Me.Graphics("chkServProv11").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv13").Value = False
+	                    Me.Graphics("chkServProv13").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv11").Value = False
+	                    Exit For
+	        
+	                Case 8 And True 'N1L_TCC
+	                    Me.Graphics("chkServProv1").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                    And Me.Graphics("chkServProv3").Value = False _
+	                                                    And Me.Graphics("chkServProv11").Value = False _
+	                                                    And Me.Graphics("chkServProv13").Value = False
+	                    Me.Graphics("chkServProv2").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                    And Me.Graphics("chkServProv3").Value = False _
+	                                                    And Me.Graphics("chkServProv9").Value = False _
+	                                                    And Me.Graphics("chkServProv11").Value = False _
+	                                                    And Me.Graphics("chkServProv13").Value = False
+	                    Me.Graphics("chkServProv3").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False
+	                    Me.Graphics("chkServProv9").Enabled = Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv3").Value = False _
+	                                                      And Me.Graphics("chkServProv11").Value = False _
+	                                                      And Me.Graphics("chkServProv13").Value = False
+	                    Me.Graphics("chkServProv11").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv3").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False _
+	                                                      And Me.Graphics("chkServProv13").Value = False
+	                    Me.Graphics("chkServProv13").Enabled = Me.Graphics("chkServProv1").Value = False _
+	                                                      And Me.Graphics("chkServProv2").Value = False _
+	                                                      And Me.Graphics("chkServProv3").Value = False _
+	                                                      And Me.Graphics("chkServProv9").Value = False _
+	                                                      And Me.Graphics("chkServProv11").Value = False
+	                    Exit For
+	        
+	                Case 9 And True 'FED_QCI
+	                    Me.Graphics("chkServProv1").Enabled = True
+	                    Me.Graphics("chkServProv8").Enabled = True
+	                    Exit For
+	        
+	                Case 11, 13 'TZA_CTD, 'PAT_CTD
+	                    Me.Graphics("chkServProv7").Enabled = True
+	                    Me.Graphics("chkServProv8").Enabled = True
+	                    Exit For
+	        
+	                Case 12, 14 'CTD_TCC, 'CTD_N1L
+	                    Me.Graphics("chkServProv1").Enabled = True
+	                    Me.Graphics("chkServProv2").Enabled = True
+	                    Exit For
+	        
+	            End Select
+	            
+	            
+	        Next i
+	        If i > 14 Then
+	            'Enable all
+	            For i = 1 To 14
+	                Me.Graphics("chkServProv" & i).Enabled = True
+	            Next i
+	        End If
+	    End If
+	        
+	    'Enable VIA
+	    optTZAVia1.Enabled = False
+	    optTZAVia2.Enabled = False
+	    optTZAAnden.Enabled = False
+	
+	    optTCCVia1.Enabled = False
+	    optTCCVia2.Enabled = False
+	    optTCCAnden.Enabled = False
+	    
+	    For i = 1 To 14
+	        If (i < 5 Or i = 11) And Me.Graphics("chkServProv" & i).Value Then
+	            optTZAVia1.Enabled = True
+	            optTZAVia2.Enabled = True
+	            optTZAAnden.Enabled = True
+	        
+	        ElseIf (i < 9 Or i = 12) And Me.Graphics("chkServProv" & i).Value Then
+	            optTCCVia1.Enabled = True
+	            optTCCVia2.Enabled = True
+	            optTCCAnden.Enabled = True
+	        
+	        End If
+	    Next i
+	
+	    If optTZAVia1.Enabled = False Then optTZAVia1.Value = False
+	    If optTZAVia2.Enabled = False Then optTZAVia2.Value = False
+	    If optTZAAnden.Enabled = False Then optTZAAnden.Value = False
+	
+	    If optTCCVia1.Enabled = False Then optTCCVia1.Value = False
+	    If optTCCVia2.Enabled = False Then optTCCVia2.Value = False
+	    If optTCCAnden.Enabled = False Then optTCCAnden.Value = False
+	
+	    EnableButtonOK
+	                      
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableCompatibleServices", Err.Description)
+	                      
+	End Function
+	
+	
+	Private Function EnableButtonOK()
+	    On Error GoTo ErrorHandler
+	    
+	    Variables(Me.Branch & ".ButtonOKEnabled%").Value = _
+	        ( _
+	            ([@ServiceTZAanden%] Or [@ServiceTZAv1%] Or [@ServiceTZAv2%] Or (Not optTZAVia1.Enabled)) _
+	        And ([@ServiceTCCanden%] Or [@ServiceTCCv1%] Or [@ServiceTCCv2%] Or (Not optTCCVia1.Enabled)) _
+	        And ((([@Service9%] Or [@Service10%] Or [@Service13%] Or [@Service14%]) And (Not (optTZAVia1.Enabled And optTCCVia1.Enabled))) _
+	            Or (Not ([@Service9%] And [@Service10%] And [@Service13%] And [@Service14%]) And (optTZAVia1.Enabled Or optTCCVia1.Enabled))) _
+	        )
+	        
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "EnableButtonOK", Err.Description)
+	End Function
+	
+	'TZA_PAT - @Service1%
+	Private Sub chkServProv1_Click()
+	    EnableCompatibleServices 1
+	End Sub
+	
+	'TZA_FED - @Service2%
+	Private Sub chkServProv2_Click()
+	    EnableCompatibleServices 2
+	End Sub
+	
+	'TZA_QCI - @Service3%
+	Private Sub chkServProv3_Click()
+	    EnableCompatibleServices 3
+	End Sub
+	
+	'TZA_N1L - @Service4%
+	Private Sub chkServProv4_Click()
+	    EnableCompatibleServices 4
+	End Sub
+	
+	'PAT_TCC - @Service5%
+	Private Sub chkServProv5_Click()
+	    EnableCompatibleServices 5
+	End Sub
+	
+	'FED_TCC - @Service6%
+	Private Sub chkServProv6_Click()
+	    EnableCompatibleServices 6
+	End Sub
+	
+	'QCI_TCC - @Service7%
+	Private Sub chkServProv7_Click()
+	    EnableCompatibleServices 7
+	End Sub
+	
+	'N1L_TCC - @Service8%
+	Private Sub chkServProv8_Click()
+	    EnableCompatibleServices 8
+	End Sub
+	
+	'FED_QCI - @Service9%
+	Private Sub chkServProv9_Click()
+	    EnableCompatibleServices 9
+	End Sub
+	
+	'PAT_N1L - @Service10%
+	Private Sub chkServProv10_Click()
+	    EnableCompatibleServices 10
+	End Sub
+	
+	'TZA_CTD - Service11%
+	Private Sub chkServProv11_Click()
+	    EnableCompatibleServices 11
+	End Sub
+	
+	'CTD_TCC - Service12%
+	Private Sub chkServProv12_Click()
+	    EnableCompatibleServices 12
+	End Sub
+	
+	'PAT_CTD - Service13%
+	Private Sub chkServProv13_Click()
+	    EnableCompatibleServices 13
+	End Sub
+	
+	'CTD_N1L - Service14%
+	Private Sub chkServProv14_Click()
+	    EnableCompatibleServices 14
+	End Sub
+	
+	
+	Private Sub optTCCAnden_Click()
+	    EnableButtonOK
+	End Sub
+	
+	Private Sub optTCCVia1_Click()
+	    EnableButtonOK
+	End Sub
+	
+	Private Sub optTCCVia2_Click()
+	    EnableButtonOK
+	End Sub
+	
+	
+	
+	Private Sub optTZAAnden_Click()
+	    EnableButtonOK
+	End Sub
+	
+	Private Sub optTZAVia1_Click()
+	    EnableButtonOK
+	End Sub
+	
+	Private Sub optTZAVia2_Click()
+	    EnableButtonOK
+	End Sub
+	
+	
+	
+	
+	Private Function UpdateCurrentService()
+	    Dim xmlDoc As DOMDocument
+	    Dim pNode As IXMLDOMNode
+	    Dim sQuery As String
+	    Dim pElement        As IXMLDOMElement
+	    Dim i As Integer
+	    Dim vLoops As Variant
+	    Dim sType As Integer
+	    Dim iCurrentServiceID As Integer
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    'Exit if current mode is diff from Automatic Without TT
+	    If Variables(ThisMimic.Branch & c_strCmdOperModeMgmtMode).Value <> 1 Then Exit Function
+	    iCurrentServiceID = Variables.Item(c_strClusterLevel2 & c_strCmdOperModeCarouselConfigMode).Value
+	
+	    If iCurrentServiceID < 1 Then Exit Function
+	
+	    Set xmlDoc = New DOMDocument
+	    xmlDoc.loadXML Variables(c_strClusterLevel2 & c_strCarouselConfOperatingModeList).Value
+	    
+	    
+	    sQuery = "//NextMode[@Index=" & Chr(34) & iCurrentServiceID & Chr(34) & "]"
+	    Set pNode = xmlDoc.selectSingleNode(sQuery)
+	    
+	    sType = pNode.Attributes.getNamedItem("Type").nodeValue
+	    
+	''    'To consist according the Type, you must uncomment this code >>>
+	''    If sType = "0" Then
+	''        optNorm = True
+	''    Else
+	''        optProv = True
+	''    End If
+	''    'To consist according the Type, you must uncomment this code <<<
+	    
+	    'To consist according the service id, you must uncomment this code >>>
+	    If iCurrentServiceID < 10 Then
+	        optNorm = True
+	    Else
+	        optProv = True
+	    End If
+	    'To consist according the service id, you must uncomment this code <<<
+	    
+	    SetLocalCurrentService iCurrentServiceID
+	    
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "UpdateCurrentService", Err.Description)
+	End Function
+	
+	Private Function SetLocalCurrentService(ByVal iServiceID As Integer)
+	    Dim xmlDoc As DOMDocument
+	    Dim pNode As IXMLDOMNode
+	    Dim sQuery As String
+	    Dim vHMI_VarList As Variant, sHMI_VarList As String
+	    Dim i As Integer
+	    
+	    On Error GoTo ErrorHandler
+	    
+	    Set xmlDoc = New DOMDocument
+	    xmlDoc.setProperty "SelectionLanguage", "XPath"
+	    
+	    xmlDoc.Load ThisProject.Path & "\Working Files\ServicesHDWxHMI.xml"
+	    sQuery = "//SERVICE[contains(@ID, """ & iServiceID & """)]"
+	
+	    Set pNode = xmlDoc.selectSingleNode(sQuery)
+	    
+	    If pNode Is Nothing Then Exit Function
+	        
+	    sHMI_VarList = pNode.Attributes.getNamedItem("HMI_VARLIST").nodeValue
+	
+	    If InStr(sHMI_VarList, ";") > 0 Then vHMI_VarList = Split(sHMI_VarList, ";")
+	
+	    EnableButtonOK
+	    For i = 0 To UBound(vHMI_VarList)
+	        Variables(vHMI_VarList(i)).Value = True
+	    Next i
+	    
+	    EnableButtonOK
+	
+	    Exit Function
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisMimic.Name, "SetLocalCurrentService", Err.Description)
+	End Function
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+	"MSForms", 2, 0, "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+	"MSXML2", 3, 0, "{F5078F18-C551-11D3-89B9-0000F81FE221}"
+VBA_REFERENCES,END
+FONTS,BEGIN
+	FONT,1,-13,0,700,0,0,"Arial",0,0
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,255,255,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,0,0,0,0,0,1
+	COLOR,4,191,191,191,0,0,0
+	COLOR,5,128,128,128,0,0,0
+	COLOR,6,215,215,215,0,0,0
+	COLOR,7,192,192,192,0,0,0
+	COLOR,8,0,255,0,0,0,0
+	COLOR,9,255,0,255,0,0,0
+	COLOR,10,0,0,0,0,34,0
+	COLOR,11,105,105,105,0,0,0
+	COLOR,12,0,0,0,0,63,0
+	COLOR,13,255,0,0,0,0,0
+COLORS,END
+O,BEGIN,R,"Shape2"
+	B,609,304,3,9,609,304,64511,0,6400,1,1,0,0
+	ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optProv"
+	B,9,86,103,110,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+O,END
+O,BEGIN,OCX,"optNorm"
+	B,9,46,89,70,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service0%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,T,"Text1"
+	B,15,1,215,17,15,17,64511,0,6400,0,1,0,0
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,4,0,COLOR,4,0,COLOR,2,0,COLOR,2
+	PP,0,15,1,0,0,FONT,1,"Selecci¢n del tipo de servicio",36,FONT,1,"Selecci¢n del tipo de servicio",36
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Selecci¢n del tipo de servicio",FONT,1,36
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Selecci¢n del tipo de servicio",FONT,1,36
+		LANG,END
+	MULTILANG,END
+O,END
+O,BEGIN,T,"btnOK"
+	B,138,319,217,348,138,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,138,319,0,0,FONT,1,"Aceptar",37,FONT,1,"Aceptar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Aceptar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Aceptar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim4",0,0,"",""
+		PP,"ButtonOKEnabled%"
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,0,COLOR,3,COLOR,3
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,1,COLOR,6,COLOR,6
+	A,END
+	A,BEGIN,LO,"Anim6",0,0,"",""
+		PP,"LineOperatingModeAutoWithoutTT_RegulationMode","*",0,0,0,0,"LineOperatingModeAutoWithoutTT_Ctrl","*",0
+		AUTH,"ButtonOKEnabled%",1,0,0
+	A,END
+O,END
+O,BEGIN,T,"btnCancel"
+	B,394,319,473,348,394,348,64511,0,6400,0,1,1,1
+	ST,0,1,COLOR,2,COLOR,2,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	AST,7,2,COLOR,2,COLOR,3,0,COLOR,5,0,COLOR,5,0,COLOR,1,0,COLOR,1
+	PP,1,394,319,0,0,FONT,1,"Cancelar",37,FONT,1,"Cancelar",37
+	MULTILANG,BEGIN
+		LANG_DEFAULT,2058
+		LANG,BEGIN,1033
+			ROLE_DEFAULT,-1
+			ROLE,-1,"Cancelar",FONT,1,37
+		LANG,END
+		LANG,BEGIN,2058
+			ROLE_DEFAULT,0
+			ROLE,0,"Cancelar",FONT,1,37
+		LANG,END
+	MULTILANG,END
+	A,BEGIN,CB,"Anim1",0,0,"",""
+		PP,"ButtonCancelEnabled%"
+		COL,0,COLOR,7,COLOR,7
+		COL,0,COLOR,8,COLOR,8
+		COL,0,COLOR,9,COLOR,9
+		COL,1,COLOR,6,COLOR,6
+		COL,1,COLOR,2,COLOR,2
+		COL,0,COLOR,6,COLOR,6
+	A,END
+	A,BEGIN,LC,"Anim2",0,0,"",""
+		PP,"View_LineOperatingModes","*"
+	A,END
+O,END
+O,BEGIN,OCX,"optTZAVia1"
+	B,103,19,196,39,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTZAv1%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"optTZAVia2"
+	B,103,112,183,132,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTZAv2%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"optTCCVia1"
+	B,520,19,603,39,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTCCv1%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"optTCCVia2"
+	B,520,112,603,132,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTCCv2%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"optTZAAnden"
+	B,188,112,279,132,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTZAanden%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"optTCCAnden"
+	B,424,19,517,39,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@ServiceTCCanden%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv1"
+	B,16,133,255,157,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service1%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv2"
+	B,16,157,256,181,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service2%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv5"
+	B,320,133,592,157,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service5%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv6"
+	B,320,181,592,205,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service6%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv9"
+	B,320,157,592,181,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service9%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,GRP,"Group15"
+	B,103,39,603,111,103,111,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,R,"Shape1"
+		B,603,111,103,39,603,111,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,1,COLOR,1,0,0,COLOR,10,0,COLOR,10,0,COLOR,2,0,COLOR,2
+		AST,5,2,COLOR,1,COLOR,10,0,COLOR,1,0,COLOR,1,0,COLOR,11,0,COLOR,11
+	O,END
+	O,BEGIN,RR,"Shape6"
+		B,207,55,207,55,207,55,65535,0,6400,0,2,0,0
+		ST,0,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+		PP,16,16
+	O,END
+	O,BEGIN,R,"Shape8"
+		B,146,55,137,51,146,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape9"
+		B,146,98,137,94,146,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape12"
+		B,178,55,169,51,178,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape13"
+		B,178,98,169,94,178,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape14"
+		B,194,55,185,51,194,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape15"
+		B,194,98,185,94,194,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape16"
+		B,210,55,201,51,210,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape17"
+		B,210,98,201,94,210,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape18"
+		B,241,55,232,51,241,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape19"
+		B,241,98,232,94,241,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape24"
+		B,257,55,248,51,257,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape25"
+		B,257,98,248,94,257,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape26"
+		B,289,55,280,51,289,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape27"
+		B,289,98,280,94,289,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape28"
+		B,303,55,294,51,303,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape29"
+		B,303,98,294,94,303,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape30"
+		B,317,55,308,51,317,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape31"
+		B,317,98,308,94,317,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape32"
+		B,339,55,330,51,339,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape33"
+		B,339,98,330,94,339,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape34"
+		B,353,55,344,51,353,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape35"
+		B,353,98,344,94,353,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape36"
+		B,386,55,377,51,386,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape37"
+		B,386,98,377,94,386,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape38"
+		B,451,55,442,51,451,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape39"
+		B,451,98,442,94,451,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape40"
+		B,467,55,458,51,467,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape41"
+		B,467,98,458,94,467,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape42"
+		B,500,55,491,51,500,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape43"
+		B,500,98,491,94,500,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape44"
+		B,516,55,507,51,516,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape45"
+		B,516,98,507,94,516,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape46"
+		B,532,55,523,51,532,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape47"
+		B,532,98,523,94,532,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape48"
+		B,566,55,557,51,566,55,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,R,"Shape49"
+		B,566,98,557,94,566,98,65535,0,6400,0,2,0,0
+		ST,5,1,COLOR,12,COLOR,12,0,0,COLOR,7,0,COLOR,7,0,COLOR,2,0,COLOR,2
+	O,END
+	O,BEGIN,I,"Poly26"
+		B,108,63,598,63,108,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,108,63,598,63
+	O,END
+	O,BEGIN,I,"Poly27"
+		B,108,87,598,87,108,87,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,108,87,598,87
+	O,END
+	O,BEGIN,I,"Poly28"
+		B,116,63,132,87,116,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,116,63,132,87
+	O,END
+	O,BEGIN,I,"Poly29"
+		B,132,63,116,87,132,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,132,63,116,87
+	O,END
+	O,BEGIN,I,"Poly30"
+		B,166,63,150,87,166,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,166,63,150,87
+	O,END
+	O,BEGIN,I,"Poly31"
+		B,213,63,229,87,213,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,213,63,229,87
+	O,END
+	O,BEGIN,I,"Poly32"
+		B,262,63,278,87,262,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,262,63,278,87
+	O,END
+	O,BEGIN,I,"Poly33"
+		B,422,63,438,87,422,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,422,63,438,87
+	O,END
+	O,BEGIN,I,"Poly34"
+		B,374,63,358,87,374,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,374,63,358,87
+	O,END
+	O,BEGIN,I,"Poly35"
+		B,412,55,388,63,380,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,388,63,396,55,404,55,412,63
+	O,END
+	O,BEGIN,I,"Poly36"
+		B,472,63,488,87,472,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,472,63,488,87
+	O,END
+	O,BEGIN,I,"Poly37"
+		B,553,63,537,87,553,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,553,63,537,87
+	O,END
+	O,BEGIN,I,"Poly38"
+		B,590,63,574,87,590,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,590,63,574,87
+	O,END
+	O,BEGIN,I,"Poly39"
+		B,574,63,590,87,574,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,574,63,590,87
+	O,END
+	O,BEGIN,I,"Poly1"
+		B,311,63,327,87,311,63,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,311,63,327,87
+	O,END
+	O,BEGIN,I,"Poly2"
+		B,399,51,392,54,372,59,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,392,51,396,51,399,54
+	O,END
+	O,BEGIN,I,"Poly3"
+		B,401,51,408,54,428,59,65535,0,6400,0,2,0,0
+		ST,0,3,COLOR,12,COLOR,12,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,408,51,404,51,401,54
+	O,END
+O,END
+O,BEGIN,GRP,"Group16"
+	B,106,57,600,93,106,93,65535,0,6400,0,1,0,0
+	PP,0
+	O,BEGIN,GRP,"Group29"
+		B,248,57,455,93,248,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,450,87,250,63,304,73,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,250,63,262,63,278,87,450,87,438,87
+			PP,422,63,262,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,256,69,248,57,256,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,256,63,248,69,248,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,354,93,346,81,354,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,354,87,346,93,346,81
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,455,93,447,81,455,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,455,87,447,93,447,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,346,69,354,57,346,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,346,63,354,69,354,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service9%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group31"
+		B,201,57,503,93,201,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,497,87,205,63,304,73,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,205,63,213,63,229,87,497,87,488,87
+			PP,472,63,212,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,209,69,201,57,209,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,209,63,201,69,201,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,355,93,347,81,355,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,355,87,347,93,347,81
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,503,93,495,81,503,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,503,87,495,93,495,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,347,69,355,57,347,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,347,63,355,69,355,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service10%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group39"
+		B,140,63,179,93,140,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,140,81,148,93,140,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,140,87,148,81,148,93
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,144,87,179,63,179,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,179,87,144,87,150,87,166,63,179,63
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAanden%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group40"
+		B,563,87,524,57,563,57,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,563,69,555,57,563,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,563,63,555,69,555,57
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,559,63,524,87,524,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,524,63,559,63,553,63,537,87,524,87
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCanden%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group42"
+		B,106,63,179,93,106,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,106,81,114,93,106,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,106,87,114,81,114,93
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,110,87,179,63,179,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,179,87,110,87,116,87,132,63,179,63
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAv2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group44"
+		B,106,57,179,87,106,87,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,106,69,114,57,106,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,106,63,114,69,114,57
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,110,63,179,87,179,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,179,63,110,63,116,63,132,87,179,87
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTZAv1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group45"
+		B,600,63,527,93,600,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,600,81,592,93,600,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,600,87,592,81,592,93
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,596,87,527,63,527,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,527,87,596,87,590,87,574,63,527,63
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCv2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group46"
+		B,600,57,527,87,600,87,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly54"
+			B,600,69,592,57,600,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,600,63,592,69,592,57
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,596,63,527,87,527,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,527,63,596,63,590,63,574,87,527,87
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@ServiceTCCv1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group47"
+		B,176,57,536,93,176,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly2"
+			B,176,63,536,63,176,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,176,63,536,63
+		O,END
+		O,BEGIN,I,"Poly3"
+			B,176,87,536,87,176,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,176,87,536,87
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,356,93,348,81,356,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,356,87,348,93,348,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,348,69,356,57,348,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,348,63,356,69,356,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service0%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group54"
+		B,168,57,291,93,168,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,287,87,168,63,224,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,169,87,287,87,278,87,262,63,168,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,283,81,291,93,283,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,283,87,291,81,291,93
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,195,57,203,69,195,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,195,63,203,57,203,69
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,203,81,195,93,203,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,203,87,195,81,195,93
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service2%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group56"
+		B,166,57,453,93,166,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,P,"Poly41"
+			B,445,81,453,93,445,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,445,87,453,81,453,93
+		O,END
+		O,BEGIN,I,"Poly1"
+			B,450,87,166,63,382,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,166,87,450,87,438,87,422,63,166,63
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,275,57,283,69,275,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,275,63,283,57,283,69
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,283,81,275,93,283,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,283,87,275,81,275,93
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service3%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group58"
+		B,168,57,501,93,168,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,497,87,168,63,434,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,168,87,497,87,488,87,472,63,168,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,493,81,501,93,493,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,493,87,501,81,501,93
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,300,57,308,69,300,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,300,63,308,57,308,69
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,308,81,300,93,308,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,308,87,300,81,300,93
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service4%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group61"
+		B,166,57,243,93,166,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,241,87,166,63,166,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,166,87,241,87,229,87,213,63,166,63
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,172,57,180,69,172,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,172,63,180,57,180,69
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,180,81,172,93,180,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,180,87,172,81,172,93
+		O,END
+		O,BEGIN,P,"Poly5"
+			B,235,81,243,93,235,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,235,87,243,81,243,93
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service1%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group62"
+		B,458,57,535,93,458,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,461,63,535,87,535,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,535,63,461,63,472,63,488,87,535,87
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,466,69,458,57,466,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,466,63,458,69,458,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,533,93,525,81,533,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,533,87,525,93,525,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,525,69,533,57,525,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,525,63,533,69,533,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service8%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group64"
+		B,413,57,535,93,413,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,416,63,535,87,535,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,535,63,416,63,422,63,438,87,535,87
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,421,69,413,57,421,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,421,63,413,69,413,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,511,93,503,81,511,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,511,87,503,93,503,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,503,69,511,57,503,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,503,63,511,69,511,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service7%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group66"
+		B,201,57,536,93,201,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,205,63,536,87,311,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,536,63,205,63,213,63,229,87,536,87
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,209,69,201,57,209,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,209,63,201,69,201,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,406,93,398,81,406,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,406,87,398,93,398,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,398,69,406,57,398,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,398,63,406,69,406,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service5%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group68"
+		B,248,57,535,93,248,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,251,63,535,87,360,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,535,63,251,63,262,63,278,87,535,87
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,256,69,248,57,256,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,256,63,248,69,248,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,428,93,420,81,428,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,428,87,420,93,420,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,420,69,428,57,420,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,420,63,428,69,428,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service6%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group4"
+		B,168,57,340,93,168,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,336,87,168,63,273,87,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,169,87,336,87,327,87,311,63,168,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,332,81,340,93,332,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,332,87,340,81,340,93
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,244,57,252,69,244,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,244,63,252,57,252,69
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,252,81,244,93,252,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,252,87,244,81,244,93
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service11%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group7"
+		B,302,57,527,93,302,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly1"
+			B,305,63,527,87,527,63,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,527,63,305,63,311,63,327,87,527,87
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,310,69,302,57,310,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,310,63,302,69,302,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,420,93,412,81,420,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,420,87,412,93,412,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,412,69,420,57,412,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,412,63,420,69,420,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service12%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group11"
+		B,201,57,340,93,201,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,337,87,205,63,304,73,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,205,63,213,63,229,87,337,87,327,87
+			PP,311,63,212,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,209,69,201,57,209,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,209,63,201,69,201,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,275,93,267,81,275,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,275,87,267,93,267,81
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,340,93,332,81,340,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,340,87,332,93,332,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,267,69,275,57,267,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,267,63,275,69,275,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service13%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+	O,BEGIN,GRP,"Group14"
+		B,302,57,503,93,302,93,65535,0,6400,0,2,0,0
+		PP,0
+		O,BEGIN,I,"Poly40"
+			B,497,87,305,63,304,73,65535,0,6400,0,4,0,0
+			ST,0,3,COLOR,13,COLOR,13,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+			PP,311,63,327,87,497,87,488,87,472,63
+			PP,305,63
+		O,END
+		O,BEGIN,P,"Poly41"
+			B,310,69,302,57,310,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,310,63,302,69,302,57
+		O,END
+		O,BEGIN,P,"Poly42"
+			B,405,93,397,81,405,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,405,87,397,93,397,81
+		O,END
+		O,BEGIN,P,"Poly43"
+			B,503,93,495,81,503,87,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,503,87,495,93,495,81
+		O,END
+		O,BEGIN,P,"Poly45"
+			B,397,69,405,57,397,63,65535,0,6400,0,4,0,0
+			ST,5,1,COLOR,13,COLOR,13,0,0,COLOR,13,0,COLOR,13,0,COLOR,2,0,COLOR,2
+			PP,397,63,405,69,405,57
+		O,END
+		A,BEGIN,CB,"Anim1",0,0,"",""
+			PP,"@Service14%"
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,3,COLOR,3
+			COL,1,COLOR,13,COLOR,13
+			COL,1,COLOR,3,COLOR,3
+		A,END
+	O,END
+O,END
+O,BEGIN,OCX,"chkServProv3"
+	B,16,205,288,229,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service3%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv4"
+	B,16,229,288,253,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service4%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv10"
+	B,16,277,288,301,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service10%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv11"
+	B,16,181,256,205,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service11%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv12"
+	B,320,229,592,253,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service12%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv7"
+	B,320,253,592,277,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service7%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv8"
+	B,320,277,592,301,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service8%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv13"
+	B,16,253,256,277,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service13%",0, 11, 1, "Value"
+	A,END
+O,END
+O,BEGIN,OCX,"chkServProv14"
+	B,320,205,592,229,10,60,65535,0,6400,0,1,1,1
+	ST,5,1,COLOR,1,COLOR,1,1,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+	A,BEGIN,VL,"Anim1",0,0,"",""
+		PP,"@Service14%",0, 11, 1, "Value"
+	A,END
+O,END

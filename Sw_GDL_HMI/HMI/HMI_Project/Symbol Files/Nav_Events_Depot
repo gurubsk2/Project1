@@ -1,0 +1,55 @@
+ASCII32,15,6,2017,9:56,28,1.1
+FONTS,BEGIN
+FONTS,END
+COLORS,BEGIN
+	COLOR,1,255,0,0,0,0,0
+	COLOR,2,0,0,0,0,0,0
+	COLOR,3,192,192,192,0,0,0
+	COLOR,4,255,0,255,0,0,0
+	COLOR,5,0,0,0,0,0,1
+	COLOR,6,255,255,255,0,0,0
+	COLOR,7,128,128,128,0,0,0
+COLORS,END
+VBA_HOSTPROJECT,BEGIN
+	Private Sub Shape20_Click()
+	On Error GoTo ErrorHandler
+	    Call OpenMimicInCenter("GUA_Event_DepotView", "*", Getmousepointerpossition)
+	    Variables.Item("@Talleres" & Getmousepointerpossition & "%").Value = "Eventos"
+	Exit Sub
+	ErrorHandler:
+	    Call CBTrace(CBTRACEF_ALWAYS, ThisSymbol.Name, "Symbol_Click", Err.Description)
+	End Sub
+	
+	
+VBA_HOSTPROJECT,END
+VBA_REFERENCES,BEGIN
+	"stdole", 2, 0, "{00020430-0000-0000-C000-000000000046}"
+	"FrontVueEx", 2, 0, "{141E3228-8E65-44D3-9F4F-DD4799D613BB}"
+VBA_REFERENCES,END
+O,BEGIN,GRP,"Symbol15"
+	B,3501,100,3540,139,3501,139,65535,0,6400,0,1,1,1
+	O,BEGIN,BM,"Bitmap65"
+		B,3505,104,3536,135,3505,135,128,0,6400,0,2,0,0
+		ST,0,1,COLOR,1,COLOR,1,0,0,COLOR,3,0,COLOR,3,0,COLOR,2,0,COLOR,2
+		PP,"Logs2.bmp",1,COLOR,4
+	O,END
+	O,BEGIN,R,"Shape20"
+		B,3540,139,3501,100,3540,139,65535,0,6400,0,2,1,1
+		ST,5,1,COLOR,2,COLOR,2,0,0,COLOR,5,0,COLOR,5,0,COLOR,2,0,COLOR,2
+		AST,7,2,COLOR,2,COLOR,5,0,COLOR,7,0,COLOR,7,0,COLOR,6,0,COLOR,6
+		A,BEGIN,SB,"Anim1",0,0,"",""
+			MULTILANG,BEGIN
+				LANG_DEFAULT,1033
+				LANG,BEGIN,1033
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Ventana de eventos"
+				LANG,END
+				LANG,BEGIN,1036
+					ROLE_DEFAULT,-1
+					ROLE,-1,"@Impression ‚cran"
+				LANG,END
+			MULTILANG,END
+			PP,"tip%",0,0,0,0,0.000000
+		A,END
+	O,END
+O,END
